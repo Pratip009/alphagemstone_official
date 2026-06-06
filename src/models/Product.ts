@@ -1,0 +1,267 @@
+import mongoose, { Document, Schema } from 'mongoose';
+
+// ─── Diamond / Gemstone enums (unchanged) ─────────────────────────────────────
+
+export const SHAPES = [
+  'round', 'oval', 'princess', 'cushion', 'emerald',
+  'pear', 'marquise', 'radiant', 'asscher', 'heart', 'other',
+] as const;
+
+export const COLORS = [
+  'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  'fancy-yellow', 'fancy-pink', 'fancy-blue', 'fancy-green', 'fancy-red', 'other',
+] as const;
+
+export const CLARITIES = [
+  'FL', 'IF', 'VVS1', 'VVS2', 'VS1', 'VS2', 'SI1', 'SI2', 'I1', 'I2', 'I3',
+] as const;
+
+export const CERTIFICATIONS = ['GIA', 'AGS', 'EGL', 'IGI', 'HRD', 'none'] as const;
+
+// ─── Watch-specific enums ─────────────────────────────────────────────────────
+
+export const WATCH_GENDERS = ['Men', 'Women', 'Unisex'] as const;
+
+export const WATCH_BRANDS = [
+  'Rolex', 'Omega', 'Cartier', 'Citizen', 'Seiko',
+  'Patek Philippe', 'Audemars Piguet', 'Vacheron Constantin',
+  'A. Lange & Söhne', 'Jaeger-LeCoultre', 'IWC', 'Panerai',
+  'Breitling', 'TAG Heuer', 'Richard Mille', 'Hublot',
+  'Zenith', 'Blancpain', 'Breguet', 'Tudor',
+  'Grand Seiko', 'Longines', 'Tissot', 'Hamilton',
+  'Frederique Constant', 'Fossil', 'Casio', 'other',
+] as const;
+
+export const WATCH_MOVEMENTS = ['Automatic', 'Quartz', 'Mechanical'] as const;
+
+export const WATCH_STRAP_TYPES = [
+  'Metal Bracelet', 'Leather', 'Rubber / Silicone',
+] as const;
+
+export const WATCH_CASE_MATERIALS = [
+  'Stainless Steel', 'Gold', 'Two-tone', 'Titanium',
+] as const;
+
+export const WATCH_DIAL_COLORS = [
+  'Black', 'White', 'Blue', 'Green', 'Gold', 'Silver',
+  'Grey', 'Brown', 'Red', 'Orange', 'Pink', 'other',
+] as const;
+
+export const WATCH_FEATURES = [
+  'Chronograph', 'Date Display', 'Water Resistant',
+  'Diamond Studded', 'Skeleton Dial',
+] as const;
+
+export const WATCH_STYLES = ['Luxury', 'Casual', 'Sport', 'Dress'] as const;
+
+export const WATCH_CASE_SIZES = ['Small', 'Medium', 'Large'] as const;
+
+// ─── TypeScript types ─────────────────────────────────────────────────────────
+
+export type Shape        = (typeof SHAPES)[number];
+export type Color        = (typeof COLORS)[number];
+export type Clarity      = (typeof CLARITIES)[number];
+export type Certification = (typeof CERTIFICATIONS)[number];
+
+export type WatchGender       = (typeof WATCH_GENDERS)[number];
+export type WatchBrand        = (typeof WATCH_BRANDS)[number];
+export type WatchMovement     = (typeof WATCH_MOVEMENTS)[number];
+export type WatchStrapType    = (typeof WATCH_STRAP_TYPES)[number];
+export type WatchCaseMaterial = (typeof WATCH_CASE_MATERIALS)[number];
+export type WatchDialColor    = (typeof WATCH_DIAL_COLORS)[number];
+export type WatchFeature      = (typeof WATCH_FEATURES)[number];
+export type WatchStyle        = (typeof WATCH_STYLES)[number];
+export type WatchCaseSize     = (typeof WATCH_CASE_SIZES)[number];
+
+// ─── IProduct interface ───────────────────────────────────────────────────────
+
+export interface IProduct extends Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  category: mongoose.Types.ObjectId;
+  subcategory?: mongoose.Types.ObjectId;
+  price: number;
+
+  // Diamond / gemstone fields
+  shape?: Shape[];
+  size?: number;
+  color?: Color[];
+  clarity?: Clarity[];
+  certification?: Certification[];
+
+  // Watch fields
+  watchGender?:       WatchGender;
+  watchBrand?:        WatchBrand;
+  watchMovement?:     WatchMovement;
+  watchStrapType?:    WatchStrapType;
+  watchCaseMaterial?: WatchCaseMaterial;
+  watchDialColor?:    WatchDialColor;
+  watchFeatures?:     WatchFeature[];
+  watchStyle?:        WatchStyle;
+  watchCaseSize?:     WatchCaseSize;
+
+  images: string[];
+  stock: number;
+  isActive: boolean;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Schema ───────────────────────────────────────────────────────────────────
+
+const ProductSchema = new Schema<IProduct>(
+  {
+    name: {
+      type: String,
+      required: [true, 'Product name is required'],
+      trim: true,
+      maxlength: [200, 'Name cannot exceed 200 characters'],
+    },
+    category: {
+      type: Schema.Types.ObjectId,
+      ref: 'Category',
+      required: [true, 'Category is required'],
+    },
+    subcategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'Subcategory',
+    },
+    price: {
+      type: Number,
+      required: [true, 'Price is required'],
+      min: [0, 'Price cannot be negative'],
+    },
+
+    // ── Diamond / gemstone fields (all optional at schema level) ────────────
+    shape: {
+      type: [String],
+      enum: { values: SHAPES, message: 'Invalid shape: {VALUE}' },
+      default: undefined,
+    },
+    size: {
+      type: Number,
+      min: [0.01, 'Size must be at least 0.01 carat'],
+    },
+    color: {
+      type: [String],
+      enum: { values: COLORS, message: 'Invalid color: {VALUE}' },
+      default: undefined,
+    },
+    clarity: {
+      type: [String],
+      enum: { values: CLARITIES, message: 'Invalid clarity: {VALUE}' },
+      default: undefined,
+    },
+    certification: {
+      type: [String],
+      enum: { values: CERTIFICATIONS, message: 'Invalid certification: {VALUE}' },
+      default: [],
+    },
+
+    // ── Watch fields ────────────────────────────────────────────────────────
+    watchGender: {
+      type: String,
+      enum: { values: WATCH_GENDERS, message: 'Invalid gender: {VALUE}' },
+    },
+    watchBrand: {
+      type: String,
+      enum: { values: WATCH_BRANDS, message: 'Invalid brand: {VALUE}' },
+    },
+    watchMovement: {
+      type: String,
+      enum: { values: WATCH_MOVEMENTS, message: 'Invalid movement: {VALUE}' },
+    },
+    watchStrapType: {
+      type: String,
+      enum: { values: WATCH_STRAP_TYPES, message: 'Invalid strap type: {VALUE}' },
+    },
+    watchCaseMaterial: {
+      type: String,
+      enum: { values: WATCH_CASE_MATERIALS, message: 'Invalid case material: {VALUE}' },
+    },
+    watchDialColor: {
+      type: String,
+      enum: { values: WATCH_DIAL_COLORS, message: 'Invalid dial color: {VALUE}' },
+    },
+    watchFeatures: {
+      type: [String],
+      enum: { values: WATCH_FEATURES, message: 'Invalid feature: {VALUE}' },
+      default: [],
+    },
+    watchStyle: {
+      type: String,
+      enum: { values: WATCH_STYLES, message: 'Invalid style: {VALUE}' },
+    },
+    watchCaseSize: {
+      type: String,
+      enum: { values: WATCH_CASE_SIZES, message: 'Invalid case size: {VALUE}' },
+    },
+
+    // ── Common fields ───────────────────────────────────────────────────────
+    images: {
+      type: [String],
+      default: [],
+    },
+    stock: {
+      type: Number,
+      required: [true, 'Stock is required'],
+      min: [0, 'Stock cannot be negative'],
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [2000, 'Description cannot exceed 2000 characters'],
+    },
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
+
+// ─── Indexes ──────────────────────────────────────────────────────────────────
+
+// Diamond indexes
+ProductSchema.index({ shape: 1 });
+ProductSchema.index({ color: 1 });
+ProductSchema.index({ clarity: 1 });
+ProductSchema.index({ size: 1 });
+
+// Watch indexes
+ProductSchema.index({ watchGender: 1 });
+ProductSchema.index({ watchBrand: 1 });
+ProductSchema.index({ watchMovement: 1 });
+ProductSchema.index({ watchStrapType: 1 });
+ProductSchema.index({ watchCaseMaterial: 1 });
+ProductSchema.index({ watchDialColor: 1 });
+ProductSchema.index({ watchFeatures: 1 });
+ProductSchema.index({ watchStyle: 1 });
+ProductSchema.index({ watchCaseSize: 1 });
+
+// Common indexes
+ProductSchema.index({ price: 1 });
+ProductSchema.index({ isActive: 1 });
+ProductSchema.index({ stock: 1 });
+ProductSchema.index({ createdAt: -1 });
+ProductSchema.index({ category: 1, subcategory: 1 });
+ProductSchema.index({ category: 1, isActive: 1 });
+ProductSchema.index({ category: 1, price: 1 });
+ProductSchema.index({ shape: 1, size: 1 });
+ProductSchema.index({ name: 'text', description: 'text' });
+
+const Product = (() => {
+  if (mongoose.models && mongoose.models.Product) {
+    return mongoose.models.Product as mongoose.Model<IProduct>;
+  }
+  return mongoose.model<IProduct>('Product', ProductSchema);
+})();
+
+export default Product;

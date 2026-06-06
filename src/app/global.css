@@ -1,0 +1,291 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #fafaf8;
+  --surface: #ffffff;
+  --surface-2: #f5f4f0;
+  --border: #e8e4dc;
+  --border-dark: #d4cfc4;
+  --text: #1a1814;
+  --text-secondary: #5c5852;
+  --muted: #9c9690;
+  --accent: #b8966e;
+  --accent-dark: #8a6e50;
+  --accent-light: #e8d5be;
+  --accent-hover: #a07d58;
+  --danger: #c0392b;
+  --success: #2e7d32;
+  --gold: #c9a84c;
+  --gold-light: #f0e6c8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* ── Typography ─────────────────────────────── */
+h1, h2, h3, h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.font-serif    { font-family: 'Cormorant Garamond', serif; }
+.font-display  { font-family: 'EB Garamond', serif; }
+.font-sans     { font-family: 'Josefin Sans', sans-serif; }
+
+/* ── Decorative Elements ─────────────────────── */
+.gold-divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 0 auto;
+}
+
+.diamond-bullet::before {
+  content: '◆';
+  color: var(--gold);
+  font-size: 0.5em;
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+/* ── Scrollbar ──────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Selection ──────────────────────────────── */
+::selection {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+}
+
+@layer components {
+
+  /* ── Buttons ──────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-3 text-xs font-medium tracking-widest uppercase transition-all duration-300;
+    background: var(--text);
+    color: var(--bg);
+    letter-spacing: 0.15em;
+    border: 1px solid var(--text);
+  }
+  .btn-primary:hover {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-8 py-3 text-xs font-medium tracking-widest uppercase transition-all duration-300;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-dark);
+    letter-spacing: 0.15em;
+  }
+  .btn-secondary:hover {
+    border-color: var(--text);
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center px-8 py-3 text-xs font-medium tracking-widest uppercase transition-all duration-300;
+    background: var(--gold);
+    color: white;
+    border: 1px solid var(--gold);
+    letter-spacing: 0.15em;
+  }
+  .btn-gold:hover {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center px-6 py-2.5 text-xs font-medium tracking-widest uppercase transition-all duration-300;
+    background: var(--danger);
+    color: white;
+    border: 1px solid var(--danger);
+    letter-spacing: 0.12em;
+  }
+
+  /* ── Inputs ───────────────────────────────── */
+  .input {
+    @apply w-full px-4 py-3 text-sm transition-all duration-200 outline-none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+  .input::placeholder { color: var(--muted); }
+  .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  /* ── Cards ────────────────────────────────── */
+  .card {
+    @apply transition-all duration-300;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .card:hover {
+    border-color: var(--border-dark);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+  }
+
+  .card-luxury {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  .card-luxury::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .card-luxury:hover::before { opacity: 1; }
+  .card-luxury:hover {
+    box-shadow: 0 12px 50px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ── Labels ───────────────────────────────── */
+  .label {
+    @apply block mb-2;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  /* ── Section titles ───────────────────────── */
+  .section-subtitle {
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Badges ───────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-3 py-1;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  .badge-gold {
+    background: var(--gold-light);
+    border-color: var(--gold);
+    color: var(--accent-dark);
+  }
+
+  /* ── Table ────────────────────────────────── */
+  .table-luxury {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .table-luxury th {
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .table-luxury td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .table-luxury tr:hover td {
+    background: var(--surface-2);
+  }
+
+  /* ── Page wrapper ─────────────────────────── */
+  .page-container {
+    @apply max-w-7xl mx-auto px-6 py-12;
+  }
+
+  /* ── Dividers ─────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Select ───────────────────────────────── */
+  .select {
+    @apply w-full px-4 py-3 text-sm outline-none transition-all duration-200 appearance-none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+  .select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+}
+
+@keyframes shimmerSweep {
+  0%   { left: -40px; opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { left: 110%; opacity: 0; }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Josefin+Sans:wght@100;300;400;500&display=swap');
+
+.font-bebas {
+  font-family: 'Bebas Neue', sans-serif;
+}
+
+.font-josefin {
+  font-family: 'Josefin Sans', sans-serif;
+}
