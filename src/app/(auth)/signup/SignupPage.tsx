@@ -3,12 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import OtpInput from "@/components/ui/OtpInput";
+import { useAuth } from "@/hooks/useAuth";
 
 type Step = "form" | "otp";
 
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { verifyOtp } = useAuth();
 
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -69,15 +71,9 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/verify-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, otp }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Verification failed.");
-      localStorage.setItem("auth_token", data.data.token);
-      localStorage.setItem("auth_user", JSON.stringify(data.data.user));
+      // verifyOtp calls the API and updates AuthContext state (user + token)
+      // in the same synchronous React batch before navigation — no refresh needed.
+      await verifyOtp(form.email, otp);
       const redirect = searchParams.get("redirect") || "/products";
       router.push(redirect);
     } catch (err) {

@@ -1,11 +1,17 @@
 import Order, { IOrder, IShippingAddress } from '@/models/Order';
 import Cart, { ICart } from '@/models/Cart';
 import Product, { IProduct } from '@/models/Product';
+import User from '@/models/User';
 import { clearCart, calculateCartTotals } from './cart.service';
 import { capturePayPalOrder, createPayPalOrder } from './paypal.service';
 import { createFedExShipment, trackFedExShipment } from './fedex.service';
 import { createUspsShipment } from './usps.service';
 import { createUpsShipment } from './ups.service';
+import { Resend } from 'resend';
+import { orderConfirmationEmailHtml, orderShippedEmailHtml } from '@/lib/email-templates';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,6 +138,9 @@ export async function capturePayment(paypalOrderId: string) {
 
   await clearCart(order.user.toString());
 
+  // ─── Send order confirmation email ───────────────────────────────────────
+  void sendOrderConfirmationEmail(order);
+
   // ─── Auto-generate FedEx label ────────────────────────────────────────────
   try {
     await generateFedExLabel(order._id.toString());
@@ -176,11 +185,78 @@ export async function updateOrderStatus(orderId: string, status: string) {
   const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
   if (!validStatuses.includes(status)) throw new Error('Invalid status');
 
-  return Order.findByIdAndUpdate(
+  const order = await Order.findByIdAndUpdate(
     orderId,
     { $set: { status } },
     { new: true }
-  ).populate('user', 'name email').lean();
+  ).populate('user', 'name email').lean() as (IOrder & { user: { name: string; email: string } }) | null;
+
+  // Send shipped notification when admin marks order as shipped
+  if (order && status === 'shipped') {
+    void sendOrderShippedEmail(order);
+  }
+
+  return order;
+}
+
+// ─── Email helpers ───────────────────────────────────────────────────────────
+
+async function sendOrderConfirmationEmail(order: IOrder): Promise<void> {
+  try {
+    const user = await User.findById(order.user).select('name email').lean() as { name: string; email: string } | null;
+    if (!user) return;
+
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: user.email,
+      subject: `Order Confirmed — #${order._id.toString().slice(-8).toUpperCase()}`,
+      html: orderConfirmationEmailHtml({
+        orderId: order._id.toString(),
+        customerName: user.name,
+        items: order.items.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          price: i.price,
+          image: i.image,
+        })),
+        subtotal: order.subtotal,
+        shippingCost: order.shippingCost,
+        tax: order.tax,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        shippingAddress: order.shippingAddress,
+      }),
+    });
+
+    if (error) console.error('[orderConfirmationEmail] Resend error:', error);
+  } catch (err) {
+    console.error('[orderConfirmationEmail] Failed:', err);
+  }
+}
+
+async function sendOrderShippedEmail(order: IOrder & { user: { name: string; email: string } }): Promise<void> {
+  try {
+    const trackingNumber = order.trackingNumber || order.fedex?.trackingNumber;
+    if (!trackingNumber) return;
+
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: order.user.email,
+      subject: `Your Order Has Shipped — #${order._id.toString().slice(-8).toUpperCase()}`,
+      html: orderShippedEmailHtml({
+        orderId: order._id.toString(),
+        customerName: order.user.name,
+        trackingNumber,
+        trackingUrl: order.trackingUrl ?? undefined,
+        shippingCarrier: order.shippingCarrier ?? undefined,
+        estimatedDelivery: order.shippingEstimatedDelivery ?? order.fedex?.estimatedDelivery,
+      }),
+    });
+
+    if (error) console.error('[orderShippedEmail] Resend error:', error);
+  } catch (err) {
+    console.error('[orderShippedEmail] Failed:', err);
+  }
 }
 
 // ─── NEW: FedEx label generation ──────────────────────────────────────────────

@@ -1,10 +1,9 @@
-import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import Otp from '@/models/Otp';
 import User from '@/models/User';
 import { signToken } from '@/lib/jwt';
-import { otpEmailHtml } from '@/lib/email-templates';
+import { otpEmailHtml, welcomeEmailHtml } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
@@ -17,7 +16,9 @@ const RATE_LIMIT_MAX = 3;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function generateOtp(): string {
-  return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return String(array[0] % 1_000_000).padStart(6, '0');
 }
 
 async function checkRateLimit(email: string, purpose: string): Promise<void> {
@@ -42,12 +43,22 @@ async function sendOtpEmail(
       ? 'Your Alpha Imports verification code'
       : 'Reset your Alpha Imports password';
 
-  await resend.emails.send({
-    from: FROM,
-    to: email,
-    subject,
-    html: otpEmailHtml(otp, purpose),
-  });
+  console.log('[sendOtpEmail] Preparing to send:', { to: email, from: FROM, subject });
+  console.log('[sendOtpEmail] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
+  console.log('[sendOtpEmail] RESEND_API_KEY prefix:', process.env.RESEND_API_KEY?.slice(0, 8) ?? 'MISSING');
+
+  try {
+    const result = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject,
+      html: otpEmailHtml(otp, purpose),
+    });
+    console.log('[sendOtpEmail] Resend response:', JSON.stringify(result));
+  } catch (err) {
+    console.error('[sendOtpEmail] Resend threw an error:', err);
+    throw err;
+  }
 }
 
 // ─── Signup OTP ───────────────────────────────────────────────────────────────
@@ -57,20 +68,25 @@ export async function sendSignupOtp(
   email: string,
   password: string
 ): Promise<void> {
+  console.log('[sendSignupOtp] Called with email:', email);
   const normalizedEmail = email.toLowerCase();
 
   const existing = await User.findOne({ email: normalizedEmail }).lean();
   if (existing) {
+    console.log('[sendSignupOtp] Email already exists:', normalizedEmail);
     throw new Error('An account with this email already exists.');
   }
 
+  console.log('[sendSignupOtp] Checking rate limit...');
   await checkRateLimit(normalizedEmail, 'signup');
 
   const otp = generateOtp();
+  console.log('[sendSignupOtp] Generated OTP (dev only):', otp);
   const otpHash = await bcrypt.hash(otp, 10);
   const passwordHash = await bcrypt.hash(password, 12);
 
   await Otp.deleteMany({ email: normalizedEmail, purpose: 'signup' });
+  console.log('[sendSignupOtp] Cleared old OTP records');
 
   await Otp.create({
     email: normalizedEmail,
@@ -82,8 +98,10 @@ export async function sendSignupOtp(
     verified: false,
     attempts: 0,
   });
+  console.log('[sendSignupOtp] OTP record saved to DB');
 
   await sendOtpEmail(normalizedEmail, otp, 'signup');
+  console.log('[sendSignupOtp] Done — email send attempted');
 }
 
 export async function verifySignupOtp(
@@ -99,6 +117,7 @@ export async function verifySignupOtp(
   }).select('+otp +pendingPassword');
 
   if (!record) throw new Error('No pending verification found. Please request a new code.');
+  if (!record.pendingName) throw new Error('Signup data is missing. Please start over.');
   if (record.expiresAt < new Date()) throw new Error('Code expired. Please request a new one.');
   if (record.attempts >= MAX_ATTEMPTS) throw new Error('Too many wrong attempts. Please request a new code.');
 
@@ -135,6 +154,15 @@ export async function verifySignupOtp(
   });
 
   await Otp.deleteOne({ _id: record._id });
+
+  // Send welcome email — fires after account is fully created, exactly once.
+  // Using void to not block the response on email delivery.
+  void resend.emails.send({
+    from: FROM,
+    to: normalizedEmail,
+    subject: `Welcome to Alpha Imports`,
+    html: welcomeEmailHtml(record.pendingName),
+  });
 
   return {
     token,

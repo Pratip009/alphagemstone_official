@@ -1,7 +1,12 @@
 import { connectDB } from '@/lib/db';
-import Order from '@/models/Order';
+import Order, { IOrder } from '@/models/Order';
 import { withAdmin, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { Resend } from 'resend';
+import { orderShippedEmailHtml } from '@/lib/email-templates';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
 export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
   try {
@@ -29,9 +34,30 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
       id,
       { $set },
       { new: true }
-    ).populate('user', 'name email').lean();
+    ).populate('user', 'name email').lean() as (IOrder & { user: { name: string; email: string } }) | null;
 
     if (!order) return errorResponse('Order not found', 404);
+
+    // Send shipped notification email when admin marks order as shipped
+    if (status === 'shipped') {
+      const tracking = trackingNumber ?? order.trackingNumber ?? order.fedex?.trackingNumber;
+      if (tracking) {
+        void resend.emails.send({
+          from: EMAIL_FROM,
+          to: order.user.email,
+          subject: `Your Order Has Shipped — #${order._id.toString().slice(-8).toUpperCase()}`,
+          html: orderShippedEmailHtml({
+            orderId: order._id.toString(),
+            customerName: order.user.name,
+            trackingNumber: tracking,
+            trackingUrl: (trackingUrl ?? order.trackingUrl) || undefined,
+            shippingCarrier: (shippingCarrier ?? order.shippingCarrier) || undefined,
+            estimatedDelivery: order.shippingEstimatedDelivery ?? order.fedex?.estimatedDelivery,
+          }),
+        });
+      }
+    }
+
     return successResponse(order);
   } catch (err) {
     console.error('[updateOrder]', err);

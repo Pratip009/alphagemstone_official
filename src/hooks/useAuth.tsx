@@ -13,6 +13,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
   loading: boolean;
@@ -65,6 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveAuth(data.data.token, data.data.user);
   }, []);
 
+  // Verifies the OTP after signup and hydrates the auth state immediately.
+  // This is the correct entry point after OTP-based account creation —
+  // calling saveAuth() here updates React state in the same tick as navigation.
+  const verifyOtp = useCallback(async (email: string, otp: string) => {
+    const res = await fetch('/api/auth/verify-signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Verification failed');
+    saveAuth(data.data.token, data.data.user);
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
@@ -80,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       login,
       signup,
+      verifyOtp,
       logout,
       isAdmin: user?.role === 'admin',
       loading,
