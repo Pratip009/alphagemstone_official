@@ -1,9 +1,12 @@
 // lib/getNavCategories.ts
+// Queries MongoDB directly — no internal HTTP round-trip.
+// Called only from Server Components / RSC layouts, never in the browser.
 
 export interface NavSubcategory {
   _id: string;
   name: string;
   slug: string;
+  imageUrl?: string;
   isActive?: boolean;
 }
 
@@ -12,38 +15,51 @@ export interface NavCategory {
   name: string;
   slug: string;
   isActive?: boolean;
+  sortOrder?: number;
   subcategories: NavSubcategory[];
 }
 
 export async function getNavCategories(): Promise<NavCategory[]> {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000");
+    const { connectDB } = await import('@/lib/db');
+    const { listCategories, listSubcategories } = await import('@/services/category.service');
 
-    const res = await fetch(
-      `${baseUrl}/api/categories?withSubcategories=true`,
-      {
-        next: { revalidate: 3600 }, // cache 1 hour, revalidates in background
-      }
-    );
+    await connectDB();
 
-    if (!res.ok) return [];
+    const [categories, subcategories] = await Promise.all([
+      listCategories(),
+      listSubcategories(),
+    ]);
 
-    const data = await res.json();
-    const list: NavCategory[] = Array.isArray(data) ? data : (data?.data ?? []);
+    return categories
+      .filter((c: any) => c.isActive !== false)
+      .map((cat: any) => {
+        const catId = cat._id?.toString();
+        const subs = subcategories
+          .filter((s: any) => {
+            const parentId =
+              (s.category as any)?._id?.toString() ?? s.category?.toString();
+            return parentId === catId && s.isActive !== false;
+          })
+          .map((s: any) => ({
+            _id: s._id?.toString(),
+            name: s.name,
+            slug: s.slug,
+            imageUrl: s.imageUrl ?? undefined,
+            isActive: s.isActive,
+          }));
 
-    return list
-      .filter((c) => c.isActive !== false)
-      .map((c) => ({
-        ...c,
-        subcategories: (c.subcategories ?? []).filter(
-          (s) => s.isActive !== false
-        ),
-      }));
-  } catch {
-    return []; // fail silently — nav still renders, just empty
+        return {
+          _id: catId,
+          name: cat.name,
+          slug: cat.slug,
+          isActive: cat.isActive,
+          sortOrder: cat.sortOrder,
+          subcategories: subs,
+        };
+      });
+  } catch (err) {
+    console.error('[getNavCategories]', err);
+    return [];
   }
 }

@@ -28,7 +28,7 @@ const CouponSchema = new Schema<ICoupon>(
   { timestamps: true }
 );
 
-CouponSchema.index({ code: 1 });
+
 CouponSchema.index({ email: 1, isUsed: 1 });
 CouponSchema.index({ expiresAt: 1 });
 

@@ -1,35 +1,286 @@
-// app/StartupLoader.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function StartupLoader({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
+  // ── Three.js diamond ───────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    let animId: number;
+    let renderer: any, scene: any, camera: any, gem: any, envGroup: any;
+
+    async function init() {
+      const THREE = await import('three');
+
+      if (cancelled || !canvasRef.current) return;
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(320, 320);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.4;
+      canvasRef.current.appendChild(renderer.domElement);
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+      camera.position.set(0, 0.6, 3.8);
+      camera.lookAt(0, 0, 0);
+
+      // ── Lighting ──────────────────────────────────────────────────────────
+      // Warm key light (gold)
+      const key = new THREE.DirectionalLight('#ffe4a0', 3.5);
+      key.position.set(2, 3, 2);
+      key.castShadow = true;
+      scene.add(key);
+
+      // Cool fill (sky blue)
+      const fill = new THREE.DirectionalLight('#c8e8ff', 1.8);
+      fill.position.set(-2.5, 1.5, 1);
+      scene.add(fill);
+
+      // Rim (warm)
+      const rim = new THREE.DirectionalLight('#ffd080', 2.0);
+      rim.position.set(0, -2, -2.5);
+      scene.add(rim);
+
+      // Top sparkle
+      const top = new THREE.DirectionalLight('#ffffff', 1.2);
+      top.position.set(0, 5, 0);
+      scene.add(top);
+
+      // Ambient
+      scene.add(new THREE.AmbientLight('#f0e8d8', 0.6));
+
+      // ── Diamond Geometry ──────────────────────────────────────────────────
+      // Build a proper brilliant-cut diamond with crown + pavilion
+      const verts: number[] = [];
+      const indices: number[] = [];
+      const normals: number[] = [];
+
+      const SEGS = 16; // facet count
+      const crown_r = 1.0;
+      const table_r = 0.55;
+      const gir_r = 1.0;
+      const crown_h = 0.38;
+      const gir_y = 0;
+      const table_y = crown_h;
+      const culet_y = -1.12;
+
+      // Helper: add triangle with auto normal
+      function addTri(
+        ax: number, ay: number, az: number,
+        bx: number, by: number, bz: number,
+        cx: number, cy: number, cz: number,
+      ) {
+        const base = verts.length / 3;
+        verts.push(ax, ay, az, bx, by, bz, cx, cy, cz);
+        indices.push(base, base + 1, base + 2);
+        // flat normal
+        const ux = bx - ax, uy = by - ay, uz = bz - az;
+        const vx = cx - ax, vy = cy - ay, vz = cz - az;
+        const nx = uy * vz - uz * vy;
+        const ny = uz * vx - ux * vz;
+        const nz = ux * vy - uy * vx;
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+        normals.push(nx / len, ny / len, nz / len);
+        normals.push(nx / len, ny / len, nz / len);
+        normals.push(nx / len, ny / len, nz / len);
+      }
+
+      for (let i = 0; i < SEGS; i++) {
+        const a0 = (i / SEGS) * Math.PI * 2;
+        const a1 = ((i + 1) / SEGS) * Math.PI * 2;
+        const g0x = Math.cos(a0) * gir_r, g0z = Math.sin(a0) * gir_r;
+        const g1x = Math.cos(a1) * gir_r, g1z = Math.sin(a1) * gir_r;
+        const t0x = Math.cos(a0) * table_r, t0z = Math.sin(a0) * table_r;
+        const t1x = Math.cos(a1) * table_r, t1z = Math.sin(a1) * table_r;
+        const c0x = Math.cos(a0) * crown_r, c0z = Math.sin(a0) * crown_r;
+        const c1x = Math.cos(a1) * crown_r, c1z = Math.sin(a1) * crown_r;
+
+        // Table (flat top) — fan from center
+        addTri(0, table_y, 0, t0x, table_y, t0z, t1x, table_y, t1z);
+
+        // Upper crown bezel (table → girdle edge)
+        addTri(t0x, table_y, t0z, g0x, gir_y, g0z, t1x, table_y, t1z);
+        addTri(t1x, table_y, t1z, g0x, gir_y, g0z, g1x, gir_y, g1z);
+
+        // Lower crown star (girdle → outer crown)
+        // Alternate between steeper and shallower to mimic star/bezel facets
+        if (i % 2 === 0) {
+          addTri(g0x, gir_y, g0z, c0x, gir_y * 0.5, c0z, g1x, gir_y, g1z);
+        }
+
+        // Pavilion main facets
+        addTri(g0x, gir_y, g0z, 0, culet_y, 0, g1x, gir_y, g1z);
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geo.setIndex(indices);
+
+      // ── Materials ─────────────────────────────────────────────────────────
+      // Main glass-like diamond body
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#f0f8ff'),
+        metalness: 0.0,
+        roughness: 0.0,
+        transmission: 0.92,
+        thickness: 1.8,
+        ior: 2.42,         // diamond IOR
+        reflectivity: 1.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.0,
+        transparent: true,
+        opacity: 0.96,
+        side: THREE.DoubleSide,
+        envMapIntensity: 2.5,
+      });
+
+      // Subtle gold-tinted wireframe overlay for facet lines
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color('#c9a84c'),
+        wireframe: true,
+        transparent: true,
+        opacity: 0.10,
+      });
+
+      gem = new THREE.Group();
+      gem.add(new THREE.Mesh(geo, mat));
+      gem.add(new THREE.Mesh(geo, wireMat));
+      scene.add(gem);
+
+      // ── Floating sparkle particles ─────────────────────────────────────────
+      envGroup = new THREE.Group();
+      const sparkGeo = new THREE.BufferGeometry();
+      const sparkCount = 28;
+      const sparkPos = new Float32Array(sparkCount * 3);
+      for (let i = 0; i < sparkCount; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const r = 1.6 + Math.random() * 1.2;
+        sparkPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        sparkPos[i * 3 + 1] = r * Math.cos(phi);
+        sparkPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+      }
+      sparkGeo.setAttribute('position', new THREE.Float32BufferAttribute(sparkPos, 3));
+      const sparkMat = new THREE.PointsMaterial({
+        color: '#c9a84c',
+        size: 0.045,
+        transparent: true,
+        opacity: 0.7,
+        sizeAttenuation: true,
+      });
+      envGroup.add(new THREE.Points(sparkGeo, sparkMat));
+      scene.add(envGroup);
+
+      // ── Thin gold ring orbit ───────────────────────────────────────────────
+      const ringGeo = new THREE.TorusGeometry(1.55, 0.008, 6, 80);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: '#c9a84c',
+        transparent: true,
+        opacity: 0.35,
+      });
+      const ring1 = new THREE.Mesh(ringGeo, ringMat);
+      ring1.rotation.x = Math.PI / 2.8;
+      scene.add(ring1);
+
+      const ring2 = new THREE.Mesh(
+        new THREE.TorusGeometry(1.72, 0.005, 6, 80),
+        new THREE.MeshBasicMaterial({ color: '#b8966e', transparent: true, opacity: 0.2 })
+      );
+      ring2.rotation.x = Math.PI / 2;
+      ring2.rotation.y = Math.PI / 5;
+      scene.add(ring2);
+
+      // ── Animation loop ─────────────────────────────────────────────────────
+      let t = 0;
+      function animate() {
+        if (cancelled) return;
+        animId = requestAnimationFrame(animate);
+        t += 0.008;
+
+        // Slow elegant rotation
+        gem.rotation.y = t * 0.55;
+        gem.rotation.x = Math.sin(t * 0.3) * 0.18;
+        gem.position.y = Math.sin(t * 0.6) * 0.08;
+
+        // Counter-rotate particles slightly
+        envGroup.rotation.y = -t * 0.12;
+        envGroup.rotation.z = t * 0.07;
+
+        // Rings
+        ring1.rotation.z = t * 0.25;
+        ring2.rotation.y = t * 0.18;
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    init();
+
+    cleanupRef.current = () => {
+      cancelled = true;
+      if (animId) cancelAnimationFrame(animId);
+      if (renderer) {
+        renderer.dispose();
+        renderer.domElement?.parentNode?.removeChild(renderer.domElement);
+      }
+    };
+
+    return () => cleanupRef.current?.();
+  }, []);
+
+  // ── Data preload + progress ────────────────────────────────────────────────
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href =
-      'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap';
+      'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Josefin+Sans:wght@300;400&display=swap';
     document.head.appendChild(link);
 
-    const loadWebsite = async () => {
+    // Animate progress bar over the loading window
+    let p = 0;
+    const steps = [
+      { target: 35, delay: 200 },
+      { target: 62, delay: 900 },
+      { target: 85, delay: 1800 },
+      { target: 97, delay: 2600 },
+      { target: 100, delay: 3200 },
+    ];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    steps.forEach(({ target, delay }) => {
+      timers.push(setTimeout(() => { p = target; setProgress(target); }, delay));
+    });
+
+    const loadData = async () => {
       try {
         await Promise.all([
           fetch('/api/products'),
           fetch('/api/categories'),
           fetch('/api/products/popular'),
         ]);
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        setFadeOut(true);
-        setTimeout(() => setLoading(false), 900);
-      } catch {
+        await new Promise((r) => setTimeout(r, 3000));
+      } catch {}
+      setFadeOut(true);
+      setTimeout(() => {
         setLoading(false);
-      }
+        cleanupRef.current?.();
+      }, 800);
     };
 
-    loadWebsite();
+    loadData();
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   if (!loading) return <>{children}</>;
@@ -37,51 +288,42 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
   return (
     <>
       <style>{`
-        @keyframes gem-float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-7px) rotate(2deg); }
+        @keyframes sl-fade-in {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes glow-breathe {
-          0%, 100% { opacity: 0.5; transform: scale(0.9); }
-          50% { opacity: 1; transform: scale(1.15); }
+        @keyframes sl-shimmer {
+          0%   { background-position: -300% center; }
+          100% { background-position:  300% center; }
         }
-        @keyframes ring-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes sl-pulse-ring {
+          0%   { transform: scale(0.95); opacity: 0.5; }
+          50%  { transform: scale(1.05); opacity: 1;   }
+          100% { transform: scale(0.95); opacity: 0.5; }
         }
-        @keyframes ring-spin-rev {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(-360deg); }
+        @keyframes sl-dot-pulse {
+          0%, 100% { opacity: 0.25; transform: scale(0.8); }
+          50%       { opacity: 1;   transform: scale(1.2); }
         }
-        @keyframes load-fill {
-          0%   { width: 0%; }
-          30%  { width: 45%; }
-          60%  { width: 72%; }
-          85%  { width: 89%; }
-          100% { width: 100%; }
+        .sl-brand    { animation: sl-fade-in 1s ease 0.4s both; }
+        .sl-divider  { animation: sl-fade-in 0.8s ease 0.7s both; }
+        .sl-tagline  { animation: sl-fade-in 0.8s ease 1s both; }
+        .sl-progress { animation: sl-fade-in 0.6s ease 1.2s both; }
+        .sl-shimmer-bar {
+          background: linear-gradient(90deg,
+            transparent 0%,
+            #c9a84c 30%,
+            #f0d080 50%,
+            #c9a84c 70%,
+            transparent 100%);
+          background-size: 300% 100%;
+          animation: sl-shimmer 2s linear infinite;
         }
-        @keyframes dot-pulse {
-          0%, 100% { background: rgba(180,145,80,0.2); transform: scale(1); }
-          50%       { background: rgba(180,145,80,0.85); transform: scale(1.6); }
-        }
-        @keyframes bg-breathe {
-          0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-          50%       { opacity: 1;   transform: translate(-50%, -50%) scale(1.15); }
-        }
-        .gem-float   { animation: gem-float 4s ease-in-out infinite; }
-        .glow-anim   { animation: glow-breathe 3s ease-in-out infinite; }
-        .ring-1      { animation: ring-spin 8s linear infinite; }
-        .ring-2      { animation: ring-spin-rev 14s linear infinite; }
-        .bar-fill    { animation: load-fill 3.4s cubic-bezier(0.4,0,0.2,1) forwards; }
-        .dot-1 { animation: dot-pulse 1.5s ease-in-out 0s infinite; }
-        .dot-2 { animation: dot-pulse 1.5s ease-in-out 0.2s infinite; }
-        .dot-3 { animation: dot-pulse 1.5s ease-in-out 0.4s infinite; }
-        .bg-bloom {
-          position: absolute;
-          width: 600px; height: 600px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(180,145,80,0.06) 0%, transparent 70%);
-          top: 50%; left: 50%;
-          animation: bg-breathe 4s ease-in-out infinite;
+        .sl-dot-1 { animation: sl-dot-pulse 1.6s ease 0s infinite; }
+        .sl-dot-2 { animation: sl-dot-pulse 1.6s ease 0.26s infinite; }
+        .sl-dot-3 { animation: sl-dot-pulse 1.6s ease 0.52s infinite; }
+        .sl-canvas-glow {
+          animation: sl-pulse-ring 3.5s ease-in-out infinite;
         }
       `}</style>
 
@@ -91,186 +333,137 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
           inset: 0,
           zIndex: 99999,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background:
-            'radial-gradient(ellipse at 60% 30%, #0d2347 0%, #060e1f 55%, #020710 100%)',
-          transition: 'opacity 0.85s ease',
+          background: 'linear-gradient(160deg, #fdfcf8 0%, #f5f0e8 45%, #faf7f2 100%)',
+          transition: 'opacity 0.75s ease',
           opacity: fadeOut ? 0 : 1,
           pointerEvents: fadeOut ? 'none' : 'all',
+          overflow: 'hidden',
         }}
       >
-        {/* Ambient bloom */}
-        <div className="bg-bloom" />
+        {/* Subtle grain texture overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.018, pointerEvents: 'none',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: '180px',
+        }} />
 
-        {/* Corner accents */}
-        {(['tl', 'tr', 'bl', 'br'] as const).map((pos) => (
-          <div
-            key={pos}
-            style={{
-              position: 'absolute',
-              width: 32, height: 32,
-              top: pos.startsWith('t') ? 28 : undefined,
-              bottom: pos.startsWith('b') ? 28 : undefined,
-              left: pos.endsWith('l') ? 28 : undefined,
-              right: pos.endsWith('r') ? 28 : undefined,
-              borderColor: 'rgba(180,145,80,0.2)',
-              borderStyle: 'solid',
-              borderWidth: `${pos.startsWith('t') ? 1 : 0}px ${pos.endsWith('r') ? 1 : 0}px ${pos.startsWith('b') ? 1 : 0}px ${pos.endsWith('l') ? 1 : 0}px`,
-            }}
-          />
+        {/* Corner hairlines */}
+        {(['tl','tr','bl','br'] as const).map((p) => (
+          <div key={p} style={{
+            position: 'absolute',
+            width: 28, height: 28,
+            top:    p[0] === 't' ? 32 : undefined,
+            bottom: p[0] === 'b' ? 32 : undefined,
+            left:   p[1] === 'l' ? 32 : undefined,
+            right:  p[1] === 'r' ? 32 : undefined,
+            borderColor: 'rgba(180,145,80,0.28)',
+            borderStyle: 'solid',
+            borderWidth: [
+              p[0]==='t'?'1px':'0',
+              p[1]==='r'?'1px':'0',
+              p[0]==='b'?'1px':'0',
+              p[1]==='l'?'1px':'0',
+            ].join(' '),
+          }} />
         ))}
 
-        {/* Main content */}
-        <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Ambient light bloom behind gem */}
+        <div style={{
+          position: 'absolute',
+          width: 380, height: 380,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(201,168,76,0.10) 0%, rgba(184,150,110,0.05) 50%, transparent 75%)',
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -54%)',
+          pointerEvents: 'none',
+        }} />
 
-          {/* Gem */}
-          <div style={{ position: 'relative', width: 120, height: 120, marginBottom: 44 }}>
-            {/* Glow halo */}
-            <div
-              className="glow-anim"
-              style={{
-                position: 'absolute',
-                inset: -30, borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(180,145,80,0.18) 0%, transparent 70%)',
-              }}
-            />
-            {/* Orbit ring 1 */}
-            <div
-              className="ring-1"
-              style={{
-                position: 'absolute', inset: -16, borderRadius: '50%',
-                border: '1px solid rgba(180,145,80,0.22)',
-              }}
-            >
-              <div style={{
-                position: 'absolute', top: -3, left: '50%',
-                width: 6, height: 6, borderRadius: '50%',
-                background: '#b49150', transform: 'translateX(-50%)',
-                boxShadow: '0 0 8px rgba(180,145,80,0.9)',
-              }} />
-            </div>
-            {/* Orbit ring 2 */}
-            <div
-              className="ring-2"
-              style={{
-                position: 'absolute', inset: -28, borderRadius: '50%',
-                border: '1px solid rgba(180,145,80,0.08)',
-              }}
-            />
-            {/* SVG gem */}
-            <svg
-              className="gem-float"
-              viewBox="0 0 120 120"
-              width={120} height={120}
-              style={{ filter: 'drop-shadow(0 0 18px rgba(180,145,80,0.4)) drop-shadow(0 0 6px rgba(100,170,255,0.15))' }}
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient id="sl-g1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#e8c97a" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#b49150" />
-                  <stop offset="100%" stopColor="#7a5f30" />
-                </linearGradient>
-                <linearGradient id="sl-g2" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#c8e8ff" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#4a90d9" stopOpacity="0.15" />
-                </linearGradient>
-                <linearGradient id="sl-g3" x1="100%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#fff5d6" stopOpacity="0.5" />
-                  <stop offset="100%" stopColor="#b49150" stopOpacity="0.2" />
-                </linearGradient>
-              </defs>
-              <polygon points="60,18 82,38 60,48 38,38" fill="url(#sl-g3)" opacity="0.95" />
-              <polygon points="60,18 82,38 96,22" fill="url(#sl-g1)" opacity="0.8" />
-              <polygon points="60,18 38,38 24,22" fill="url(#sl-g1)" opacity="0.6" />
-              <polygon points="82,38 96,22 102,48" fill="#c9a55a" opacity="0.7" />
-              <polygon points="38,38 24,22 18,48" fill="#8a6932" opacity="0.6" />
-              <polygon points="60,48 82,38 102,48" fill="url(#sl-g2)" opacity="0.8" />
-              <polygon points="60,48 38,38 18,48" fill="url(#sl-g1)" opacity="0.5" />
-              <polygon points="102,48 82,38 92,72" fill="#d4a84b" opacity="0.7" />
-              <polygon points="18,48 38,38 28,72" fill="#7a5f30" opacity="0.6" />
-              <polygon points="60,48 102,48 92,72" fill="url(#sl-g1)" opacity="0.75" />
-              <polygon points="60,48 18,48 28,72" fill="#c9a55a" opacity="0.5" />
-              <polygon points="92,72 60,48 60,102" fill="#b49150" opacity="0.85" />
-              <polygon points="28,72 60,48 60,102" fill="#8a6932" opacity="0.7" />
-              <polygon points="92,72 28,72 60,102" fill="url(#sl-g1)" opacity="0.6" />
-              <circle cx="60" cy="100" r="2" fill="#e8c97a" opacity="0.9" />
-              <polygon points="60,22 76,36 60,44 44,36" fill="white" opacity="0.12" />
-              <circle cx="48" cy="30" r="2.5" fill="white" opacity="0.6" />
-              <line x1="48" y1="26" x2="48" y2="34" stroke="white" strokeWidth="0.5" opacity="0.4" />
-              <line x1="44" y1="30" x2="52" y2="30" stroke="white" strokeWidth="0.5" opacity="0.4" />
-            </svg>
-          </div>
+        {/* Three.js canvas container */}
+        <div
+          className="sl-canvas-glow"
+          style={{
+            position: 'relative',
+            width: 320, height: 320,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: -12,
+          }}
+        >
+          <div ref={canvasRef} style={{ borderRadius: '50%', overflow: 'hidden' }} />
+        </div>
 
-          {/* Brand name */}
+        {/* Brand name */}
+        <div className="sl-brand" style={{ textAlign: 'center', marginBottom: 10 }}>
           <h1 style={{
-            fontFamily: "'Cinzel', serif",
-            color: '#e8dcc8',
-            fontSize: 22,
-            letterSpacing: '0.5em',
+            fontFamily: "'Cormorant Garamond', serif",
             fontWeight: 400,
+            fontSize: 26,
+            letterSpacing: '0.45em',
             textTransform: 'uppercase',
-            marginBottom: 10,
-            textShadow: '0 0 40px rgba(180,145,80,0.3)',
+            color: '#1a1814',
+            margin: 0,
+            lineHeight: 1,
           }}>
             Alpha Imports
           </h1>
+        </div>
 
-          {/* Ornamental divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, width: 260, marginBottom: 10 }}>
-            <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right, transparent, rgba(180,145,80,0.5), transparent)' }} />
-            <div style={{ width: 5, height: 5, background: '#b49150', transform: 'rotate(45deg)', boxShadow: '0 0 6px rgba(180,145,80,0.6)' }} />
-            <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right, transparent, rgba(180,145,80,0.5), transparent)' }} />
+        {/* Ornamental divider */}
+        <div className="sl-divider" style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          width: 240, marginBottom: 10,
+        }}>
+          <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(to right, transparent, rgba(180,145,80,0.5))' }} />
+          <div style={{ width: 4, height: 4, background: '#c9a84c', transform: 'rotate(45deg)' }} />
+          <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(to left, transparent, rgba(180,145,80,0.5))' }} />
+        </div>
+
+        {/* Tagline */}
+        <p className="sl-tagline" style={{
+          fontFamily: "'Josefin Sans', sans-serif",
+          fontWeight: 300,
+          fontSize: 10,
+          letterSpacing: '0.3em',
+          textTransform: 'uppercase',
+          color: '#9c9690',
+          margin: '0 0 36px',
+        }}>
+          Fine Diamonds &amp; Gemstones
+        </p>
+
+        {/* Progress bar */}
+        <div className="sl-progress" style={{ width: 180, textAlign: 'center' }}>
+          <div style={{
+            width: '100%', height: '1px',
+            background: 'rgba(180,145,80,0.12)',
+            borderRadius: 1,
+            overflow: 'hidden',
+            marginBottom: 14,
+          }}>
+            <div
+              className="sl-shimmer-bar"
+              style={{
+                height: '100%',
+                width: `${progress}%`,
+                transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                borderRadius: 1,
+              }}
+            />
           </div>
 
-          {/* Tagline */}
-          <p style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontStyle: 'italic',
-            color: 'rgba(200,185,160,0.55)',
-            fontSize: 12,
-            letterSpacing: '0.28em',
-            textTransform: 'uppercase',
-            fontWeight: 300,
-            marginBottom: 40,
-          }}>
-            Fine Diamonds &amp; Timepieces
-          </p>
-
-          {/* Progress */}
-          <div style={{ width: 200 }}>
-            <p style={{
-              fontFamily: "'Cinzel', serif",
-              color: 'rgba(180,145,80,0.4)',
-              fontSize: 9,
-              letterSpacing: '0.3em',
-              textTransform: 'uppercase',
-              textAlign: 'center',
-              marginBottom: 10,
-            }}>
-              Curating your collection
-            </p>
-            <div style={{ width: '100%', height: 1, background: 'rgba(180,145,80,0.12)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 7 }}>
+            {['sl-dot-1', 'sl-dot-2', 'sl-dot-3'].map((cls) => (
               <div
-                className="bar-fill"
+                key={cls}
+                className={cls}
                 style={{
-                  height: '100%',
-                  background: 'linear-gradient(to right, transparent, #b49150, #e8c97a, #b49150)',
-                  boxShadow: '0 0 6px rgba(180,145,80,0.6)',
-                  width: 0,
+                  width: 3, height: 3, borderRadius: '50%',
+                  background: '#c9a84c',
                 }}
               />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 20 }}>
-              {['dot-1', 'dot-2', 'dot-3'].map((cls) => (
-                <div
-                  key={cls}
-                  className={cls}
-                  style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(180,145,80,0.3)' }}
-                />
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       </div>

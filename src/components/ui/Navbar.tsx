@@ -29,13 +29,17 @@ interface NavCategory {
 // ── Data fetching hook ───────────────────────────────────────────────────────
 
 function useNavCategories(initialCategories: NavCategory[]) {
+  const hasInitial = initialCategories.length > 0;
   const [categories, setCategories] =
     useState<NavCategory[]>(initialCategories);
-  const [loading, setLoading] = useState(initialCategories.length === 0);
+  // If the server passed data in, we are never in a loading state.
+  const [loading, setLoading] = useState(!hasInitial);
 
   useEffect(() => {
+    // Server already provided data — skip the client fetch entirely.
+    if (hasInitial) return;
+
     let cancelled = false;
-    setLoading(true);
     fetch("/api/categories?withSubcategories=true", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
@@ -52,8 +56,8 @@ function useNavCategories(initialCategories: NavCategory[]) {
             ),
           }));
         filtered.sort((a, b) => {
-          const sa = a.sortOrder ?? 0;
-          const sb = b.sortOrder ?? 0;
+          const sa = (a as any).sortOrder ?? 0;
+          const sb = (b as any).sortOrder ?? 0;
           return sa !== sb ? sa - sb : a.name.localeCompare(b.name);
         });
         setCategories(filtered);

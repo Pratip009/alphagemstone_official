@@ -33,12 +33,21 @@ interface IProduct {
   origin?: string;
   tag?: string;
 }
+
 interface IPickProduct {
   _id: string;
   name: string;
   image?: string;
   price: number;
 }
+
+// ─── Module-level cache (survives remounts within the same session) ───────────
+let _catsCache: {
+  categories: ICategory[];
+  subcategories: ISubcategory[];
+} | null = null;
+
+let _picksCache: IPickProduct[] | null = null;
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function Skeleton({
@@ -93,8 +102,6 @@ function SubcategoryCard({
       }}
     >
       <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         style={{
           width: "100%",
           aspectRatio: "1",
@@ -904,12 +911,21 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
 export default function ShopLayout() {
   const router = useRouter();
 
-  const [categories, setCategories] = useState<ICategory[]>([]);
-  const [subcategories, setSubcategories] = useState<ISubcategory[]>([]);
+  // Initialise from cache synchronously so first render is already populated
+  const [categories, setCategories] = useState<ICategory[]>(
+    () => _catsCache?.categories ?? [],
+  );
+  const [subcategories, setSubcategories] = useState<ISubcategory[]>(
+    () => _catsCache?.subcategories ?? [],
+  );
   const [products, setProducts] = useState<IProduct[]>([]);
-  const [loadingCats, setLoadingCats] = useState(true);
+
+  // If cache is warm, skip the loading skeleton entirely
+  const [loadingCats, setLoadingCats] = useState(() => !_catsCache);
   const [loadingProds, setLoadingProds] = useState(false);
-  const [buyersPicks, setBuyersPicks] = useState<IPickProduct[]>([]);
+  const [buyersPicks, setBuyersPicks] = useState<IPickProduct[]>(
+    () => _picksCache ?? [],
+  );
 
   const [activeSub, setActiveSub] = useState<ISubcategory | null>(null);
   const [activeCat, setActiveCat] = useState<ICategory | null>(null);
@@ -919,7 +935,11 @@ export default function ShopLayout() {
   const [catError, setCatError] = useState("");
   const [prodError, setProdError] = useState("");
 
+  // ── Categories + subcategories ───────────────────────────────────────────────
   useEffect(() => {
+    // Cache hit: nothing to do — state already seeded in useState initialisers
+    if (_catsCache) return;
+
     fetch("/api/categories?withSubcategories=true")
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -934,6 +954,9 @@ export default function ShopLayout() {
         const subs: ISubcategory[] = enriched
           .filter((c) => c.isActive)
           .flatMap((c) => (c.subcategories ?? []).filter((s) => s.isActive));
+
+        // Persist in module-level cache for future remounts
+        _catsCache = { categories: cats, subcategories: subs };
         setCategories(cats);
         setSubcategories(subs);
       })
@@ -941,6 +964,7 @@ export default function ShopLayout() {
       .finally(() => setLoadingCats(false));
   }, []);
 
+  // ── Products ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!activeSub) return;
     setLoadingProds(true);
@@ -962,15 +986,25 @@ export default function ShopLayout() {
       .finally(() => setLoadingProds(false));
   }, [activeSub, sortBy]);
 
+  // ── Buyers picks ─────────────────────────────────────────────────────────────
   useEffect(() => {
+    // Cache hit: state already seeded above
+    if (_picksCache) return;
+
     fetch("/api/products/popular")
       .then((r) => r.json())
       .then((res) => {
         const raw = res?.data ?? [];
-        setBuyersPicks(Array.isArray(raw) ? raw : []);
+        const picks = Array.isArray(raw) ? raw : [];
+        _picksCache = picks;
+        setBuyersPicks(picks);
+      })
+      .catch(() => {
+        // Picks are non-critical; fail silently
       });
   }, []);
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   function subsByCat(catId: string): ISubcategory[] {
     return subcategories.filter(
       (s) => s.category._id.toString() === catId.toString(),
@@ -1671,6 +1705,11 @@ export default function ShopLayout() {
                 </section>
               )}
             </main>
+
+            {/* Buyers Picks sidebar — only when picks exist */}
+            {buyersPicks.length > 0 && (
+              <BuyersPicks products={buyersPicks} />
+            )}
           </div>
         </div>
       </div>

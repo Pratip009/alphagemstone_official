@@ -136,7 +136,7 @@ const BlogSchema = new Schema<IBlog>(
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
 
-BlogSchema.index({ slug: 1 }, { unique: true });
+
 BlogSchema.index({ status: 1 });
 BlogSchema.index({ publishedAt: -1 });
 BlogSchema.index({ category: 1 });
