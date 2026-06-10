@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {
   Gem, UploadCloud, Layers, ShoppingBag, ArrowRight,
   Users, TrendingUp, Package, Crown, ChevronLeft, ChevronRight, Search,
-  HomeIcon, BookOpen,
+  HomeIcon, BookOpen, Mail,
 } from 'lucide-react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,7 +43,8 @@ const NAV_LINKS = [
   { href: '/admin/categories', label: 'Categories',  icon: Layers,      desc: 'Categories & subcategories', accent: '#9ab87a' },
   { href: '/admin/orders',     label: 'Orders',      icon: ShoppingBag, desc: 'Customer orders',            accent: '#c97a7a' },
   { href: '/admin/contacts',   label: 'Contacts',    icon: Users,       desc: 'Manage customer contacts',   accent: '#7ac9a8' },
-  { href: '/admin/blogs',      label: 'Blog',        icon: BookOpen,    desc: 'Create & manage blog posts', accent: '#a87ac9' },
+  { href: '/admin/blogs',       label: 'Blog',        icon: BookOpen,    desc: 'Create & manage blog posts', accent: '#a87ac9' },
+  { href: '/admin/newsletter',  label: 'Newsletter',  icon: Mail,        desc: 'Campaigns & subscribers',    accent: '#0ea5e9' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

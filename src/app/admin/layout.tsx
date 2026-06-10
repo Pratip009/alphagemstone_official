@@ -13,6 +13,7 @@ import {
   Users,
   BookOpen,
   ImagePlay,
+  Mail,
 } from 'lucide-react';
 
 const NAV = [
@@ -25,6 +26,7 @@ const NAV = [
   { href: '/admin/orders',     label: 'Orders',      icon: ShoppingBag },
   { href: '/admin/contacts',   label: 'Contacts',    icon: Users },
   { href: '/admin/blogs',      label: 'Blog',        icon: BookOpen },
+  { href: '/admin/newsletter', label: 'Newsletter',  icon: Mail },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

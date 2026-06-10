@@ -8,3 +8,5 @@ import '@/models/Cart';
 import '@/models/Order';
 import '@/models/HeroSlide';
 import '@/models/Otp';
+import '@/models/NewsletterSubscriber';
+import '@/models/NewsletterCampaign';

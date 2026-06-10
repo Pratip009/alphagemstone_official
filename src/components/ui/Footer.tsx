@@ -1,6 +1,7 @@
 'use client';
-import { Gem, Mail, Phone, MapPin, ArrowUpRight, Heart } from 'lucide-react';
+import { Gem, Mail, Phone, MapPin, ArrowUpRight, Heart, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import FooterSitemap from "../sitemap/FooterSitemap";
 const FOOTER_COLUMNS = [
   {
@@ -115,6 +116,32 @@ const FOOTER_COLUMNS = [
 const DISCLAIMER = `All our colored gemstones & Color Diamonds, except Tsavorite, Garnet etc., are "E" (Enhanced) and/or "T" (Treated). Enhancement methods may include heating, oiling, filling with resin agents, coating, diffusion, dyeing, glass filling, irradiation, and lasering. All Diamond weights shown in fractions are approximate: ¼ ct. (0.23–0.27), ⅓ ct. (0.31–0.35), ½ ct. (0.48–0.52), ¾ ct. (0.73–0.77). Products shown are subject to availability. Alphaimports.com is not responsible for typographical or pricing errors.`;
 
 export default function Footer() {
+  const [email, setEmail] = useState('');
+  const [subState, setSubState] = useState<'idle' | 'loading' | 'success' | 'duplicate' | 'error'>('idle');
+
+  const handleSubscribe = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    setSubState('loading');
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        setSubState('duplicate');
+      } else if (data.success) {
+        setSubState('success');
+        setEmail('');
+      } else {
+        setSubState('error');
+      }
+    } catch {
+      setSubState('error');
+    }
+  };
   return (
     <footer className="relative mt-24 overflow-hidden" style={{ background: '#faf8f4' }}>
 
@@ -196,26 +223,54 @@ export default function Footer() {
               <p className="text-[0.78rem] font-medium mb-4" style={{ color: '#1a1714' }}>
                 Exclusive deals &amp; early access to new gems.
               </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  className="flex-1 px-3 py-2.5 text-[0.72rem] rounded-lg outline-none transition-all"
-                  style={{
-                    background: '#faf8f4',
-                    border: '1.5px solid #e0dbd2',
-                    color: '#1a1714',
-                  }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#c9a84c'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = '#e0dbd2'; }}
-                />
-                <button
-                  className="px-4 py-2.5 rounded-lg text-[0.7rem] font-bold tracking-widest whitespace-nowrap transition-all hover:opacity-90 active:scale-95 uppercase"
-                  style={{ background: '#1a1714', color: '#f5f0e8' }}
-                >
-                  Join
-                </button>
-              </div>
+
+              {subState === 'success' ? (
+                <div className="flex items-center gap-2 py-2.5">
+                  <CheckCircle2 size={16} style={{ color: '#16a34a' }} />
+                  <span className="text-[0.72rem] font-medium" style={{ color: '#16a34a' }}>
+                    You&apos;re subscribed. Welcome!
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={e => { setEmail(e.target.value); setSubState('idle'); }}
+                      onKeyDown={e => e.key === 'Enter' && handleSubscribe()}
+                      disabled={subState === 'loading'}
+                      className="flex-1 px-3 py-2.5 text-[0.72rem] rounded-lg outline-none transition-all"
+                      style={{
+                        background: '#faf8f4',
+                        border: '1.5px solid #e0dbd2',
+                        color: '#1a1714',
+                      }}
+                      onFocus={e => { e.currentTarget.style.borderColor = '#c9a84c'; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = '#e0dbd2'; }}
+                    />
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={subState === 'loading'}
+                      className="px-4 py-2.5 rounded-lg text-[0.7rem] font-bold tracking-widest whitespace-nowrap transition-all hover:opacity-90 active:scale-95 uppercase flex items-center gap-1.5"
+                      style={{ background: '#1a1714', color: '#f5f0e8' }}
+                    >
+                      {subState === 'loading' ? <Loader2 size={13} className="animate-spin" /> : 'Join'}
+                    </button>
+                  </div>
+                  {subState === 'duplicate' && (
+                    <p className="mt-2 text-[0.67rem]" style={{ color: '#92400e' }}>
+                      You are already subscribed.
+                    </p>
+                  )}
+                  {subState === 'error' && (
+                    <p className="mt-2 text-[0.67rem]" style={{ color: '#991b1b' }}>
+                      Something went wrong. Please try again.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

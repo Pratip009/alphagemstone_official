@@ -433,3 +433,76 @@ export function orderShippedEmailHtml(data: OrderShippedEmailData): string {
 
   return emailWrapper(body);
 }
+// ─── Newsletter Campaign Email ─────────────────────────────────────────────
+
+export interface NewsletterEmailData {
+  title: string;
+  subject: string;
+  message: string;
+  image?: string;
+  unsubscribeUrl: string;
+}
+
+export function newsletterEmailHtml(data: NewsletterEmailData): string {
+  const bannerRow = data.image
+    ? `<tr>
+        <td style="padding:0;">
+          <img src="${data.image}" alt="${data.title}" width="560"
+            style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
+        </td>
+      </tr>`
+    : '';
+
+  // Convert message HTML into inline-safe version (it may contain rich text markup)
+  const messageContent = data.message
+    .replace(/<h1/g, '<h1 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:700;color:#0f172a;"')
+    .replace(/<h2/g, '<h2 style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;color:#0f172a;"')
+    .replace(/<h3/g, '<h3 style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#0f172a;"')
+    .replace(/<p(?![ >])/g, '<p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#374151;line-height:1.7;" ')
+    .replace(/<p>/g, '<p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#374151;line-height:1.7;">')
+    .replace(/<ul>/g, '<ul style="margin:0 0 16px;padding-left:20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#374151;line-height:1.7;">')
+    .replace(/<ol>/g, '<ol style="margin:0 0 16px;padding-left:20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#374151;line-height:1.7;">')
+    .replace(/<li>/g, '<li style="margin-bottom:6px;">')
+    .replace(/<a /g, '<a style="color:#6366f1;text-decoration:underline;" ')
+    .replace(/<strong>/g, '<strong style="font-weight:700;color:#0f172a;">');
+
+  const body = `
+  ${bannerRow}
+  <tr>
+    <td style="padding:40px 40px 32px;">
+      <h1 style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-0.01em;">${data.title}</h1>
+      <!-- Divider -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+        <tr><td style="border-top:1px solid #e4e4e7;"></td></tr>
+      </table>
+      <!-- Message -->
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#374151;line-height:1.7;">
+        ${messageContent}
+      </div>
+      <!-- Divider -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 24px;">
+        <tr><td style="border-top:1px solid #e4e4e7;"></td></tr>
+      </table>
+      <!-- CTA -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+        <tr>
+          <td style="background-color:#0f172a;">
+            <a href="${SITE_URL}/products" target="_blank"
+              style="display:inline-block;padding:14px 32px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.05em;text-transform:uppercase;">
+              Shop the Collection
+            </a>
+          </td>
+        </tr>
+      </table>
+      <!-- Unsubscribe -->
+      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;line-height:1.6;">
+        You are receiving this email because you subscribed to ${BRAND_NAME} newsletters.<br />
+        <a href="${data.unsubscribeUrl}" style="color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
+        &nbsp;&middot;&nbsp;
+        <a href="${SITE_URL}" style="color:#94a3b8;text-decoration:underline;">Visit our store</a>
+      </p>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body);
+}
