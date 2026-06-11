@@ -434,6 +434,7 @@ export default function CheckoutPage() {
           shippingService: selectedShipping.service,
           shippingServiceCode: selectedShipping.serviceCode ?? null,
           shippingRate: selectedShipping.rate,
+          shippingRateId: selectedShipping.rateId, 
           shippingEstimatedDays: selectedShipping.estimatedDays ?? null,
           shippingEstimatedDelivery: selectedShipping.estimatedDelivery ?? null,
           ...(couponCode ? { couponCode } : {}),

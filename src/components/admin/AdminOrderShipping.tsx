@@ -8,7 +8,7 @@
  *   • View tracking number, print label PDF, live-track the package
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Package, Printer, MapPin, CheckCircle, AlertCircle,
   ExternalLink, RefreshCw, Clock, Truck,
@@ -66,6 +66,11 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
   const [tracking,       setTracking]       = useState<TrackingInfo | null>(null);
   const [error,          setError]          = useState<string | null>(null);
   const [success,        setSuccess]        = useState<string | null>(null);
+  const [trackCooldown,  setTrackCooldown]  = useState(0); // seconds remaining
+
+  const [manualTracking,   setManualTracking]   = useState('');
+  const [manualCarrier,    setManualCarrier]    = useState('');
+  const [manualLoading,    setManualLoading]    = useState(false);
 
   const labelPurchased = Boolean(trackingNumber);
   const canPurchase    = order.paymentStatus === 'completed' && Boolean(order.shippingRateId) && !labelPurchased;
@@ -97,8 +102,8 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
       setLabelUrl(lu);
       setShippedAt(sa);
       setLabelId(li);
-      setSuccess('Label purchased successfully.');
-      onUpdate?.({ trackingNumber: tn, labelUrl: lu, shippedAt: sa, labelId: li });
+      setSuccess('Label purchased — order marked as shipped. Customer notified by email.');
+      onUpdate?.({ trackingNumber: tn, labelUrl: lu, shippedAt: sa, labelId: li, status: 'shipped' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -118,6 +123,19 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
         body: JSON.stringify({ trackingNumber }),
       });
       const data = await res.json();
+
+      if (res.status === 429) {
+        // Start a 60-second countdown
+        let secs = 60;
+        setTrackCooldown(secs);
+        const timer = setInterval(() => {
+          secs -= 1;
+          setTrackCooldown(secs);
+          if (secs <= 0) clearInterval(timer);
+        }, 1000);
+        throw new Error(data.error ?? 'Rate limited — please wait 60 seconds.');
+      }
+
       if (!res.ok) throw new Error(data.error ?? data.message ?? 'Failed to fetch tracking');
       setTracking(data.data);
       setTrackOpen(true);
@@ -125,6 +143,46 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setTrackLoading(false);
+    }
+  }
+
+  // ── Refresh tracking (clears cache hit, re-fetches) ───────────────────────
+  async function handleRefreshTrack() {
+    setTracking(null);
+    setTrackOpen(false);
+    await handleTrack();
+  }
+
+  // ── Save manual tracking ──────────────────────────────────────────────────
+  async function handleSaveManualTracking() {
+    if (!manualTracking.trim()) return;
+    setManualLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res  = await fetch(`/api/admin/orders/${order._id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          trackingNumber:  manualTracking.trim(),
+          shippingCarrier: manualCarrier.trim() || undefined,
+          status: order.status === 'paid' || order.status === 'processing' ? 'shipped' : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? data.message ?? 'Failed to save tracking');
+
+      const tn = manualTracking.trim();
+      const carrier = manualCarrier.trim();
+      setTrackingNumber(tn);
+      setManualTracking('');
+      setManualCarrier('');
+      setSuccess('Tracking number saved. Order marked as shipped.');
+      onUpdate?.({ trackingNumber: tn, ...(carrier ? { shippingCarrier: carrier } : {}) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setManualLoading(false);
     }
   }
 
@@ -267,6 +325,45 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
             </a>
           )}
         </div>
+
+        {/* ── Manual tracking entry (for orders without ShipEngine rate) ── */}
+        {!labelPurchased && !order.shippingRateId && (
+          <div className="rounded-lg border border-[#ede9e1] bg-[#faf9f7] p-4 space-y-3">
+            <p className="text-[0.6rem] uppercase tracking-[0.18em] text-[#a09a90] font-semibold">
+              Enter Tracking Manually
+            </p>
+            <p className="text-[0.68rem] text-[#8a8278]">
+              No ShipEngine rate was stored for this order. Enter a tracking number from your carrier portal to mark it as shipped.
+            </p>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Tracking number…"
+                  value={manualTracking}
+                  onChange={e => setManualTracking(e.target.value)}
+                  className="flex-1 text-[0.75rem] px-3 py-2 rounded-lg border border-[#ede9e1] outline-none focus:border-[#c9a84c]/50 focus:ring-1 focus:ring-[#c9a84c]/20 bg-white placeholder:text-[#c4bdb2]"
+                />
+                <input
+                  type="text"
+                  placeholder="Carrier (optional)…"
+                  value={manualCarrier}
+                  onChange={e => setManualCarrier(e.target.value)}
+                  className="w-32 text-[0.75rem] px-3 py-2 rounded-lg border border-[#ede9e1] outline-none focus:border-[#c9a84c]/50 focus:ring-1 focus:ring-[#c9a84c]/20 bg-white placeholder:text-[#c4bdb2]"
+                />
+              </div>
+              <button
+                onClick={handleSaveManualTracking}
+                disabled={manualLoading || !manualTracking.trim()}
+                className="self-start flex items-center gap-2 px-4 py-2 rounded-lg text-[0.75rem] font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: '#1a1714' }}
+              >
+                <Package size={13} strokeWidth={2} />
+                {manualLoading ? 'Saving…' : 'Save & Mark Shipped'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Warnings ── */}
         {!order.shippingRateId && !labelPurchased && (

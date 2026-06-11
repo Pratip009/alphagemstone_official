@@ -17,9 +17,17 @@ const shippingSchema = z.object({
 });
 
 const createOrderSchema = z.object({
-  shippingAddress: shippingSchema,
-  paymentMethod: z.enum(['paypal', 'cod']),
-  couponCode: z.string().optional(),
+  shippingAddress:  shippingSchema,
+  paymentMethod:    z.enum(['paypal', 'cod']),
+  couponCode:       z.string().optional(),
+  // ShipEngine shipping selection saved at checkout
+  shippingCarrier:           z.string().optional(),
+  shippingService:           z.string().optional(),
+  shippingServiceCode:       z.string().nullable().optional(),
+  shippingRateId:            z.string().nullable().optional(),
+  shippingRate:              z.number().optional(),
+  shippingEstimatedDays:     z.number().nullable().optional(),
+  shippingEstimatedDelivery: z.string().nullable().optional(),
 });
 
 // POST /api/orders
@@ -33,11 +41,35 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       return errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors);
     }
 
+    const {
+      shippingAddress,
+      paymentMethod,
+      couponCode,
+      shippingCarrier,
+      shippingService,
+      shippingServiceCode,
+      shippingRateId,
+      shippingRate,
+      shippingEstimatedDays,
+      shippingEstimatedDelivery,
+    } = parsed.data;
+
+    const shippingSelection = (shippingCarrier || shippingRateId) ? {
+      shippingCarrier,
+      shippingService,
+      shippingServiceCode: shippingServiceCode ?? undefined,
+      shippingRateId:      shippingRateId      ?? undefined,
+      shippingRate,
+      shippingEstimatedDays:     shippingEstimatedDays     ?? undefined,
+      shippingEstimatedDelivery: shippingEstimatedDelivery ?? undefined,
+    } : undefined;
+
     const order = await createOrderFromCart(
       req.user.userId,
-      parsed.data.shippingAddress,
-      parsed.data.paymentMethod,
-      parsed.data.couponCode
+      shippingAddress,
+      paymentMethod,
+      couponCode,
+      shippingSelection
     );
 
     return successResponse(order, 201);

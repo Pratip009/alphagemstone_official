@@ -233,9 +233,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
  */
 export async function purchaseAndSaveLabel(
   orderId: string,
-  rateId?: string
+  rateId?: string,
+  triggeredByAdmin = false
 ) {
-  const order = await Order.findById(orderId) as IOrder | null;
+  const order = await Order.findById(orderId)
+    .populate('user', 'name email')
+    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
   if (!order) throw new Error('Order not found');
   if (order.paymentStatus !== 'completed') {
     throw new Error('Cannot purchase label: payment not completed');
@@ -250,16 +253,30 @@ export async function purchaseAndSaveLabel(
 
   const label = await purchaseLabelFromRate(resolvedRateId);
 
+  // When admin manually purchases, advance straight to 'shipped'.
+  // When auto-purchased at payment capture, set 'processing' (label ready, not yet picked up).
+  const newStatus = triggeredByAdmin ? 'shipped' : 'processing';
+
   await Order.findByIdAndUpdate(orderId, {
     $set: {
       labelId:        label.labelId,
       labelUrl:       label.labelUrl,
       trackingNumber: label.trackingNumber,
       shippedAt:      new Date(),
-      // Advance from 'paid' → 'processing' once label is ready
-      ...(order.status === 'paid' ? { status: 'processing' } : {}),
+      status:         newStatus,
     },
   });
+
+  // Send "Your order has shipped" email when admin buys the label,
+  // since they're about to physically hand it to the carrier.
+  if (triggeredByAdmin && label.trackingNumber) {
+    const updatedOrder = {
+      ...order,
+      trackingNumber: label.trackingNumber,
+      labelUrl:       label.labelUrl,
+    } as IOrder & { user: { name: string; email: string } };
+    void sendOrderShippedEmail(updatedOrder);
+  }
 
   return Order.findById(orderId).lean();
 }

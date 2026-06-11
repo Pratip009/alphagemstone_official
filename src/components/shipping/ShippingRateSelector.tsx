@@ -30,6 +30,7 @@ interface ShippingRateSelectorProps {
   package:           PackageDimensions;
   onSelect:          (rate: ShippingRate) => void;
   selectedRateId?:   string;
+  selectedServiceCode?: string;
   className?:        string;
 }
 
@@ -39,6 +40,7 @@ export default function ShippingRateSelector({
   package: pkg,
   onSelect,
   selectedRateId,
+  selectedServiceCode: _selectedServiceCode,
   className = '',
 }: ShippingRateSelectorProps) {
   const [loading,  setLoading]  = useState(false);

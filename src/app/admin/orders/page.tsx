@@ -244,9 +244,9 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
             {/* Shipping */}
             <div>
               <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#a09a90', fontWeight: 600, marginBottom: 10 }}>Shipping</div>
-              {order.shippingCarrier ? (
+              {order.shippingCarrier || order.trackingNumber ? (
                 <>
-                  <div style={{ fontSize: 13, color: '#1a1714', fontWeight: 500, marginBottom: 4 }}>{order.shippingCarrier}</div>
+                  <div style={{ fontSize: 13, color: '#1a1714', fontWeight: 500, marginBottom: 4 }}>{order.shippingCarrier ?? '—'}</div>
                   {order.shippingService && <div style={{ fontSize: 11, color: '#6b6560', marginBottom: 4 }}>{order.shippingService}</div>}
                   {order.trackingNumber && (
                     <div style={{ fontSize: 11, color: '#a09a90', fontFamily: 'monospace', marginBottom: 4 }}>
@@ -263,7 +263,9 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
                   )}
                 </>
               ) : (
-                <div style={{ fontSize: 12, color: '#c4bdb2', fontStyle: 'italic' }}>Awaiting shipment</div>
+                <div style={{ fontSize: 12, color: '#c4bdb2', fontStyle: 'italic' }}>
+                  {order.shippingRateId ? 'Label pending purchase' : 'Awaiting shipment'}
+                </div>
               )}
             </div>
             {/* Notes */}
@@ -461,7 +463,7 @@ export default function AdminOrdersPage() {
       .then(j => { setOrders(j.data ?? []); setPagination(j.pagination ?? null); })
       .catch(e => console.error('[orders]', e))
       .finally(() => setLoading(false));
-  }, [authLoading, token, page, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, token, page, statusFilter, authFetch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStatusUpdate = (id: string, newStatus: string) => {
     setOrders(prev => prev.map(o => o._id === id ? { ...o, status: newStatus } : o));
