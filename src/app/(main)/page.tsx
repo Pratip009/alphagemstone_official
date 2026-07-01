@@ -35,11 +35,11 @@ export default async function HomePage() {
       </section>
       <TrustBadges />
       <ShopByCategory />
-   
+   <GemsPromise />
       <SpecialsMarquee/>
       
 
-      <GemsPromise />
+      
       <Testimonials/>
       <FeaturedInNews/>
       <JewelryModal/>

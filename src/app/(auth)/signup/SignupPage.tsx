@@ -21,7 +21,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const [redirecting, setRedirecting] = useState(false);
   useEffect(
     () => () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -71,15 +71,13 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      // verifyOtp calls the API and updates AuthContext state (user + token)
-      // in the same synchronous React batch before navigation — no refresh needed.
       await verifyOtp(form.email, otp);
+      setRedirecting(true); // ← add this
       const redirect = searchParams.get("redirect") || "/products";
       router.push(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
-    } finally {
-      setLoading(false);
+      setLoading(false); // ← only reset on error now
     }
   };
 
@@ -206,6 +204,41 @@ export default function SignupPage() {
 
       <div className="auth-root">
         {/* LEFT PANEL */}
+        {redirecting && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 50,
+              background: "rgba(250,249,247,0.92)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "20px",
+            }}
+          >
+            <span
+              className="auth-spinner"
+              style={{
+                width: 40,
+                height: 40,
+                borderWidth: 2.5,
+                borderColor: "rgba(15,52,96,0.15)",
+                borderTopColor: "#0f3460",
+              }}
+            />
+            <div style={{ textAlign: "center" }}>
+              <p className="auth-heading" style={{ marginBottom: 4 }}>
+                Creating your account…
+              </p>
+              <p className="auth-subheading" style={{ margin: 0 }}>
+                Please wait
+              </p>
+            </div>
+          </div>
+        )}
         <div className="auth-left">
           <div className="auth-left-bg" />
           <div className="auth-left-grid" />
