@@ -11,12 +11,28 @@ type ProductDoc = {
   _id: unknown;
   name: string;
   price: number;
+  productKind?: 'diamond' | 'gemstone' | 'watch' | 'jewelry';
+
+  // Diamond / gemstone
   shape?: string | string[];
+  shapeRaw?: string;
   size?: number;
   color?: string | string[];
+  colorRaw?: string;
   clarity?: string | string[];
+  clarityRaw?: string;
+  gradeRaw?: string;
+  gemstoneName?: string;
   certification?: string | string[];
+
+  // Everything else from the legacy catalog that doesn't map to a fixed
+  // enum (cut, luster, hardness, treatment, origin, metal, ring size,
+  // carat/size ranges, approx weight, dimensions, etc.)
+  legacyAttributes?: Record<string, string>;
+
+  // Watch
   watchBrand?: string;
+  watchModel?: string;
   watchMovement?: string;
   watchGender?: string;
   watchStyle?: string;
@@ -25,6 +41,7 @@ type ProductDoc = {
   watchDialColor?: string;
   watchCaseSize?: string;
   watchFeatures?: string[];
+
   images: string[];
   stock: number;
   description?: string;
@@ -45,6 +62,10 @@ type RelatedItem = {
   watchMovement?: string;
   watchGender?: string;
 };
+
+type ProductKind = 'watch' | 'diamond' | 'gemstone' | 'jewelry';
+
+type Spec = { label: string; value: string; highlight?: boolean };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function first(val?: string | string[]): string {
@@ -69,6 +90,124 @@ function isWatchDoc(p: ProductDoc): boolean {
   return !!(p.watchBrand || p.watchMovement || p.watchGender);
 }
 
+// Prefer the stored, explicit classification (productKind — set at import
+// time in fileParser.service.ts) over guessing from which fields happen to
+// be populated. Falls back to inference only for older records that predate
+// the productKind field.
+function getProductKind(p: ProductDoc): ProductKind {
+  if (p.productKind) return p.productKind;
+  if (isWatchDoc(p)) return 'watch';
+  const categoryName = (p.category?.name ?? '').toLowerCase();
+  if (categoryName.includes('diamond')) return 'diamond';
+  if (p.gemstoneName) return 'gemstone';
+  return 'jewelry';
+}
+
+// "metalMaterial" -> "Metal Material" — used only for legacyAttributes keys
+// that aren't already surfaced under a named label below, so nothing
+// captured at import time silently disappears from the page.
+function titleCase(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+// legacyAttributes keys that are internal bookkeeping, not customer-facing
+// specs, and should never render even as a leftover row.
+const SKIP_ATTR_KEYS = new Set(['legacyCategoryRaw', 'shippingWeight']);
+
+// ─── Spec table builder ────────────────────────────────────────────────────
+// Builds the "spec sheet" rows for a product, tailored per productKind.
+// Every row is only added when a value actually exists — no hardcoded "—"
+// placeholders for fields that were never captured on that product, and no
+// bleed-through of irrelevant fields (a gemstone won't show "Movement", a
+// watch won't show "Clarity").
+function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
+  const attrs = p.legacyAttributes ?? {};
+  const rows: Spec[] = [];
+  const usedAttrKeys = new Set<string>();
+
+  const push = (label: string, value: string | number | undefined | null, opts?: { highlight?: boolean }) => {
+    if (value === undefined || value === null || value === '') return;
+    rows.push({ label, value: String(value), highlight: opts?.highlight });
+  };
+  // Reads a legacyAttributes key and marks it "already shown" so it isn't
+  // duplicated in the leftover-attributes pass at the end.
+  const attr = (key: string): string | undefined => {
+    usedAttrKeys.add(key);
+    return attrs[key] || undefined;
+  };
+
+  if (kind === 'diamond') {
+    push('Item', 'Diamond');
+    push('Polish', attr('polish'));
+    push('Shape', p.shapeRaw || capitalize(p.shape));
+    push('Cut', attr('cut'));
+    push('Color', p.colorRaw || display(p.color));
+    push('Size', attr('dimensions'));
+    push('Depth', attr('depth'));
+    push('Treatment', attr('treatment'));
+    push('Clarity', p.clarityRaw || display(p.clarity));
+    const cert = certDisplay(p.certification);
+    if (cert !== '—') push('Certification', cert);
+    const diamondApproxWeightAttr = attr('approxWeight');
+    push('Approx Weight', diamondApproxWeightAttr ? `${diamondApproxWeightAttr} ct.` : (p.size ? `${p.size} ct.` : undefined));
+  } else if (kind === 'gemstone') {
+    push('Name', p.gemstoneName || p.name);
+    push('Shape', p.shapeRaw || capitalize(p.shape));
+    push('Cut', attr('cut'));
+    push('Color', p.colorRaw || display(p.color));
+    push('Origin', attr('origin'));
+    push('Size', attr('dimensions'));
+    push('Luster', attr('luster'));
+    push('Treatment', attr('treatment'));
+    push('Hardness', attr('hardness'));
+    push('Clarity', p.clarityRaw || display(p.clarity));
+    // attr() must be called unconditionally here — if it only runs on the
+    // right side of `||` (i.e. only when p.gradeRaw is empty), the 'grade'
+    // key never gets marked "used" on products that have both, and it
+    // resurfaces a second time in the leftover-attributes pass below,
+    // producing a duplicate "Grade" row (and a React duplicate-key error).
+    const gradeAttr = attr('grade');
+    push('Grade', p.gradeRaw || gradeAttr);
+    const approxWeightAttr = attr('approxWeight');
+    push('Approx Weight', approxWeightAttr ? `${approxWeightAttr} ct.` : (p.size ? `${p.size} ct.` : undefined));
+  } else if (kind === 'watch') {
+    push('Brand', p.watchBrand);
+    push('Model', p.watchModel);
+    push('Movement', p.watchMovement);
+    push('Gender', p.watchGender);
+    push('Style', p.watchStyle);
+    push('Strap', p.watchStrapType);
+    push('Case Material', p.watchCaseMaterial);
+    push('Dial Color', p.watchDialColor);
+    push('Case Size', p.watchCaseSize);
+    push('Features', p.watchFeatures?.join(', '));
+  } else {
+    // jewelry / silver / vouchers / anything without a dedicated kind
+    push('Metal', attr('metalMaterial'));
+    push('Metal Weight', attr('metalWeight'));
+    push('Ring Size', attr('ringSize'));
+    push('Size Range', attr('sizeRange'));
+    push('Carat Range', attr('caratRange'));
+    push('Shape', p.shapeRaw || capitalize(p.shape));
+    push('Color', p.colorRaw || display(p.color));
+  }
+
+  // Anything still sitting in legacyAttributes that wasn't already pulled
+  // out above — keeps the page honest instead of quietly dropping data
+  // that was captured at import time (e.g. a diamond row that happens to
+  // also carry an "origin" value, or a gemstone with a stray "ringSize").
+  for (const [key, value] of Object.entries(attrs)) {
+    if (usedAttrKeys.has(key) || SKIP_ATTR_KEYS.has(key) || !value) continue;
+    push(titleCase(key), value);
+  }
+
+  push('Availability', p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', { highlight: p.stock > 0 });
+
+  return rows;
+}
+
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 function WatchIcon() {
   return (
@@ -87,6 +226,32 @@ function DiamondIcon() {
       <path d="M2 7h14M9 16L5 7l4-5 4 5z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
     </svg>
   );
+}
+// Distinct icon for colored gemstones — emerald-cut silhouette rather than
+// the brilliant-cut diamond shape, so the two badges read differently at a glance.
+function GemstoneIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <rect x="4" y="3" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+      <path d="M4 7h10M4 11h10M8 3v12M10 3v12" stroke="currentColor" strokeWidth="0.9" />
+    </svg>
+  );
+}
+// Jewelry / silver / vouchers — simple ring silhouette.
+function JewelryIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <circle cx="9" cy="11" r="5" stroke="currentColor" strokeWidth="1.25" />
+      <path d="M9 6L6.5 2h5L9 6z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function kindIcon(kind: ProductKind) {
+  if (kind === 'watch') return <WatchIcon />;
+  if (kind === 'diamond') return <DiamondIcon />;
+  if (kind === 'gemstone') return <GemstoneIcon />;
+  return <JewelryIcon />;
 }
 
 // ─── Related products ─────────────────────────────────────────────────────────
@@ -193,38 +358,48 @@ export default async function ProductDetailPage({
 
   const rawObj = raw as unknown as ProductDoc;
   const p: ProductDoc = { ...rawObj, _id: String(rawObj._id) };
-  const watch = isWatchDoc(p);
+  const kind = getProductKind(p);
+  const watch = kind === 'watch';
+  const gemstone = kind === 'gemstone';
 
   const related = await getRelatedProducts(p, String(p._id), 4);
 
-  const specs = watch
-    ? [
-        { label: 'Brand',         value: p.watchBrand ?? '—' },
-        { label: 'Movement',      value: p.watchMovement ?? '—' },
-        { label: 'Gender',        value: p.watchGender ?? '—' },
-        { label: 'Style',         value: p.watchStyle ?? '—' },
-        { label: 'Strap',         value: p.watchStrapType ?? '—' },
-        { label: 'Case Material', value: p.watchCaseMaterial ?? '—' },
-        { label: 'Dial Color',    value: p.watchDialColor ?? '—' },
-        { label: 'Case Size',     value: p.watchCaseSize ?? '—' },
-        { label: 'Features',      value: p.watchFeatures?.join(', ') || '—' },
-        { label: 'Availability',  value: p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', highlight: p.stock > 0 },
-      ]
-    : [
-        { label: 'Shape',         value: capitalize(p.shape) },
-        { label: 'Carat Weight',  value: p.size ? `${p.size} ct` : '—' },
-        { label: 'Color Grade',   value: display(p.color) },
-        { label: 'Clarity',       value: display(p.clarity) },
-        { label: 'Certification', value: certDisplay(p.certification) },
-        { label: 'Availability',  value: p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', highlight: p.stock > 0 },
-      ];
+  // Gallery images — if fewer than 4 real photos exist, repeat the main
+  // photo to fill the strip instead of letting the gallery fall back to
+  // its own dummy placeholder images.
+  const galleryImages = (() => {
+    const imgs = (p.images ?? []).filter(Boolean);
+    if (imgs.length === 0) return imgs;
+    if (imgs.length >= 4) return imgs;
+    const padded = [...imgs];
+    while (padded.length < 4) padded.push(imgs[0]);
+    return padded;
+  })();
+
+  // Dynamic, per-kind spec sheet — see buildSpecs() above. Diamonds get
+  // diamond fields (polish/cut/color/clarity/depth/...), gemstones get
+  // gemstone fields (origin/luster/hardness/grade/...), watches get watch
+  // fields, and every row is omitted when the underlying value is empty.
+  const specs = buildSpecs(p, kind);
 
   const certBadge = certDisplay(p.certification);
   const showCertBadge = !watch && certBadge !== '—';
 
   const heroSubtitle = watch
     ? [p.watchGender, p.watchStyle, p.watchMovement].filter(Boolean).join(' · ')
-    : [display(p.color) ? `${display(p.color)} Color` : '', display(p.clarity) ? `${display(p.clarity)} Clarity` : '', p.size ? `${p.size} ct` : ''].filter(Boolean).join(' · ');
+    : [
+        (p.colorRaw || display(p.color)) ? `${p.colorRaw || display(p.color)} Color` : '',
+        (p.clarityRaw || display(p.clarity)) ? `${p.clarityRaw || display(p.clarity)} Clarity` : '',
+        p.size ? `${p.size} ct` : '',
+      ].filter(Boolean).join(' · ');
+
+  const typeLabel = watch
+    ? 'Luxury Watch'
+    : gemstone
+    ? (p.gemstoneName || p.category?.name || 'Fine Gemstone')
+    : kind === 'diamond'
+    ? 'Fine Diamond'
+    : (p.category?.name || 'Fine Jewelry');
 
   return (
     <>
@@ -256,6 +431,8 @@ export default async function ProductDetailPage({
         .pd-type-label { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; padding: 4px 10px; border-radius: 2px; margin-bottom: 14px; }
         .pd-type-label.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
         .pd-type-label.diamond { background: #fdf4ff; color: #7e22ce; border: 0.5px solid rgba(126,34,206,0.2); }
+        .pd-type-label.gemstone { background: #ecfdf5; color: #047857; border: 0.5px solid rgba(4,120,87,0.2); }
+        .pd-type-label.jewelry { background: #fff7ed; color: #c2410c; border: 0.5px solid rgba(194,65,12,0.2); }
         .pd-category-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
         .pd-category-label::before { content: ''; display: inline-block; width: 28px; height: 0.5px; background: var(--gold); }
         .pd-title { font-family: 'Playfair Display', serif; font-size: clamp(26px, 4vw, 40px); font-weight: 500; line-height: 1.15; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
@@ -356,7 +533,7 @@ export default async function ProductDetailPage({
           {/* Hero */}
           <div className="pd-hero">
             <ProductGallery
-              images={p.images}
+              images={galleryImages}
               name={p.name}
               certBadge={showCertBadge ? certBadge : null}
               inStock={p.stock > 0}
@@ -365,9 +542,9 @@ export default async function ProductDetailPage({
 
             <div>
               {/* Type pill — SVG icons, no emoji */}
-              <div className={`pd-type-label ${watch ? 'watch' : 'diamond'}`}>
-                {watch ? <WatchIcon /> : <DiamondIcon />}
-                {watch ? 'Luxury Watch' : 'Fine Diamond'}
+              <div className={`pd-type-label ${kind}`}>
+                {kindIcon(kind)}
+                {typeLabel}
               </div>
 
               <p className="pd-category-label">
@@ -376,7 +553,7 @@ export default async function ProductDetailPage({
               </p>
 
               <h1 className="pd-title">{p.name}</h1>
-              <p className="pd-subtitle">{heroSubtitle}</p>
+              {heroSubtitle && <p className="pd-subtitle">{heroSubtitle}</p>}
 
               {/* Price */}
               <div className="pd-price-block">
@@ -385,11 +562,11 @@ export default async function ProductDetailPage({
                 <span className="pd-price-meta">USD<br />Free insured<br />shipping</span>
               </div>
 
-              {/* Specs */}
+              {/* Specs — dynamic per productKind, see buildSpecs() */}
               <table className="pd-specs">
                 <tbody>
-                  {specs.map(({ label, value, highlight }) => (
-                    <tr key={label}>
+                  {specs.map(({ label, value, highlight }, i) => (
+                    <tr key={`${label}-${i}`}>
                       <td>{label}</td>
                       <td className={highlight ? 'highlight' : ''}>{value}</td>
                     </tr>
@@ -471,7 +648,7 @@ export default async function ProductDetailPage({
                     {/* SVG icons instead of emoji */}
                     <div className={`pd-related-type-pip ${relIsWatch ? 'watch' : 'diamond'}`}>
                       {relIsWatch ? <WatchIcon /> : <DiamondIcon />}
-                      {relIsWatch ? 'Watch' : 'Diamond'}
+                      {relIsWatch ? 'Watch' : 'Gem'}
                     </div>
                     <div className="pd-related-meta">{relMeta}</div>
                     <div className="pd-related-name">{item.name}</div>

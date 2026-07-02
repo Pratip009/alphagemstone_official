@@ -12,29 +12,19 @@ import Category from "@/models/Category";
 import Subcategory from "@/models/Subcategory";
 
 // ─── Build all match variants for a raw category/subcategory string ───────────
-// The user may type any of:
-//   - A slug:             "loose-diamonds"
-//   - A display name:     "Loose Diamonds"
-//   - A breadcrumb path:  "Diamonds > Natural Diamonds > Loose Diamonds"
-//
-// For each raw value we produce:
-//   1. The raw value itself (matches slug if user typed a slug)
-//   2. deriveSlug(raw)   (slug of the last breadcrumb segment)
-//   3. The last breadcrumb segment, trimmed (matches name if user typed display name)
 function buildSearchVariants(raw: string): string[] {
   const trimmed = raw.trim();
   const slug = deriveSlug(trimmed);
 
-  // Last segment of a ">" path (e.g. "Loose Diamonds" from "X > Y > Loose Diamonds")
   const segments = trimmed
     .split(">")
     .map((s) => s.trim())
     .filter(Boolean);
   const lastSegment = segments[segments.length - 1] ?? trimmed;
 
-  // Deduplicate
   return Array.from(new Set([trimmed, slug, lastSegment])).filter(Boolean);
 }
+
 const IGNORE_SUBCATEGORIES = [
   "Certificates",
   "Diamond Loupe",
@@ -43,6 +33,7 @@ const IGNORE_SUBCATEGORIES = [
   "Alpha Collector's Gallery",
   "nan",
 ];
+
 const SUBCATEGORY_MAPPING: Record<string, string> = {
   "Blue Sapphire": "Sapphire",
   "Yellow Sapphire": "Sapphire",
@@ -76,23 +67,33 @@ const SUBCATEGORY_MAPPING: Record<string, string> = {
 
   "Diamond Stud Earrings (In Silver": "Diamond Stud Earrings",
 };
+
 export const POST = withAdmin(async (req: NextRequest) => {
   try {
     await connectDB();
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    // "true"/"false" string from a form checkbox — when on, categories that
+    // don't resolve get created instead of dropping the row.
+    const autoCreateCategories = formData.get("autoCreateCategories") === "true";
+
     if (!file) return errorResponse("No file uploaded", 400);
 
-    const maxSize = 10 * 1024 * 1024;
+    const maxSize = 17 * 1024 * 1024;
     if (file.size > maxSize)
-      return errorResponse("File too large (max 10MB)", 400);
+      return errorResponse("File too large (max 17MB)", 400);
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { rows, parseErrors } = await parseUploadedFile(buffer, file.name);
+    const { rows, parseErrors, warnings } = await parseUploadedFile(
+      buffer,
+      file.name,
+    );
 
     if (rows.length === 0 && parseErrors.length > 0) {
-      return errorResponse("No valid rows found in file", 400, { parseErrors });
+      return errorResponse("No valid rows found in file", 400, {
+        parseErrors,
+      });
     }
     if (rows.length === 0) {
       return errorResponse("File appears to be empty", 400);
@@ -110,13 +111,11 @@ export const POST = withAdmin(async (req: NextRequest) => {
       ),
     );
 
-    // ── Build all search variants for each raw value ──────────────────────────
     const categorySearchVariants =
       rawCategoryValues.flatMap(buildSearchVariants);
     const subcategorySearchVariants =
       rawSubcategoryValues.flatMap(buildSearchVariants);
 
-    // ── Query DB: match slug OR name (case-insensitive regex) ─────────────────
     const [categories, subcategories] = await Promise.all([
       Category.find({
         $or: [
@@ -153,9 +152,6 @@ export const POST = withAdmin(async (req: NextRequest) => {
       }>,
     ]);
 
-    // ── Build lookup maps ─────────────────────────────────────────────────────
-    // We index each DB record by BOTH its slug and its name (lowercased),
-    // so any variant of the user's input has a chance to match.
     const categoryMap = new Map<string, string>();
     for (const c of categories) {
       categoryMap.set(c.slug, c._id.toString());
@@ -172,11 +168,38 @@ export const POST = withAdmin(async (req: NextRequest) => {
       subcategoryMap.set(s.name.toLowerCase(), s._id.toString());
     }
 
-    // ── Resolve each row's category/subcategory to ObjectIds ─────────────────
+    // ── Auto-create missing categories ──────────────────────────────────────
+    // The previously-pending step: instead of just reporting a category as
+    // missing and dropping every row that references it, create it (using
+    // the raw name as-is, slugified) when the caller opts in.
+    const createdCategories: string[] = [];
+    if (autoCreateCategories) {
+      for (const raw of rawCategoryValues) {
+        const alreadyResolves = buildSearchVariants(raw).some(
+          (v) => categoryMap.has(v) || categoryMap.has(v.toLowerCase()),
+        );
+        if (alreadyResolves) continue;
+
+        const slug = deriveSlug(raw);
+        if (!slug) continue;
+
+        const created = await Category.create({ name: raw.trim(), slug });
+        const id = created._id.toString();
+        categoryMap.set(raw, id);
+        categoryMap.set(raw.toLowerCase(), id);
+        categoryMap.set(slug, id);
+        createdCategories.push(raw);
+      }
+    }
+
     const resolvedRows: Record<string, unknown>[] = [];
     const resolutionErrors: Array<{ row: number; error: string }> = [];
     const missingSubcategories = new Set<string>();
     const missingCategories = new Set<string>();
+    const subcategoriesDroppedButRowKept: Array<{
+      row: number;
+      subcategory: string;
+    }> = [];
 
     rows.forEach((row, i) => {
       const rowNum = i + 2; // row 1 = header, data starts at 2
@@ -187,14 +210,13 @@ export const POST = withAdmin(async (req: NextRequest) => {
 
       if (!categoryId) {
         missingCategories.add(categoryRaw);
-
         const tried = buildSearchVariants(categoryRaw).join('", "');
-
         resolutionErrors.push({
           row: rowNum,
-          error: `Category not found: "${categoryRaw}". Tried matching by slug/name: ["${tried}"]. Ensure the category exists in the database.`,
+          error: autoCreateCategories
+            ? `Category "${categoryRaw}" could not be auto-created (empty/invalid name).`
+            : `Category not found: "${categoryRaw}". Tried matching by slug/name: ["${tried}"]. Enable autoCreateCategories to create it automatically, or add it manually first.`,
         });
-
         return;
       }
 
@@ -220,15 +242,14 @@ export const POST = withAdmin(async (req: NextRequest) => {
         const subcategoryId = resolveId(subcategoryRaw, subcategoryMap);
 
         if (!subcategoryId) {
-         missingSubcategories.add(subcategoryRaw);
-
-console.warn(
-  `Subcategory not found: ${subcategoryRaw}. Product imported without subcategory.`,
-);
-
-delete resolvedRow.subcategory;
-resolvedRows.push(resolvedRow);
-return;
+          missingSubcategories.add(subcategoryRaw);
+          subcategoriesDroppedButRowKept.push({
+            row: rowNum,
+            subcategory: subcategoryRaw,
+          });
+          delete resolvedRow.subcategory;
+          resolvedRows.push(resolvedRow);
+          return;
         }
         resolvedRow.subcategory = subcategoryId;
       } else {
@@ -245,7 +266,7 @@ return;
         { parseErrors, resolutionErrors },
       );
     }
-   
+
     // ── Bulk insert ───────────────────────────────────────────────────────────
     const result = await bulkCreateProducts(resolvedRows);
 
@@ -253,10 +274,12 @@ return;
       message: `Processed ${rows.length} row${rows.length !== 1 ? "s" : ""}`,
       inserted: result.inserted,
       failed: result.failed + parseErrors.length,
-      errors: [
-  ...parseErrors,
-  ...result.errors,
-],
+      errors: [...parseErrors, ...resolutionErrors, ...result.errors],
+      warnings,
+      createdCategories,
+      missingCategories: Array.from(missingCategories),
+      missingSubcategories: Array.from(missingSubcategories),
+      subcategoriesDroppedButRowKept,
     });
   } catch (err) {
     console.error("[POST /api/admin/bulk-upload]", err);
@@ -279,10 +302,6 @@ export const GET = withAdmin(async () => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Try every variant of `raw` against the map.
- * Returns the first ObjectId string found, or undefined.
- */
 function resolveId(raw: string, map: Map<string, string>): string | undefined {
   for (const variant of buildSearchVariants(raw)) {
     const id = map.get(variant) ?? map.get(variant.toLowerCase());
@@ -291,7 +310,6 @@ function resolveId(raw: string, map: Map<string, string>): string | undefined {
   return undefined;
 }
 
-/** Escape special regex characters so we can use user input in a RegExp safely. */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
