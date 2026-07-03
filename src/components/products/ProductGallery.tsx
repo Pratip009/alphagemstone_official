@@ -133,7 +133,7 @@ export default function ProductGallery({
           border: 0.5px solid #e2ddd5;
           padding: 4px 10px;
           pointer-events: none;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Google Sans Flex", sans-serif;
           z-index: 10;
         }
         .pg-thumbs {

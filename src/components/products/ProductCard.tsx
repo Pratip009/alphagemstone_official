@@ -8,12 +8,20 @@ interface ProductCardProps {
     _id: string;
     name: string;
     price: number;
+    // gem / diamond fields
     shape?: string | string[];
     size?: number;
     color?: string | string[];
     clarity?: string | string[];
     certification?: string | string[];
+    gemstoneName?: string;
+    shapeRaw?: string;
+    colorRaw?: string;
+    clarityRaw?: string;
+    gradeRaw?: string;
+    // watch fields
     watchBrand?: string;
+    watchModel?: string;
     watchMovement?: string;
     watchGender?: string;
     watchStyle?: string;
@@ -21,6 +29,7 @@ interface ProductCardProps {
     watchDialColor?: string;
     watchStrapType?: string;
     watchCaseSize?: string;
+    watchFeatures?: string[];
     images: string[];
     stock: number;
   };
@@ -49,6 +58,27 @@ function isWatch(p: ProductCardProps['product']): boolean {
 
 const WATCH_PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80&fit=crop';
 const DIAMOND_PLACEHOLDER = 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80&fit=crop';
+
+// Best-effort word -> hex map so a stated color (dial color, stone color, gem
+// color) can render as a tiny inspection swatch rather than just a word.
+const COLOR_HEX: Record<string, string> = {
+  black: '#1C1C1E', white: '#F5F5F7', ivory: '#F2EAD9', cream: '#F3E9D2',
+  silver: '#C8C9CC', gold: '#CBA658', 'rose gold': '#E0B3A1', 'two-tone': '#C9B37E',
+  champagne: '#E8D6B3', blue: '#2F5FA8', navy: '#1F3A5F', green: '#2F6F4E',
+  red: '#A4302F', brown: '#6B4A34', grey: '#8A8A8F', gray: '#8A8A8F',
+  gunmetal: '#3A3D42', pink: '#D99AA6', purple: '#6B4C8A', salmon: '#E0917C',
+  'mother of pearl': '#E9E6E1', bronze: '#8C6B3F', orange: '#D97A3D', yellow: '#E0C14A',
+  ruby: '#A4192F', emerald: '#2F6F4E', sapphire: '#2B4C8C', amethyst: '#6B4C8A',
+  topaz: '#D9A441', aquamarine: '#7FC7C6', peridot: '#A3C150', citrine: '#E0A83D',
+  tanzanite: '#4A5FA5', morganite: '#E3A9A1', opal: '#E7E2DE', garnet: '#7A2530',
+};
+function swatchHex(text?: string): string | null {
+  if (!text) return null;
+  const key = text.trim().toLowerCase();
+  if (COLOR_HEX[key]) return COLOR_HEX[key];
+  const found = Object.keys(COLOR_HEX).find((k) => key.includes(k));
+  return found ? COLOR_HEX[found] : null;
+}
 
 function ProductImage({ src, alt, fallback }: { src: string; alt: string; fallback: string }) {
   const [imgSrc, setImgSrc] = useState(src);
@@ -88,16 +118,40 @@ function buildEyebrow(product: ProductCardProps['product'], watch: boolean): str
     return [product.watchCaseSize, product.watchMovement].filter(Boolean).join(' · ');
   }
   const carat = product.size ? `${product.size} ct` : '';
-  return carat;
+  return [carat, product.gemstoneName].filter(Boolean).join(' · ');
 }
 
 function buildChips(product: ProductCardProps['product'], watch: boolean): string[] {
   if (watch) {
     return [product.watchGender, product.watchStyle, product.watchCaseMaterial].filter(Boolean) as string[];
   }
-  const shape = first(product.shape);
-
+  const shape = first(product.shape) || product.shapeRaw || '';
   return [shape].filter(Boolean);
+}
+
+interface LedgerRow { label: string; value: string; swatch?: string | null; }
+
+function buildLedger(product: ProductCardProps['product'], watch: boolean): LedgerRow[] {
+  const rows: LedgerRow[] = [];
+  if (watch) {
+    if (product.watchModel) rows.push({ label: 'Model', value: product.watchModel });
+    if (product.watchDialColor) {
+      rows.push({ label: 'Dial', value: product.watchDialColor, swatch: swatchHex(product.watchDialColor) });
+    }
+    if (product.watchStrapType) rows.push({ label: 'Strap', value: product.watchStrapType });
+    if (product.watchFeatures && product.watchFeatures.length > 0) {
+      const extra = product.watchFeatures.length > 2 ? ` +${product.watchFeatures.length - 2}` : '';
+      rows.push({ label: 'Features', value: product.watchFeatures.slice(0, 2).join(', ') + extra });
+    }
+    return rows.slice(0, 3);
+  }
+  const color = display(product.color) || product.colorRaw || '';
+  if (color) rows.push({ label: 'Color', value: color, swatch: swatchHex(product.colorRaw || first(product.color)) });
+  const clarity = display(product.clarity) || product.clarityRaw || '';
+  if (clarity) rows.push({ label: 'Clarity', value: clarity });
+  const certValue = certDisplay(product.certification) || product.gradeRaw || '';
+  if (certValue) rows.push({ label: certDisplay(product.certification) ? 'Cert' : 'Grade', value: certValue });
+  return rows.slice(0, 3);
 }
 
 interface TiltState { rx: number; ry: number; mx: number; my: number; active: boolean; }
@@ -109,7 +163,11 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
   const placeholder = watch ? WATCH_PLACEHOLDER : DIAMOND_PLACEHOLDER;
   const eyebrow = buildEyebrow(product, watch);
   const chips = buildChips(product, watch);
-  const certLabel = watch ? product.watchBrand : certDisplay(product.certification);
+  const ledger = buildLedger(product, watch);
+  const certLabel = watch
+    ? product.watchBrand
+    : (certDisplay(product.certification) || product.gradeRaw);
+  const subtitle = watch ? product.watchModel : undefined;
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState<TiltState>(REST_TILT);
@@ -130,19 +188,19 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
   return (
     <>
       <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
         .pc6 {
           display: block;
           text-decoration: none;
           color: inherit;
-          font-family: 'Playfair Display', serif;
+          font-family: "Google Sans Flex", sans-serif;
           perspective: 1000px;
         }
 
         .pc6-card {
           position: relative;
           background: #FFFFFF;
-          border-radius: 18px;
+          border-radius: 12px;
           border: 1px solid #EAEAEC;
           padding: 14px;
           display: flex;
@@ -176,7 +234,7 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           width: 100%;
           height: 148px;
           flex-shrink: 0;
-          background: linear-gradient(180deg, #FBFBFC 0%, #F2F2F4 100%);
+background: #ffffff;
           border-radius: 13px;
           overflow: hidden;
           display: flex;
@@ -222,12 +280,13 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
         .pc6-badge {
           position: absolute;
           z-index: 2;
-          font-size: 9px;
-          font-weight: 500;
+          font-family: "Google Sans Flex", sans-serif
+          font-size: 5px;
+          font-weight: 200;
           letter-spacing: 0.04em;
-          text-transform: uppercase;
+          
           padding: 4px 9px;
-          border-radius: 20px;
+          border-radius: 5px;
         }
         .pc6-badge-cert {
           top: 8px; left: 8px;
@@ -245,8 +304,8 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           bottom: 8px; left: 8px;
           display: flex; align-items: center; gap: 4px;
         }
-        .pc6-badge-type.watch { background: rgba(238,241,244,0.95); color: #475467; }
-        .pc6-badge-type.gem   { background: rgba(238,238,241,0.95); color: #3D4FE0; }
+        .pc6-badge-type.watch { background: rgba(238,241,244,0.95); color: #ff5100; }
+        .pc6-badge-type.gem   { background: rgba(238,241,244,0.95); color: #2600ff; }
 
         .pc6-sold {
           position: absolute; inset: 0; z-index: 3;
@@ -254,8 +313,9 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           display: flex; align-items: center; justify-content: center;
         }
         .pc6-sold span {
+          font-family: "Google Sans Flex", sans-serif
           font-size: 10px;
-          font-weight: 500;
+          font-weight: 400;
           letter-spacing: 0.06em;
           text-transform: uppercase;
           padding: 5px 12px;
@@ -273,23 +333,32 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
         }
         .pc6-eyebrow {
           margin-top: 12px;
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 9.5px;
-          font-weight: 500;
+          font-weight: 200;
           letter-spacing: 0.07em;
-          text-transform: uppercase;
-          color: #8E8E93;
+          
+          color: #3f3f3f;
         }
         .pc6-name {
           margin-top: 3px;
-          font-family: 'Playfair Display', serif;
-          font-size: 16px;
-          font-weight: 500;
-          color: #18181B;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 13px;
+          font-weight: 400;
+          color: #000000;
           line-height: 1.3;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+        .pc6-subtitle {
+          margin-top: 1px;
+          font-family: "Google Sans Flex", sans-serif;
+          font-style: italic;
+          font-size: 11px;
+          font-weight: 500;
+          color: #8E8E93;
         }
 
         .pc6-chips {
@@ -299,15 +368,66 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           gap: 5px;
         }
         .pc6-chip {
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 9.5px;
           font-weight: 500;
           letter-spacing: 0.01em;
-          color: #5B5B63;
-          background: #F7F7F8;
-          border: 1px solid #E4E4E8;
+          color: #ffffff;
+          background: #0000ff;
+          border: 1px solid #ffffff;
           border-radius: 6px;
           padding: 3px 7px;
           white-space: nowrap;
+        }
+
+        /* the ledger: a compact appraisal-report strip — dotted leaders
+           tying a small-caps label to its value, like a hallmark tag */
+        .pc6-ledger {
+          margin-top: 9px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .pc6-ledger-row {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+        }
+        .pc6-ledger-label {
+          flex-shrink: 0;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 8.5px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #ADADB3;
+        }
+        .pc6-ledger-leader {
+          flex: 1;
+          min-width: 6px;
+          border-bottom: 1px dotted #ffffff;
+          transform: translateY(-3px);
+        }
+        .pc6-ledger-value {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          color: #000000;
+          max-width: 62%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .pc6-swatch {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          border: 1px solid rgba(20,20,22,0.15);
         }
 
         .pc6-price-row {
@@ -319,16 +439,17 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           justify-content: space-between;
         }
         .pc6-price {
-          font-family: 'Playfair Display', serif;
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 16px;
           font-weight: 600;
-          color: #18181B;
+          color: #000000;
           letter-spacing: -0.01em;
         }
         .pc6-avail {
           display: flex;
           align-items: center;
           gap: 5px;
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 10.5px;
           font-weight: 400;
           color: #1F7A4D;
@@ -385,11 +506,27 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           <div className="pc6-body">
             {eyebrow && <div className="pc6-eyebrow">{eyebrow}</div>}
             <div className="pc6-name">{product.name}</div>
+            {subtitle && <div className="pc6-subtitle">{subtitle}</div>}
 
             {chips.length > 0 && (
               <div className="pc6-chips">
                 {chips.map((c, i) => (
                   <span key={i} className="pc6-chip">{c}</span>
+                ))}
+              </div>
+            )}
+
+            {ledger.length > 0 && (
+              <div className="pc6-ledger">
+                {ledger.map((row, i) => (
+                  <div key={i} className="pc6-ledger-row">
+                    <span className="pc6-ledger-label">{row.label}</span>
+                    <span className="pc6-ledger-leader" />
+                    <span className="pc6-ledger-value">
+                      {row.swatch && <span className="pc6-swatch" style={{ background: row.swatch }} />}
+                      {row.value}
+                    </span>
+                  </div>
                 ))}
               </div>
             )}

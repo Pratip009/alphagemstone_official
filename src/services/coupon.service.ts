@@ -122,6 +122,23 @@ export async function validateCoupon(code: string, subtotal: number): Promise<Va
   };
 }
 
+// ─── Admin: resend coupon email ───────────────────────────────────────────────
+
+/**
+ * Re-sends the coupon email for an existing coupon by its id.
+ * Throws if the coupon doesn't exist, is already used, or has expired.
+ */
+export async function resendCouponEmail(id: string): Promise<ICoupon> {
+  const coupon = await Coupon.findById(id);
+  if (!coupon) throw new Error('Coupon not found');
+  if (coupon.isUsed) throw new Error('Cannot resend a coupon that has already been used');
+  if (coupon.expiresAt < new Date()) throw new Error('Cannot resend an expired coupon');
+
+  await sendCouponEmail(coupon.email, coupon.code, coupon.expiresAt, coupon.discount);
+
+  return coupon;
+}
+
 // ─── Internal: redeem on order ────────────────────────────────────────────────
 
 export async function redeemCoupon(code: string, orderId: string): Promise<number> {

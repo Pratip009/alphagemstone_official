@@ -501,7 +501,7 @@ export default function CheckoutPage() {
 
   const inputBase: React.CSSProperties = {
     width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13.5,
-    fontFamily: "'Poppins', sans-serif", outline: 'none', transition: 'all 0.18s',
+    fontFamily: "'Google Sans Flex', sans-serif", outline: 'none', transition: 'all 0.18s',
     color: '#1e293b', background: '#fff', WebkitAppearance: 'none',
   };
   const inputStyle = (state: 'error' | 'valid' | 'idle', extra?: React.CSSProperties): React.CSSProperties => ({
@@ -550,7 +550,7 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 20, fontWeight: 600, color: '#f5f1eb', fontFamily: 'Cormorant Garamond, serif', letterSpacing: '-0.3px', marginBottom: 8 }}>
+              <p style={{ fontSize: 20, fontWeight: 600, color: '#f5f1eb', fontFamily: '"Google Sans Flex", sans-serif', letterSpacing: '-0.3px', marginBottom: 8 }}>
                 Confirming your payment…
               </p>
               <p style={{ fontSize: 13, color: '#8a8278', maxWidth: 280 }}>
@@ -587,7 +587,7 @@ export default function CheckoutPage() {
           ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         `}</style>
 
-        <div className="co" style={{ minHeight: '100vh', background: '#ffffff', fontFamily: "'Poppins', sans-serif" }}>
+        <div className="co" style={{ minHeight: '100vh', background: '#ffffff', fontFamily: "'Google Sans Flex', sans-serif" }}>
 
           {/* Top nav */}
           <header style={{ background: '#fff', borderBottom: '1px solid #f1f5f9', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.05)' }}>
@@ -806,7 +806,7 @@ export default function CheckoutPage() {
                             <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', background: '#f8fafc', color: '#374151', fontSize: 13, fontWeight: 600, borderRight: '1.5px solid #e2e8f0', whiteSpace: 'nowrap', minWidth: 52 }}>
                               {form.country === 'IN' ? '+91' : form.country === 'US' || form.country === 'CA' ? '+1' : form.country === 'GB' ? '+44' : form.country === 'AU' ? '+61' : form.country === 'AE' ? '+971' : '+'}
                             </span>
-                            <input style={{ flex: 1, border: 'none', padding: '11px 14px', fontSize: 13.5, fontFamily: "'Poppins', sans-serif", outline: 'none', background: '#fff', color: '#1e293b' }}
+                            <input style={{ flex: 1, border: 'none', padding: '11px 14px', fontSize: 13.5, fontFamily: "'Google Sans Flex', sans-serif", outline: 'none', background: '#fff', color: '#1e293b' }}
                               type="tel" placeholder={isIndia ? '98765 43210' : '(555) 123-4567'}
                               value={form.phone ? formatPhone(form.phone, form.country) : ''}
                               onChange={(e) => handlePhoneChange(e.target.value)} onBlur={() => handleBlur('phone')} autoComplete="tel" inputMode="numeric" />
@@ -826,7 +826,7 @@ export default function CheckoutPage() {
                           background: loading || pinLoading ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                           color: loading || pinLoading ? '#94a3b8' : '#fff',
                           border: 'none', borderRadius: 12, cursor: loading || pinLoading ? 'not-allowed' : 'pointer',
-                          fontSize: 14, fontWeight: 600, fontFamily: "'Poppins', sans-serif", letterSpacing: '0.01em',
+                          fontSize: 14, fontWeight: 600, fontFamily: "'Google Sans Flex', sans-serif", letterSpacing: '0.01em',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                         }}>
                           {loading ? <><Spinner /> Processing…</> : <>Choose Shipping Method <ArrowRight /></>}
@@ -868,13 +868,13 @@ export default function CheckoutPage() {
                         background: !selectedShipping || loading ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                         color: !selectedShipping || loading ? '#94a3b8' : '#fff',
                         border: 'none', borderRadius: 12, cursor: !selectedShipping || loading ? 'not-allowed' : 'pointer',
-                        fontSize: 14, fontWeight: 600, fontFamily: "'Poppins', sans-serif", letterSpacing: '0.01em',
+                        fontSize: 14, fontWeight: 600, fontFamily: "'Google Sans Flex', sans-serif", letterSpacing: '0.01em',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                       }}>
                         {loading ? <><Spinner /> Creating order…</> : <>Continue to Payment <ArrowRight /></>}
                       </button>
 
-                      <button className="back-btn" onClick={() => setStep('shipping')} style={{ width: '100%', padding: '12px 24px', background: '#f8fafc', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'Poppins', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <button className="back-btn" onClick={() => setStep('shipping')} style={{ width: '100%', padding: '12px 24px', background: '#f8fafc', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'Google Sans Flex', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                         <ArrowLeft /> Back to Address
                       </button>
                     </div>
@@ -928,7 +928,7 @@ export default function CheckoutPage() {
                         )}
                       </div>
 
-                      <button className="back-btn" onClick={() => setStep('rates')} style={{ width: '100%', padding: '12px 24px', background: '#f8fafc', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'Poppins', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.18s' }}>
+                      <button className="back-btn" onClick={() => setStep('rates')} style={{ width: '100%', padding: '12px 24px', background: '#f8fafc', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'Google Sans Flex', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.18s' }}>
                         <ArrowLeft /> Back to Shipping
                       </button>
                     </div>
@@ -969,7 +969,7 @@ export default function CheckoutPage() {
                         value={couponInput}
                         onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponMsg(''); }}
                         placeholder="Enter code"
-                        style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontFamily: 'monospace', letterSpacing: '0.08em', outline: 'none' }}
+                        style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontFamily: 'Google Sans Flex', letterSpacing: '0.08em', outline: 'none' }}
                       />
                       <button
                         disabled={couponLoading || !couponInput.trim()}

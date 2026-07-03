@@ -38,7 +38,7 @@ export default function SortBar({
   return (
     <div
       className="flex items-center justify-between gap-3 py-3 mb-1"
-      style={{ fontFamily: "'Poppins', sans-serif" }}
+      style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
     >
       {/* ── Left: result count + optional query ─────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -49,7 +49,7 @@ export default function SortBar({
             </span>
             <span
               className="text-sm text-[#4A3F35] italic truncate max-w-[120px] sm:max-w-none"
-              style={{ fontFamily: "'Playfair Display', serif" }}
+              style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
             >
               &ldquo;{query}&rdquo;
             </span>
@@ -60,7 +60,7 @@ export default function SortBar({
         {/* Count */}
         <span
           className="text-xl sm:text-2xl font-semibold text-[#1A1612] tracking-tight leading-none shrink-0"
-          style={{ fontFamily: "'Playfair Display', serif" }}
+          style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
         >
           {total.toLocaleString()}
         </span>

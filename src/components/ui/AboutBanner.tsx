@@ -4,8 +4,8 @@ export default function AboutBanner() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-        .about-banner * { font-family: 'Poppins', sans-serif; }
+       @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+        .about-banner * { font-family: 'Google Sans Flex', sans-serif; }
       `}</style>
 
       {/* Hero Banner */}

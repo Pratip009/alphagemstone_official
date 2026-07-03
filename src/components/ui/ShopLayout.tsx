@@ -67,8 +67,8 @@ function Skeleton({
       style={{
         width: w ?? "100%",
         height: h ?? 16,
-        borderRadius: 4,
-        background: "#f3f1ee",
+        borderRadius: 2,
+        background: "#f0f0f0",
         display: "block",
         ...style,
       }}
@@ -76,7 +76,47 @@ function Skeleton({
   );
 }
 
-// ─── Subcategory circle card (landing) ────────────────────────────────────────
+// ─── Landing hero ──────────────────────────────────────────────────────────────
+function LandingHero() {
+  return (
+    <div
+      style={{
+        marginBottom: 60,
+        padding: "48px 4px 36px",
+        borderBottom: "1px solid var(--border)",
+      }}
+    >
+      <p
+        style={{
+          fontFamily: '"Google Sans Flex", sans-serif',
+          fontSize: 11,
+          letterSpacing: "0.28em",
+          textTransform: "uppercase",
+          color: "var(--gold)",
+          fontWeight: 600,
+          marginBottom: 16,
+        }}
+      >
+        Fine Jewelry, Since 1998
+      </p>
+      <h1
+        style={{
+          fontFamily: '"Google Sans Flex", sans-serif',
+          fontSize: "clamp(30px, 4vw, 50px)",
+          fontWeight: 600,
+          color: "var(--navy)",
+          lineHeight: 1.12,
+          letterSpacing: "-0.02em",
+          maxWidth: 620,
+        }}
+      >
+        Timeless pieces, crafted for every story.
+      </h1>
+    </div>
+  );
+}
+
+// ─── Subcategory card (landing) ────────────────────────────────────────────────
 function SubcategoryCard({
   sub,
   onSelect,
@@ -96,30 +136,16 @@ function SubcategoryCard({
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
         cursor: "pointer",
-        gap: 14,
       }}
     >
       <div
         style={{
           width: "100%",
           aspectRatio: "1",
-          maxWidth: 180,
-          margin: "0 auto",
           overflow: "hidden",
-          position: "relative",
-          borderRadius: "50%",
-          border: hovered
-            ? "1.5px solid rgba(255,255,255,0.35)"
-            : "1.5px solid rgba(255,255,255,0.1)",
-          transform: hovered ? "translateY(-4px)" : "translateY(0)",
-          transition:
-            "transform 0.35s cubic-bezier(0.22,1,0.36,1), border-color 0.3s ease",
-          outline: hovered
-            ? "1px solid rgba(255,255,255,0.12)"
-            : "1px solid transparent",
-          outlineOffset: "5px",
+          background: "#fafafa",
+          border: "1px solid var(--border)",
         }}
       >
         <img
@@ -129,24 +155,37 @@ function SubcategoryCard({
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            display: "block",
+            transform: hovered ? "scale(1.04)" : "scale(1)",
+            transition: "transform 0.5s cubic-bezier(0.22,1,0.36,1)",
           }}
         />
       </div>
-      <p
-        style={{
-          fontFamily: '"Playfair Display", Georgia, serif',
-          fontSize: 13,
-          fontWeight: 500,
-          color: hovered ? "#b8922a" : "#1a1a2e",
-          textAlign: "center",
-          lineHeight: 1.4,
-          transition: "color 0.25s",
-          letterSpacing: "0.02em",
-        }}
-      >
-        {sub.name}
-      </p>
+      <div style={{ padding: "14px 2px 0" }}>
+        <p
+          style={{
+            fontFamily: '"Google Sans Flex", sans-serif',
+            fontSize: 14,
+            fontWeight: 500,
+            color: "var(--navy)",
+            marginBottom: 4,
+          }}
+        >
+          {sub.name}
+        </p>
+        <span
+          style={{
+            fontFamily: '"Google Sans Flex", sans-serif',
+            fontSize: 10,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: hovered ? "var(--gold)" : "var(--text-muted)",
+            fontWeight: 500,
+            transition: "color 0.25s",
+          }}
+        >
+          Shop now →
+        </span>
+      </div>
     </div>
   );
 }
@@ -166,14 +205,10 @@ function ProductCard({ product }: { product: IProduct }) {
         display: "flex",
         flexDirection: "column",
         cursor: "pointer",
-        background: "#fff",
-        borderRadius: 2,
-        transition:
-          "transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s cubic-bezier(0.22,1,0.36,1)",
-        transform: hovered ? "translateY(-4px)" : "translateY(0)",
-        boxShadow: hovered
-          ? "0 20px 48px -12px rgba(26,26,46,0.18)"
-          : "0 2px 12px -4px rgba(26,26,46,0.08)",
+        background: "var(--surface)",
+        border: "1px solid",
+        borderColor: hovered ? "rgba(166,124,46,0.4)" : "var(--border)",
+        transition: "border-color 0.3s ease",
       }}
     >
       <div
@@ -182,8 +217,7 @@ function ProductCard({ product }: { product: IProduct }) {
           aspectRatio: "1",
           position: "relative",
           overflow: "hidden",
-          borderRadius: "2px 2px 0 0",
-          background: "#f8f6f2",
+          background: "#fafafa",
         }}
       >
         <img
@@ -193,7 +227,7 @@ function ProductCard({ product }: { product: IProduct }) {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            transform: hovered ? "scale(1.07)" : "scale(1)",
+            transform: hovered ? "scale(1.06)" : "scale(1)",
             transition: "transform 0.6s cubic-bezier(0.22,1,0.36,1)",
           }}
         />
@@ -202,7 +236,7 @@ function ProductCard({ product }: { product: IProduct }) {
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(to bottom, transparent 50%, rgba(26,26,46,0.6) 100%)",
+              "linear-gradient(to bottom, transparent 55%, rgba(20,33,61,0.55) 100%)",
             opacity: hovered ? 1 : 0,
             transition: "opacity 0.3s",
             display: "flex",
@@ -213,14 +247,14 @@ function ProductCard({ product }: { product: IProduct }) {
         >
           <span
             style={{
-              fontSize: 8,
-              letterSpacing: "0.3em",
+              fontSize: 9,
+              letterSpacing: "0.24em",
               textTransform: "uppercase",
               color: "#fff",
-              fontFamily: '"Playfair Display", Georgia, serif',
+              fontFamily: '"Google Sans Flex", sans-serif',
               fontWeight: 500,
               border: "1px solid rgba(255,255,255,0.6)",
-              padding: "5px 14px",
+              padding: "6px 14px",
               backdropFilter: "blur(4px)",
             }}
           >
@@ -233,14 +267,14 @@ function ProductCard({ product }: { product: IProduct }) {
               position: "absolute",
               top: 10,
               left: 10,
-              fontSize: 7,
-              letterSpacing: "0.22em",
+              fontSize: 9,
+              letterSpacing: "0.16em",
               textTransform: "uppercase",
-              fontFamily: '"Playfair Display", Georgia, serif',
+              fontFamily: '"Google Sans Flex", sans-serif',
               fontWeight: 600,
-              background: "linear-gradient(135deg, #1a1a2e, #0f3460)",
-              color: "#e8c96a",
-              padding: "3px 9px",
+              background: "var(--navy)",
+              color: "var(--gold-l)",
+              padding: "4px 10px",
             }}
           >
             {product.tag}
@@ -248,16 +282,14 @@ function ProductCard({ product }: { product: IProduct }) {
         )}
       </div>
 
-      <div
-        style={{ padding: "14px 12px 16px", borderTop: "1px solid #f0ece4" }}
-      >
+      <div style={{ padding: "14px 12px 16px" }}>
         <p
           style={{
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontSize: 13,
-            color: "#1a1a2e",
-            lineHeight: 1.45,
-            marginBottom: 4,
+            fontFamily: '"Google Sans Flex", sans-serif',
+            fontSize: 13.5,
+            color: "var(--navy)",
+            lineHeight: 1.4,
+            marginBottom: 5,
             fontWeight: 400,
           }}
         >
@@ -266,11 +298,11 @@ function ProductCard({ product }: { product: IProduct }) {
         {product.origin && (
           <p
             style={{
-              fontSize: 9,
-              letterSpacing: "0.2em",
+              fontSize: 9.5,
+              letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: "#b8922a",
-              fontFamily: '"Playfair Display", Georgia, serif',
+              color: "var(--gold)",
+              fontFamily: '"Google Sans Flex", sans-serif',
               marginBottom: 6,
               fontWeight: 500,
             }}
@@ -280,9 +312,9 @@ function ProductCard({ product }: { product: IProduct }) {
         )}
         <p
           style={{
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontSize: 14,
-            color: "#0f3460",
+            fontFamily: '"Google Sans Flex", sans-serif',
+            fontSize: 14.5,
+            color: "var(--navy)",
             fontWeight: 600,
           }}
         >
@@ -299,7 +331,7 @@ function ProductCardSkeleton() {
       style={{
         display: "flex",
         flexDirection: "column",
-        borderRadius: 2,
+        border: "1px solid var(--border)",
         overflow: "hidden",
       }}
     >
@@ -307,9 +339,7 @@ function ProductCardSkeleton() {
         h={0}
         style={{ width: "100%", aspectRatio: "1", borderRadius: 0 }}
       />
-      <div
-        style={{ padding: "14px 12px 16px", borderTop: "1px solid #f0ece4" }}
-      >
+      <div style={{ padding: "14px 12px 16px" }}>
         <Skeleton w="75%" h={13} style={{ marginBottom: 6 }} />
         <Skeleton w="45%" h={11} style={{ marginBottom: 6 }} />
         <Skeleton w="35%" h={14} />
@@ -338,7 +368,7 @@ function SidebarGroup({
   const visible = showAll ? subcategories : subcategories.slice(0, LIMIT);
 
   return (
-    <div style={{ borderBottom: "1px solid rgba(26,26,46,0.08)" }}>
+    <div style={{ borderBottom: "1px solid var(--border)" }}>
       <div style={{ display: "flex", alignItems: "center" }}>
         <button
           onClick={() => onSelectCat(category)}
@@ -353,10 +383,10 @@ function SidebarGroup({
         >
           <span
             style={{
-              fontFamily: '"Playfair Display", Georgia, serif',
+              fontFamily: '"Google Sans Flex", sans-serif',
               fontSize: 13,
-              fontWeight: 700,
-              color: "#1a1a2e",
+              fontWeight: 600,
+              color: "var(--navy)",
               letterSpacing: "0.01em",
             }}
           >
@@ -371,7 +401,7 @@ function SidebarGroup({
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              color: "#9f9fc0",
+              color: "var(--text-muted)",
             }}
           >
             <svg
@@ -414,7 +444,7 @@ function SidebarGroup({
                   textAlign: "left",
                   padding: "5px 16px 5px 26px",
                   background: isActive
-                    ? "linear-gradient(90deg, rgba(184,146,42,0.08), transparent)"
+                    ? "linear-gradient(90deg, rgba(166,124,46,0.08), transparent)"
                     : "transparent",
                   border: "none",
                   cursor: "pointer",
@@ -422,14 +452,14 @@ function SidebarGroup({
                   alignItems: "center",
                   gap: 8,
                   borderLeft: isActive
-                    ? "2px solid #b8922a"
+                    ? "2px solid var(--gold)"
                     : "2px solid transparent",
                   transition: "background 0.2s, border-color 0.2s",
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive)
                     (e.currentTarget as HTMLElement).style.background =
-                      "rgba(26,26,46,0.03)";
+                      "rgba(20,33,61,0.03)";
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive)
@@ -439,11 +469,11 @@ function SidebarGroup({
               >
                 <span
                   style={{
-                    fontSize: 11.5,
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    color: isActive ? "#b8922a" : "#4a5568",
+                    fontSize: 12,
+                    fontFamily: '"Google Sans Flex", sans-serif',
+                    color: isActive ? "var(--gold)" : "var(--text-muted)",
                     fontWeight: isActive ? 600 : 400,
-                    letterSpacing: "0.03em",
+                    letterSpacing: "0.01em",
                   }}
                 >
                   {sub.name}
@@ -459,10 +489,11 @@ function SidebarGroup({
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
-                fontSize: 10,
-                color: "#b8922a",
-                fontFamily: '"Playfair Display", Georgia, serif',
-                letterSpacing: "0.08em",
+                fontSize: 10.5,
+                color: "var(--gold)",
+                fontFamily: '"Google Sans Flex", sans-serif',
+                letterSpacing: "0.06em",
+                fontWeight: 500,
               }}
             >
               {showAll
@@ -483,7 +514,7 @@ function SidebarSkeleton() {
         <div
           key={i}
           style={{
-            borderBottom: "1px solid rgba(26,26,46,0.08)",
+            borderBottom: "1px solid var(--border)",
             padding: "10px 16px",
           }}
         >
@@ -518,11 +549,13 @@ function LandingView({
   subcategories,
   onSelectSub,
   onSelectCat,
+  showHero,
 }: {
   categories: ICategory[];
   subcategories: ISubcategory[];
   onSelectSub: (sub: ISubcategory) => void;
   onSelectCat: (cat: ICategory) => void;
+  showHero: boolean;
 }) {
   const RANDOM_PICK = 4;
 
@@ -540,6 +573,7 @@ function LandingView({
 
   return (
     <div>
+      {showHero && <LandingHero />}
       {categories.map((cat, catIndex) => {
         const pickedSubs = randomSubsMap[cat._id] ?? [];
         if (pickedSubs.length === 0) return null;
@@ -559,17 +593,12 @@ function LandingView({
           >
             <div
               style={{
-                marginBottom: 28,
+                marginBottom: 26,
                 paddingBottom: 14,
                 display: "flex",
                 alignItems: "baseline",
                 gap: 16,
-                borderBottom: "1px solid transparent",
-                backgroundImage:
-                  "linear-gradient(90deg, #e8c96a 0%, rgba(184,146,42,0.15) 40%, transparent 80%)",
-                backgroundSize: "100% 1px",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "bottom",
+                borderBottom: "1px solid var(--border)",
               }}
             >
               <button
@@ -583,15 +612,11 @@ function LandingView({
               >
                 <span
                   style={{
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: "#1a1a2e",
+                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontSize: 26,
+                    fontWeight: 600,
+                    color: "var(--navy)",
                     letterSpacing: "-0.01em",
-                    background:
-                      "linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
                   }}
                 >
                   {cat.name}
@@ -605,10 +630,10 @@ function LandingView({
                     border: "none",
                     cursor: "pointer",
                     padding: 0,
-                    fontSize: 10,
-                    color: "#b8922a",
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    letterSpacing: "0.14em",
+                    fontSize: 10.5,
+                    color: "var(--gold)",
+                    fontFamily: '"Google Sans Flex", sans-serif',
+                    letterSpacing: "0.1em",
                     textTransform: "uppercase",
                     fontWeight: 500,
                   }}
@@ -621,7 +646,7 @@ function LandingView({
             <div
               style={{
                 display: "grid",
-                gap: "32px 20px",
+                gap: "28px 20px",
                 gridTemplateColumns: "repeat(4, 1fr)",
               }}
             >
@@ -643,9 +668,19 @@ function LandingView({
 function LandingSkeleton() {
   return (
     <div>
+      <div
+        style={{
+          marginBottom: 60,
+          padding: "48px 4px 36px",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <Skeleton w={160} h={11} style={{ marginBottom: 16 }} />
+        <Skeleton w={420} h={40} />
+      </div>
       {[1, 2, 3].map((i) => (
         <div key={i} style={{ marginBottom: 48 }}>
-          <Skeleton w={180} h={18} style={{ marginBottom: 20 }} />
+          <Skeleton w={180} h={22} style={{ marginBottom: 20 }} />
           <div
             style={{
               display: "grid",
@@ -654,23 +689,16 @@ function LandingSkeleton() {
             }}
           >
             {Array.from({ length: 4 }).map((_, j) => (
-              <div
-                key={j}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
+              <div key={j} style={{ display: "flex", flexDirection: "column" }}>
                 <Skeleton
                   style={{
                     width: "100%",
                     aspectRatio: "1",
-                    borderRadius: "50%",
+                    borderRadius: 0,
+                    marginBottom: 12,
                   }}
                 />
-                <Skeleton w="65%" h={11} />
+                <Skeleton w="70%" h={12} />
               </div>
             ))}
           </div>
@@ -691,8 +719,8 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
       style={{
         width: 240,
         flexShrink: 0,
-        borderLeft: "1px solid rgba(26,26,46,0.08)",
-        background: "#fff",
+        borderLeft: "1px solid var(--border)",
+        background: "var(--surface)",
         position: "sticky",
         top: 0,
         maxHeight: "100vh",
@@ -701,24 +729,12 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
     >
       <div
         style={{
-          background: "linear-gradient(160deg, #1a1a2e 0%, #0f3460 100%)",
+          background: "var(--navy)",
           padding: "18px 18px 14px",
           position: "relative",
           overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: -20,
-            right: -20,
-            width: 80,
-            height: 80,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(184,146,42,0.25), transparent 70%)",
-          }}
-        />
         <div style={{ position: "relative", zIndex: 1 }}>
           <div
             style={{
@@ -729,15 +745,15 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
             }}
           >
             <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-              <path d="M5 0L10 5L5 10L0 5Z" fill="#e8c96a" />
+              <path d="M5 0L10 5L5 10L0 5Z" fill="var(--gold-l)" />
             </svg>
             <span
               style={{
-                fontSize: 8,
-                letterSpacing: "0.28em",
+                fontSize: 9,
+                letterSpacing: "0.24em",
                 textTransform: "uppercase",
-                color: "#e8c96a",
-                fontFamily: '"Playfair Display", Georgia, serif',
+                color: "var(--gold-l)",
+                fontFamily: '"Google Sans Flex", sans-serif',
                 fontWeight: 600,
               }}
             >
@@ -746,9 +762,9 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
           </div>
           <p
             style={{
-              fontFamily: '"Playfair Display", Georgia, serif',
-              fontSize: 16,
-              fontWeight: 700,
+              fontFamily: '"Google Sans Flex", sans-serif',
+              fontSize: 17,
+              fontWeight: 600,
               color: "#fff",
             }}
           >
@@ -760,19 +776,13 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
       <div
         style={{
           height: 2,
-          background:
-            "linear-gradient(90deg, transparent, #e8c96a 40%, #b8922a 60%, transparent)",
+          background: "var(--gold)",
         }}
       />
 
       <div style={{ padding: "6px 0" }}>
         {products.map((p, i) => {
           const isHovered = hovered === p._id;
-          const rankColors = [
-            "linear-gradient(135deg, #e8c96a, #b8922a)",
-            "linear-gradient(135deg, #d0d0d0, #a0a0a0)",
-            "linear-gradient(135deg, #e8a060, #cd7f32)",
-          ];
           return (
             <div
               key={p._id}
@@ -780,10 +790,10 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
               onMouseLeave={() => setHovered(null)}
               style={{
                 padding: "12px 14px",
-                borderBottom: "1px solid rgba(26,26,46,0.06)",
+                borderBottom: "1px solid var(--border)",
                 cursor: "pointer",
                 background: isHovered
-                  ? "linear-gradient(90deg, rgba(184,146,42,0.05), transparent)"
+                  ? "rgba(166,124,46,0.05)"
                   : "transparent",
                 transition: "background 0.25s",
                 display: "flex",
@@ -796,18 +806,14 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                   width: 20,
                   height: 20,
                   flexShrink: 0,
-                  background:
-                    rankColors[i] ??
-                    "linear-gradient(135deg, #0f3460, #1a3a6b)",
-                  color: "#fff",
-                  fontSize: 9,
-                  fontWeight: 800,
+                  background: "var(--navy)",
+                  color: "var(--gold-l)",
+                  fontSize: 10,
+                  fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: '"Playfair Display", Georgia, serif',
-                  clipPath:
-                    "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                  fontFamily: '"Google Sans Flex", sans-serif',
                 }}
               >
                 {i + 1}
@@ -817,12 +823,8 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                   width: 58,
                   height: 58,
                   flexShrink: 0,
-                  borderRadius: "50%",
                   overflow: "hidden",
-                  boxShadow: isHovered
-                    ? "0 6px 18px -4px rgba(184,146,42,0.4)"
-                    : "0 2px 8px -2px rgba(0,0,0,0.12)",
-                  transition: "box-shadow 0.3s",
+                  border: "1px solid var(--border)",
                 }}
               >
                 <img
@@ -832,7 +834,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    transform: isHovered ? "scale(1.1)" : "scale(1)",
+                    transform: isHovered ? "scale(1.08)" : "scale(1)",
                     transition: "transform 0.4s ease",
                   }}
                 />
@@ -840,9 +842,9 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p
                   style={{
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    fontSize: 11.5,
-                    color: "#1a1a2e",
+                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontSize: 12,
+                    color: "var(--navy)",
                     lineHeight: 1.35,
                     marginBottom: 4,
                     overflow: "hidden",
@@ -850,16 +852,17 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
+                    fontWeight: 400,
                   }}
                 >
                   {p.name}
                 </p>
                 <span
                   style={{
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#0f3460",
+                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: "var(--navy)",
                   }}
                 >
                   ₹{p.price.toLocaleString("en-IN")}
@@ -875,28 +878,27 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
           <button
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.background =
-                "linear-gradient(135deg, #e8c96a, #b8922a)";
-              (e.currentTarget as HTMLElement).style.color = "#1a1a2e";
+                "var(--gold)";
+              (e.currentTarget as HTMLElement).style.color = "var(--navy)";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.background =
-                "linear-gradient(135deg, #1a1a2e, #0f3460)";
-              (e.currentTarget as HTMLElement).style.color = "#e8c96a";
+                "var(--navy)";
+              (e.currentTarget as HTMLElement).style.color = "var(--gold-l)";
             }}
             style={{
               width: "100%",
-              padding: "10px 0",
-              background: "linear-gradient(135deg, #1a1a2e, #0f3460)",
+              padding: "11px 0",
+              background: "var(--navy)",
               border: "none",
               cursor: "pointer",
-              fontFamily: '"Playfair Display", Georgia, serif',
-              fontSize: 9,
-              letterSpacing: "0.24em",
+              fontFamily: '"Google Sans Flex", sans-serif',
+              fontSize: 10,
+              letterSpacing: "0.18em",
               textTransform: "uppercase",
-              color: "#e8c96a",
+              color: "var(--gold-l)",
               fontWeight: 600,
               transition: "background 0.3s, color 0.3s",
-              borderRadius: 1,
             }}
           >
             View All Trending →
@@ -1041,25 +1043,27 @@ export default function ShopLayout() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-          --navy:   #1a1a2e;
-          --deep:   #0f3460;
-          --gold:   #b8922a;
-          --gold-l: #e8c96a;
-          --cream:  #faf8f4;
-          --border: rgba(26,26,46,0.08);
-          --sidebar-w: 224px;
+          --navy:       #14213d;
+          --gold:       #a67c2e;
+          --gold-l:     #d4af6a;
+          --bg:         #ffffff;
+          --surface:    #ffffff;
+          --border:     rgba(20,33,61,0.08);
+          --text:       #14213d;
+          --text-muted: #6b7280;
+          --sidebar-w:  224px;
         }
 
         .shop-root {
-          font-family: 'Barlow Condensed', sans-serif;
-          background: var(--cream);
+          font-family: "Google Sans Flex", sans-serif;
+          background: var(--bg);
           min-height: 100vh;
-          color: #1a1a2e;
+          color: var(--text);
         }
 
         /* ── Shimmer skeleton ── */
@@ -1068,7 +1072,7 @@ export default function ShopLayout() {
           100% { background-position:  600px 0; }
         }
         .skeleton-pulse {
-          background: linear-gradient(90deg, #f0ece4 25%, #faf8f4 50%, #f0ece4 75%);
+          background: linear-gradient(90deg, #f0f0f0 25%, #f7f7f7 50%, #f0f0f0 75%);
           background-size: 600px 100%;
           animation: shimmer 1.6s infinite linear;
         }
@@ -1102,7 +1106,7 @@ export default function ShopLayout() {
         .sidebar {
           width: var(--sidebar-w);
           flex-shrink: 0;
-          background: #fff;
+          background: var(--surface);
           border-right: 1px solid var(--border);
           min-height: 100vh;
           position: sticky;
@@ -1111,24 +1115,24 @@ export default function ShopLayout() {
           overflow-y: auto;
           transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
           scrollbar-width: thin;
-          scrollbar-color: #e0d8cc transparent;
+          scrollbar-color: #e2e2e2 transparent;
         }
         .sidebar::-webkit-scrollbar { width: 3px; }
-        .sidebar::-webkit-scrollbar-thumb { background: #e0d8cc; }
+        .sidebar::-webkit-scrollbar-thumb { background: #e2e2e2; }
 
         .sidebar-header {
           padding: 16px 18px 14px;
-          background: linear-gradient(160deg, #1a1a2e 0%, #0f3460 100%);
+          background: var(--navy);
           position: sticky;
           top: 0;
           z-index: 2;
         }
         .sidebar-header-title {
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 9px;
-          letter-spacing: 0.3em;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 9.5px;
+          letter-spacing: 0.26em;
           text-transform: uppercase;
-          color: #e8c96a;
+          color: var(--gold-l);
           font-weight: 600;
           display: flex;
           align-items: center;
@@ -1152,11 +1156,11 @@ export default function ShopLayout() {
         .sidebar-quicklink {
           display: block;
           padding: 5px 18px;
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 11.5px;
-          color: var(--deep);
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 12px;
+          color: var(--text);
           text-decoration: none;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.01em;
           transition: color 0.2s, padding-left 0.2s;
         }
         .sidebar-quicklink:hover { color: var(--gold); padding-left: 22px; }
@@ -1191,22 +1195,22 @@ export default function ShopLayout() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
-          letter-spacing: 0.05em;
+          font-size: 11.5px;
+          letter-spacing: 0.02em;
         }
         .breadcrumb-btn {
           background: none; border: none; cursor: pointer;
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 11px; color: var(--deep);
-          letter-spacing: 0.05em;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 11.5px; color: var(--text);
+          letter-spacing: 0.02em;
           transition: color 0.2s;
           padding: 0;
           text-decoration: underline;
           text-underline-offset: 2px;
         }
         .breadcrumb-btn:hover { color: var(--gold); }
-        .breadcrumb-sep { color: #c0bcd0; font-size: 10px; }
-        .breadcrumb-current { color: #6b6880; }
+        .breadcrumb-sep { color: #c9c9c9; font-size: 11px; }
+        .breadcrumb-current { color: var(--text-muted); }
 
         .toolbar-right {
           display: flex;
@@ -1214,24 +1218,23 @@ export default function ShopLayout() {
           gap: 12px;
         }
         .item-count {
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.12em;
-          color: #9f9fc0;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 10.5px;
+          letter-spacing: 0.08em;
+          color: var(--text-muted);
           text-transform: uppercase;
         }
 
         .sort-select {
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 11px;
-          letter-spacing: 0.06em;
-          color: #1a1a2e;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 11.5px;
+          letter-spacing: 0.02em;
+          color: var(--text);
           background: #fff;
           border: 1px solid var(--border);
-          padding: 6px 12px;
+          padding: 7px 12px;
           cursor: pointer;
           outline: none;
-          border-radius: 2px;
           transition: border-color 0.2s;
         }
         .sort-select:focus { border-color: var(--gold); }
@@ -1249,10 +1252,10 @@ export default function ShopLayout() {
         /* ── Landing grid ── */
         .landing-sub-grid {
           display: grid;
-          gap: 32px 20px;
+          gap: 28px 20px;
           grid-template-columns: repeat(4, 1fr);
         }
-        @media (max-width: 680px) { .landing-sub-grid { grid-template-columns: repeat(2, 1fr); gap: 24px 16px; } }
+        @media (max-width: 680px) { .landing-sub-grid { grid-template-columns: repeat(2, 1fr); gap: 22px 16px; } }
 
         /* ── Mobile ── */
         .mob-bar {
@@ -1270,24 +1273,23 @@ export default function ShopLayout() {
           display: none;
           align-items: center;
           gap: 7px;
-          background: linear-gradient(135deg, #1a1a2e, #0f3460);
+          background: var(--navy);
           border: none;
           cursor: pointer;
-          padding: 7px 12px;
-          color: #e8c96a;
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 9px;
-          letter-spacing: 0.2em;
+          padding: 8px 12px;
+          color: var(--gold-l);
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 9.5px;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
           font-weight: 600;
-          border-radius: 2px;
           flex-shrink: 0;
         }
 
         .sidebar-overlay {
           display: none;
           position: fixed; inset: 0;
-          background: rgba(26,26,46,0.5);
+          background: rgba(20,33,61,0.5);
           z-index: 40;
           backdrop-filter: blur(2px);
           animation: fadeIn 0.2s ease;
@@ -1300,10 +1302,9 @@ export default function ShopLayout() {
           background: rgba(192,57,43,0.05);
           border: 1px solid rgba(192,57,43,0.2);
           border-left: 3px solid rgba(192,57,43,0.5);
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: 12px; letter-spacing: 0.04em;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 12.5px; letter-spacing: 0.01em;
           color: #c0392b;
-          border-radius: 0 2px 2px 0;
           margin-bottom: 20px;
         }
 
@@ -1328,13 +1329,13 @@ export default function ShopLayout() {
           display: flex; align-items: center; gap: 14px; margin-bottom: 22px;
         }
         .section-heading-text {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: 18px; font-weight: 700; color: var(--deep);
-          white-space: nowrap; font-style: italic;
+          font-family: "Google Sans Flex", sans-serif;
+          font-size: 26px; font-weight: 600; color: var(--navy);
+          white-space: nowrap;
         }
         .section-heading-rule {
           flex: 1; height: 1px;
-          background: linear-gradient(90deg, var(--border), transparent);
+          background: var(--border);
         }
 
         /* ── Responsive breakpoints ── */
@@ -1344,7 +1345,7 @@ export default function ShopLayout() {
             top: 0; left: 0; bottom: 0;
             z-index: 50;
             transform: translateX(-100%);
-            box-shadow: 8px 0 32px rgba(26,26,46,0.18);
+            box-shadow: 8px 0 32px rgba(20,33,61,0.18);
             max-height: 100vh;
           }
           .sidebar.open {
@@ -1360,7 +1361,7 @@ export default function ShopLayout() {
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #ddd8cc; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: #e2e2e2; border-radius: 2px; }
       `}</style>
 
       <div className="shop-root">
@@ -1388,10 +1389,10 @@ export default function ShopLayout() {
           </button>
           <span
             style={{
-              fontFamily: '"Playfair Display", Georgia, serif',
+              fontFamily: '"Google Sans Flex", sans-serif',
               fontSize: 15,
-              fontWeight: 700,
-              color: "#1a1a2e",
+              fontWeight: 600,
+              color: "var(--navy)",
               letterSpacing: "0.01em",
             }}
           >
@@ -1432,10 +1433,10 @@ export default function ShopLayout() {
             {catError && (
               <p
                 style={{
-                  fontSize: 11,
+                  fontSize: 11.5,
                   color: "#b91c1c",
                   padding: "10px 18px",
-                  fontFamily: '"Playfair Display", Georgia, serif',
+                  fontFamily: '"Google Sans Flex", sans-serif',
                 }}
               >
                 {catError}
@@ -1461,7 +1462,7 @@ export default function ShopLayout() {
               (l) => (
                 <div
                   key={l}
-                  style={{ borderBottom: "1px solid rgba(26,26,46,0.08)" }}
+                  style={{ borderBottom: "1px solid var(--border)" }}
                 >
                   <button
                     style={{
@@ -1475,7 +1476,7 @@ export default function ShopLayout() {
                     }}
                     onMouseEnter={(e) =>
                       ((e.currentTarget as HTMLElement).style.background =
-                        "rgba(26,26,46,0.03)")
+                        "rgba(20,33,61,0.03)")
                     }
                     onMouseLeave={(e) =>
                       ((e.currentTarget as HTMLElement).style.background =
@@ -1484,10 +1485,10 @@ export default function ShopLayout() {
                   >
                     <span
                       style={{
-                        fontFamily: '"Playfair Display", Georgia, serif',
+                        fontFamily: '"Google Sans Flex", sans-serif',
                         fontSize: 13,
-                        fontWeight: 700,
-                        color: "#1a1a2e",
+                        fontWeight: 600,
+                        color: "var(--navy)",
                       }}
                     >
                       {l}
@@ -1502,9 +1503,7 @@ export default function ShopLayout() {
               style={{
                 margin: "20px 18px",
                 height: 1,
-                background:
-                  "linear-gradient(90deg, transparent, #e8c96a 50%, transparent)",
-                opacity: 0.5,
+                background: "var(--border)",
               }}
             />
           </aside>
@@ -1597,6 +1596,7 @@ export default function ShopLayout() {
                     subcategories={subcategories}
                     onSelectSub={handleSelectSub}
                     onSelectCat={handleSelectCat}
+                    showHero={!activeCat}
                   />
                 ))}
 
@@ -1621,20 +1621,20 @@ export default function ShopLayout() {
                     <div className="empty-gem">◆</div>
                     <p
                       style={{
-                        fontFamily: '"Playfair Display", Georgia, serif',
+                        fontFamily: '"Google Sans Flex", sans-serif',
                         fontSize: 20,
-                        color: "#1a1a2e",
-                        fontStyle: "italic",
+                        color: "var(--navy)",
+                        fontWeight: 500,
                       }}
                     >
                       Nothing in {activeSub.name} yet
                     </p>
                     <p
                       style={{
-                        fontFamily: '"Playfair Display", Georgia, serif',
-                        fontSize: 12,
-                        color: "#9f9fc0",
-                        letterSpacing: "0.08em",
+                        fontFamily: '"Google Sans Flex", sans-serif',
+                        fontSize: 12.5,
+                        color: "var(--text-muted)",
+                        letterSpacing: "0.02em",
                       }}
                     >
                       Check back soon or explore another collection.
@@ -1643,17 +1643,16 @@ export default function ShopLayout() {
                       onClick={goHome}
                       style={{
                         marginTop: 8,
-                        padding: "9px 22px",
-                        background: "linear-gradient(135deg, #1a1a2e, #0f3460)",
+                        padding: "10px 22px",
+                        background: "var(--navy)",
                         border: "none",
                         cursor: "pointer",
-                        fontFamily: '"Playfair Display", Georgia, serif',
-                        fontSize: 9,
-                        letterSpacing: "0.24em",
+                        fontFamily: '"Google Sans Flex", sans-serif',
+                        fontSize: 10,
+                        letterSpacing: "0.18em",
                         textTransform: "uppercase",
-                        color: "#e8c96a",
+                        color: "var(--gold-l)",
                         fontWeight: 600,
-                        borderRadius: 1,
                         transition: "opacity 0.2s",
                       }}
                       onMouseEnter={(e) =>
@@ -1675,19 +1674,6 @@ export default function ShopLayout() {
                   <div className="section-heading-row">
                     <h2 className="section-heading-text">{activeSub.name}</h2>
                     <div className="section-heading-rule" />
-                    <svg
-                      width="8"
-                      height="8"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                      style={{ flexShrink: 0 }}
-                    >
-                      <path
-                        d="M5 0L10 5L5 10L0 5Z"
-                        fill="#e8c96a"
-                        opacity="0.7"
-                      />
-                    </svg>
                   </div>
                   <div className="product-grid">
                     {products.map((p, i) => (
@@ -1705,8 +1691,6 @@ export default function ShopLayout() {
                 </section>
               )}
             </main>
-
-            
           </div>
         </div>
       </div>

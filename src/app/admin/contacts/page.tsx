@@ -122,7 +122,7 @@ export default function AdminContactsPage() {
   const countByStatus = (s: string) => s ? messages.filter(m => m.status === s).length : messages.length;
 
   return (
-    <div className="min-h-screen bg-[#f0f4f9]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-screen bg-[#f0f4f9]" style={{ fontFamily: '"Google Sans Flex", sans-serif' }}>
 
       {/* ── Top Bar ── */}
       <div className="bg-[#0d2240] border-b border-white/10">

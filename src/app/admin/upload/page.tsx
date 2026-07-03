@@ -13,7 +13,7 @@ const css = `
   .bu-breadcrumb:hover { color: #b45309; }
 
   .bu-header { margin-bottom: 2rem; }
-  .bu-title { font-family: 'Playfair Display', serif; font-size: 2rem; color: #0f172a; letter-spacing: -0.02em; margin: 0.3rem 0 0.25rem; line-height: 1.1; }
+  .bu-title { font-family: "Google Sans Flex", sans-serif; font-size: 2rem; color: #0f172a; letter-spacing: -0.02em; margin: 0.3rem 0 0.25rem; line-height: 1.1; }
   .bu-subtitle { font-size: 0.85rem; color: #64748b; }
 
   .bu-layout { display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; align-items: start; }
@@ -21,7 +21,7 @@ const css = `
 
   .bu-card { background: #fff; border: 1px solid #e2e0da; border-radius: 14px; overflow: hidden; }
   .bu-card-head { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f0ec; display: flex; align-items: center; gap: 0.6rem; }
-  .bu-card-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: #0f172a; margin: 0; }
+  .bu-card-title { font-family: "Google Sans Flex", sans-serif; font-size: 1rem; color: #0f172a; margin: 0; }
   .bu-card-body { padding: 1.5rem; }
 
   .bu-dropzone { border: 2px dashed #d1cec7; border-radius: 12px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafaf8; position: relative; }
@@ -58,7 +58,7 @@ const css = `
   .bu-result-stat { border-radius: 10px; padding: 1.1rem; text-align: center; }
   .bu-result-stat.success { background: #f0fdf4; border: 1px solid #bbf7d0; }
   .bu-result-stat.fail { background: #fef2f2; border: 1px solid #fecaca; }
-  .bu-result-num { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 600; line-height: 1; }
+  .bu-result-num { font-family: "Google Sans Flex", sans-serif; font-size: 2.25rem; font-weight: 600; line-height: 1; }
   .bu-result-num.green { color: #15803d; }
   .bu-result-num.red { color: #dc2626; }
   .bu-result-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 0.3rem; color: #475569; }
@@ -91,7 +91,7 @@ const css = `
 
   .bu-success-banner { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; border-radius: 12px; padding: 1.25rem 1.5rem; text-align: center; margin-bottom: 1.25rem; }
   .bu-success-icon { font-size: 2rem; margin-bottom: 0.4rem; }
-  .bu-success-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #15803d; margin-bottom: 0.25rem; }
+  .bu-success-title { font-family: "Google Sans Flex", sans-serif; font-size: 1.1rem; color: #15803d; margin-bottom: 0.25rem; }
   .bu-success-sub { font-size: 0.8rem; color: #16a34a; }
 
   .bu-reset { display: block; width: 100%; margin-top: 0.75rem; padding: 0.6rem; background: none; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.15s; }

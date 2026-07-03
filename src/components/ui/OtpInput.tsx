@@ -45,7 +45,7 @@ export default function OtpInput({ value, onChange, disabled }: OtpInputProps) {
         .otp-cell {
           width: 52px;
           height: 60px;
-          font-family: 'Playfair Display', Georgia, serif;
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 24px;
           font-weight: 500;
           text-align: center;

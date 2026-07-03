@@ -404,7 +404,7 @@ export default async function ProductDetailPage({
   return (
     <>
       <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap"
         rel="stylesheet"
       />
 
@@ -420,7 +420,7 @@ export default async function ProductDetailPage({
           --bg-off: #faf8f5;
         }
         * { box-sizing: border-box; }
-        .pd-page { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+        .pd-page { font-family: 'Google Sans Flex', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
         .pd-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding: 20px 0 32px; flex-wrap: wrap; }
         .pd-breadcrumb a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
         .pd-breadcrumb a:hover { color: var(--gold); }
@@ -435,12 +435,12 @@ export default async function ProductDetailPage({
         .pd-type-label.jewelry { background: #fff7ed; color: #c2410c; border: 0.5px solid rgba(194,65,12,0.2); }
         .pd-category-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
         .pd-category-label::before { content: ''; display: inline-block; width: 28px; height: 0.5px; background: var(--gold); }
-        .pd-title { font-family: 'Playfair Display', serif; font-size: clamp(26px, 4vw, 40px); font-weight: 500; line-height: 1.15; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
-        .pd-subtitle { font-family: 'Playfair Display', serif; font-size: 13px; font-style: italic; color: var(--muted); margin-bottom: 32px; }
+        .pd-title { font-family: 'Google Sans Flex', sans-serif; font-size: clamp(26px, 4vw, 40px); font-weight: 500; line-height: 1.15; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
+        .pd-subtitle { font-family: 'Google Sans Flex', sans-serif; font-size: 13px; font-style: italic; color: var(--muted); margin-bottom: 32px; }
         .pd-price-block { display: flex; align-items: flex-start; gap: 0; padding: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 32px; position: relative; }
         .pd-price-block::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 60px; height: 1px; background: var(--gold); }
-        .pd-currency { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold); margin-top: 6px; margin-right: 2px; }
-        .pd-price-num { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 400; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
+        .pd-currency { font-family: 'Google Sans Flex', sans-serif; font-size: 18px; color: var(--gold); margin-top: 6px; margin-right: 2px; }
+        .pd-price-num { font-family: 'Google Sans Flex', sans-serif; font-size: 48px; font-weight: 400; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
         .pd-price-meta { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: auto; margin-bottom: 6px; margin-left: 12px; line-height: 1.6; }
         .pd-specs { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
         .pd-specs tr { border-bottom: 1px solid var(--border); }
@@ -453,9 +453,9 @@ export default async function ProductDetailPage({
         .pd-stock { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
         .pd-stock-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
         .pd-stock-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
-        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
+        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: "Google Sans Flex", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
         .pd-btn-primary:hover { background: #2a2a2a; }
-        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: "Google Sans Flex", sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .pd-btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
         .pd-mini-trust { display: flex; gap: 20px; padding-top: 20px; border-top: 1px solid var(--border); margin-top: 16px; flex-wrap: wrap; }
         .pd-mini-trust-item { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
@@ -469,7 +469,7 @@ export default async function ProductDetailPage({
         .pd-trust-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
         .pd-trust-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
         .pd-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .pd-section-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
+        .pd-section-title { font-family: "Google Sans Flex", sans-serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
         .pd-section-link { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; font-weight: 500; }
         .pd-section-link:hover { color: var(--gold); }
         .pd-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 80px; }
@@ -481,10 +481,10 @@ export default async function ProductDetailPage({
         .pd-related-card:hover .pd-related-img img { transform: scale(1.06); }
         .pd-related-img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0); transition: background 0.3s; }
         .pd-related-card:hover .pd-related-img-overlay { background: rgba(0,0,0,0.06); }
-        .pd-related-name { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
+        .pd-related-name { font-family: "Google Sans Flex", sans-serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
         .pd-related-card:hover .pd-related-name { color: var(--gold); }
         .pd-related-meta { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-        .pd-related-price { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--ink); }
+        .pd-related-price { font-family: "Google Sans Flex", sans-serif; font-size: 16px; color: var(--ink); }
         .pd-related-empty { grid-column: 1/-1; text-align: center; padding: 48px; color: var(--muted); font-size: 13px; letter-spacing: 0.06em; border: 1px dashed var(--border); }
         .pd-related-type-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; margin-bottom: 6px; }
         .pd-related-type-pip.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
@@ -494,8 +494,8 @@ export default async function ProductDetailPage({
         .pd-testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; }
         @media (max-width: 768px) { .pd-testimonial-grid { grid-template-columns: 1fr; } }
         .pd-testimonial-card { background: #fff; padding: 32px 28px; border: 1px solid var(--border); }
-        .pd-testimonial-quote { font-family: 'Playfair Display', serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
-        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: 'Playfair Display', serif; }
+        .pd-testimonial-quote { font-family: "Google Sans Flex", sans-serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
+        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: "Google Sans Flex", sans-serif; }
         .pd-testimonial-author { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); }
         .pd-testimonial-loc { font-size: 10px; color: var(--muted); margin-top: 2px; }
         .pd-stars { display: flex; gap: 2px; margin-bottom: 12px; color: var(--gold); font-size: 12px; }
@@ -504,7 +504,7 @@ export default async function ProductDetailPage({
         .pd-info-col-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; color: var(--ink); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         .pd-info-col-title::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
         .pd-info-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-        .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.02em; transition: color 0.2s; display: flex; align-items: center; gap: 8px; }
+        .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing： 0.02em; transition： color 0.2s; display： flex； align-items： center； gap：
         .pd-info-col ul li a::before { content: ''; display: inline-block; width: 12px; height: 0.5px; background: var(--border); transition: background 0.2s, width 0.2s; flex-shrink: 0; }
         .pd-info-col ul li a:hover { color: var(--ink); }
         .pd-info-col ul li a:hover::before { background: var(--gold); width: 18px; }

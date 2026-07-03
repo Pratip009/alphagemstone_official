@@ -13,8 +13,8 @@ export default function AlphaImportsSection() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
-        .ai-root { font-family: 'Poppins', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+        .ai-root { font-family: 'Google Sans Flex', sans-serif; }
         .ai-gem-card { transition: border-color 0.3s, box-shadow 0.3s; }
         .ai-gem-card:hover { border-color: #C8A040 !important; box-shadow: 0 4px 20px rgba(180,145,40,0.1); }
         .ai-btn:hover { background: #f5f5f5 !important; }

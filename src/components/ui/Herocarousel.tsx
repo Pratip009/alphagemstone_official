@@ -312,9 +312,9 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300;1,400&family=Barlow+Condensed:wght@200;300;400&display=swap');
-        .hero-display { font-family: 'Playfair Display', Georgia, serif; }
-        .hero-label   { font-family: 'Barlow Condensed', sans-serif; font-weight: 300; }
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+        .hero-display { font-family: "Google Sans Flex", sans-serif; }
+        .hero-label   { font-family: "Google Sans Flex", sans-serif; font-weight: 300; }
         :root { --carousel-h: 42svh; }
         @media (min-width: 640px) { :root { --carousel-h: 70vh; } }
         @keyframes tw-blink {

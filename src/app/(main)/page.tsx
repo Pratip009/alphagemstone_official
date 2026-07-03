@@ -35,14 +35,11 @@ export default async function HomePage() {
       </section>
       <TrustBadges />
       <ShopByCategory />
-   <GemsPromise />
-      <SpecialsMarquee/>
-      
-
-      
-      <Testimonials/>
-      <FeaturedInNews/>
-      <JewelryModal/>
+      <GemsPromise />
+      <SpecialsMarquee />
+      <Testimonials />
+      <FeaturedInNews />
+      <JewelryModal />
     </main>
   );
 }

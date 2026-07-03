@@ -147,16 +147,16 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
             </button>
           </div>
         </div>
-        <div ref={invoiceRef} style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', padding: '52px 60px', minHeight: '297mm' }}>
+        <div ref={invoiceRef} style={{ fontFamily: '"Google Sans Flex", sans-serif', background: '#fff', padding: '52px 60px', minHeight: '297mm' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 44 }}>
             <div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#1a1714', letterSpacing: '-0.5px', lineHeight: 1 }}>
+              <div style={{ fontFamily: '"Google Sans Flex", sans-serif', fontSize: 30, fontWeight: 500, color: '#1a1714', letterSpacing: '-0.5px', lineHeight: 1 }}>
                 Alpha<span style={{ color: '#c9a84c' }}>Imports</span>
               </div>
               <div style={{ fontSize: 9, color: '#a09a90', marginTop: 6, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Fine Gemstones & Jewellery</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 46, fontWeight: 300, color: '#1a1714', letterSpacing: '-2px', lineHeight: 1 }}>INVOICE</div>
+              <div style={{ fontFamily: '"Google Sans Flex", sans-serif', fontSize: 46, fontWeight: 300, color: '#1a1714', letterSpacing: '-2px', lineHeight: 1 }}>INVOICE</div>
               <div style={{ marginTop: 14 }}>
                 {[{ label: 'Invoice No.', value: invoiceNumber, mono: true }, { label: 'Date', value: invoiceDate }, { label: 'Due Date', value: dueDate }].map(({ label, value, mono }) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'flex-end', gap: 20, marginBottom: 5, fontSize: 12 }}>
@@ -215,12 +215,12 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', marginTop: 10, background: '#1a1714', borderRadius: 10 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: '#f0e8d0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Total Due</span>
-                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 500, color: '#c9a84c' }}>${order.totalAmount.toLocaleString()}</span>
+                <span style={{ fontFamily: '"Google Sans Flex", sans-serif', fontSize: 24, fontWeight: 500, color: '#c9a84c' }}>${order.totalAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
           <div style={{ marginTop: 52, textAlign: 'center', borderTop: '1px solid #f0ece6', paddingTop: 22 }}>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: '#c9a84c', fontStyle: 'italic', marginBottom: 6 }}>Alpha Imports — Fine Gemstones & Jewellery</div>
+            <div style={{ fontFamily: '"Google Sans Flex", sans-serif', fontSize: 15, color: '#c9a84c', fontStyle: 'italic', marginBottom: 6 }}>Alpha Imports — Fine Gemstones & Jewellery</div>
             <div style={{ fontSize: 10, color: '#c4bdb2', letterSpacing: '0.12em' }}>www.alphaimports.com · support@alphaimports.com</div>
           </div>
         </div>
@@ -389,7 +389,7 @@ function OrderDetail({ order, onShippingUpdate, onInvoice }: {
             ))}
             <div className="flex justify-between items-center px-3 py-2 bg-[#1a1714]">
               <span className="text-[0.65rem] font-semibold text-[#f0e8d0] tracking-wide uppercase">Total</span>
-              <span className="text-[0.9rem] font-semibold" style={{ fontFamily: 'Cormorant Garamond, serif', color: '#c9a84c' }}>
+              <span className="text-[0.9rem] font-semibold" style={{ fontFamily: '"Google Sans Flex", sans-serif', color: '#c9a84c' }}>
                 ${order.totalAmount.toLocaleString()}
               </span>
             </div>
@@ -464,7 +464,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[0.62rem] tracking-[0.15em] uppercase text-[#a09a90] font-semibold mb-1">{label}</p>
-        <p className="text-xl font-semibold text-[#1a1714] leading-none mb-1" style={{ fontFamily: 'Cormorant Garamond, serif' }}>{value}</p>
+        <p className="text-xl font-semibold text-[#1a1714] leading-none mb-1" style={{ fontFamily: '"Google Sans Flex", sans-serif' }}>{value}</p>
         <p className="text-[0.65rem] text-[#b0a898]">{sub}</p>
       </div>
     </div>
@@ -539,7 +539,7 @@ export default function AdminOrdersPage() {
             <p className="text-[0.62rem] tracking-[0.25em] uppercase mb-2 font-bold" style={{ color: '#c9a84c' }}>
               ◆ Admin Console
             </p>
-            <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '2.4rem', fontWeight: 400, color: '#1a1714', letterSpacing: '-0.5px', lineHeight: 1 }}>
+            <h1 style={{ fontFamily: '"Google Sans Flex", sans-serif', fontSize: '2.4rem', fontWeight: 400, color: '#1a1714', letterSpacing: '-0.5px', lineHeight: 1 }}>
               Order Management
             </h1>
           </div>
@@ -675,7 +675,7 @@ export default function AdminOrdersPage() {
 
                     {/* Amount */}
                     <div>
-                      <p className="text-[0.85rem] font-semibold text-[#1a1714]" style={{ fontFamily: 'Cormorant Garamond, serif' }}>
+                      <p className="text-[0.85rem] font-semibold text-[#1a1714]" style={{ fontFamily: '"Google Sans Flex", sans-serif' }}>
                         ${order.totalAmount.toLocaleString()}
                       </p>
                       <p className="text-[0.6rem] text-[#b0a898]">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>

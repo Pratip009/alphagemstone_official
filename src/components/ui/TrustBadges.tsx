@@ -117,7 +117,7 @@ export default function TrustBadges() {
                 {/* Label */}
                 <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
                   <p style={{
-                    fontFamily: '"Cormorant Garamond", "Playfair Display", Georgia, serif',
+                    fontFamily: '"Google Sans Flex", sans-serif',
                     fontSize: 13, fontWeight: 600, letterSpacing: "0.12em",
                     textTransform: "uppercase",
                     color: isActive ? "#f0d898" : "#a8bcd4",
@@ -127,7 +127,7 @@ export default function TrustBadges() {
                     {label}
                   </p>
                   <p style={{
-                    fontFamily: "sans-serif",
+                    fontFamily: '"Google Sans Flex", sans-serif',
                     fontSize: 10, letterSpacing: "0.18em",
                     textTransform: "uppercase",
                     color: isActive ? "rgba(200,169,110,0.8)" : "rgba(100,120,150,0.6)",
@@ -185,7 +185,7 @@ export default function TrustBadges() {
               </div>
 
               <p style={{
-                fontFamily: '"Cormorant Garamond", "Playfair Display", Georgia, serif',
+                fontFamily: '"Google Sans Flex", sans-serif',
                 fontSize: 11, fontWeight: 600, letterSpacing: "0.1em",
                 textTransform: "uppercase", color: "#8fa8cc",
                 textAlign: "center", lineHeight: 1.4,

@@ -99,13 +99,13 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
-        body, .products-page * { font-family: 'Poppins', sans-serif !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+        body, .products-page *:not(.pc6, .pc6 *) { font-family: 'Google Sans Flex', sans-serif !important; }
       `}</style>
 
       <div
         className="products-page min-h-screen bg-[#ffffff]"
-        style={{ fontFamily: "'Poppins', sans-serif" }}
+        style={{ fontFamily: "'Google Sans Flex', sans-serif" }}
       >
         {/* ── Top accent line ── */}
         <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#B8975A] to-transparent" />
@@ -139,7 +139,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                 <div>
                   <h1
                     className="text-3xl sm:text-4xl font-normal text-[#1A1612] leading-tight"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
+                    style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
                   >
                     {productType === "watch" ? "Timepieces" : "Diamonds"}
                   </h1>
@@ -171,12 +171,20 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                         _id:               String(p._id),
                         name:              p.name              as string,
                         price:             p.price             as number,
+                        // gem / diamond fields
                         shape:             p.shape             as string | string[] | undefined,
                         size:              p.size              as number | undefined,
                         color:             p.color             as string | string[] | undefined,
                         clarity:           p.clarity           as string | string[] | undefined,
                         certification:     p.certification     as string | string[] | undefined,
+                        gemstoneName:      p.gemstoneName      as string | undefined,
+                        shapeRaw:          p.shapeRaw          as string | undefined,
+                        colorRaw:          p.colorRaw          as string | undefined,
+                        clarityRaw:        p.clarityRaw        as string | undefined,
+                        gradeRaw:          p.gradeRaw          as string | undefined,
+                        // watch fields
                         watchBrand:        p.watchBrand        as string | undefined,
+                        watchModel:        p.watchModel        as string | undefined,
                         watchMovement:     p.watchMovement     as string | undefined,
                         watchGender:       p.watchGender       as string | undefined,
                         watchStyle:        p.watchStyle        as string | undefined,
@@ -184,6 +192,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                         watchDialColor:    p.watchDialColor    as string | undefined,
                         watchStrapType:    p.watchStrapType    as string | undefined,
                         watchCaseSize:     p.watchCaseSize     as string | undefined,
+                        watchFeatures:     p.watchFeatures     as string[] | undefined,
                         images:            p.images            as string[],
                         stock:             p.stock             as number,
                       };
@@ -213,7 +222,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
             <div className="w-2.5 h-2.5 bg-[#B8975A] rotate-45 rounded-[1px]" />
             <span
               className="text-[11px] tracking-[0.2em] uppercase text-[#8A7F72]"
-              style={{ fontFamily: "'Playfair Display', serif" }}
+              style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
             >
               Alpha Imports
             </span>
@@ -280,7 +289,7 @@ function ActiveFilterChips({ searchParams }: { searchParams: Record<string, stri
         <span
           key={`${chip.key}-${chip.label}-${i}`}
           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-medium tracking-wide bg-[#F5EDD6] text-[#8A6C38] border border-[#D4C4A0]"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
         >
           {chip.label}
         </span>
@@ -304,7 +313,7 @@ function EmptyState() {
       </div>
       <p
         className="text-lg font-normal text-[#1A1612] mb-2"
-        style={{ fontFamily: "'Playfair Display', serif" }}
+        style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
       >
         No results found
       </p>

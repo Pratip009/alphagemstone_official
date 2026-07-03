@@ -4,8 +4,8 @@ export default function FoundersMessage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
-        .fm-root * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+        .fm-root * { font-family: "Google Sans Flex", sans-serif; box-sizing: border-box; }
         .fm-quote-mark {
           position: absolute;
           top: -0.5rem;
@@ -32,7 +32,7 @@ export default function FoundersMessage() {
           flex-shrink: 0;
         }
         .fm-sig {
-          font-family: 'Poppins', sans-serif;
+          font-family: "Google Sans Flex", sans-serif;
           font-style: italic;
           font-weight: 300;
           font-size: 1.6rem;

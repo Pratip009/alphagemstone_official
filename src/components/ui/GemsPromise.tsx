@@ -135,7 +135,7 @@ function PromiseCard({
         <div
           className="absolute bottom-3 right-3 px-[10px] py-[4px] text-[8px] tracking-[0.26em] uppercase border"
           style={{
-            fontFamily: "'Cinzel', serif",
+            fontFamily: '"Google Sans Flex", sans-serif',
             color: item.accentText,
             borderColor: item.accentBorder,
             background: 'rgba(8,6,5,0.6)',
@@ -152,7 +152,7 @@ function PromiseCard({
         {/* Number */}
         <span
           className="block mb-[10px] text-[8px] tracking-[0.30em]"
-          style={{ fontFamily: "'Cinzel', serif", color: '#7a6a52', fontWeight: 500 }}
+          style={{ fontFamily: '"Google Sans Flex", sans-serif', color: '#7a6a52', fontWeight: 500 }}
         >
           — {item.num}
         </span>
@@ -161,7 +161,7 @@ function PromiseCard({
         <h3
           className="mb-3 text-[17px] leading-[1.25]"
           style={{
-            fontFamily: "'Cormorant Garamond', serif",
+            fontFamily: '"Google Sans Flex", sans-serif',
             color: '#f0e8d8',
             letterSpacing: '0.01em',
             fontWeight: 500,
@@ -174,7 +174,7 @@ function PromiseCard({
         <p
           className="flex-1 mb-5 leading-[1.75] transition-colors duration-400 group-hover:text-[#b0a090]"
           style={{
-            fontFamily: "'Libre Baskerville', serif",
+            fontFamily: '"Google Sans Flex", sans-serif',
             fontSize: '12.5px',
             color: '#9a8c7c',
             letterSpacing: '0.01em',
@@ -232,7 +232,7 @@ export default function GemsPromise() {
     <>
       {/* Load Cinzel + Cormorant Garamond */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Cinzel:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
       `}</style>
 
       <section
@@ -271,7 +271,7 @@ export default function GemsPromise() {
           style={{
             fontSize: '320px',
             color: 'rgba(184,149,58,0.04)',
-            fontFamily: 'serif',
+            fontFamily: '"Google Sans Flex", sans-serif',
           }}
         >
           ◆
@@ -299,7 +299,7 @@ export default function GemsPromise() {
               />
               <span
                 className="text-[9px] tracking-[0.38em] uppercase"
-                style={{ fontFamily: "'Cinzel', serif", color: '#c9a84c', fontWeight: 500 }}
+                style={{ fontFamily: '"Google Sans Flex", sans-serif', color: '#c9a84c', fontWeight: 500 }}
               >
                 Our Promise
               </span>
@@ -319,7 +319,7 @@ export default function GemsPromise() {
                 animate={isHeadingInView ? { y: 0 } : {}}
                 transition={{ duration: 1, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontFamily: "'Cormorant Garamond', serif",
+                  fontFamily: "'Google Sans Flex', sans-serif",
                   fontSize: 'clamp(38px, 6vw, 72px)',
                   lineHeight: 1.05,
                   fontWeight: 400,
@@ -347,7 +347,7 @@ export default function GemsPromise() {
               animate={isHeadingInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.35, ease: 'easeOut' }}
               style={{
-                fontFamily: "'Libre Baskerville', serif",
+                fontFamily: '"Google Sans Flex", sans-serif',
                 fontSize: '13px',
                 lineHeight: 1.85,
                 fontWeight: 400,
@@ -394,7 +394,7 @@ export default function GemsPromise() {
           >
             <span
               className="w-full sm:w-auto text-[8px] tracking-[0.30em] uppercase mb-2 sm:mb-0 sm:mr-5"
-              style={{ fontFamily: "'Cinzel', serif", color: '#7a6a50', fontWeight: 500 }}
+              style={{ fontFamily: '"Google Sans Flex", sans-serif', color: '#7a6a50', fontWeight: 500 }}
             >
               Certified by
             </span>
@@ -409,7 +409,7 @@ export default function GemsPromise() {
                   transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }}
                   className="text-[11px] tracking-[0.12em] px-[18px] py-[7px] cursor-default select-none transition-all duration-350"
                   style={{
-                    fontFamily: "'Cinzel', serif",
+                    fontFamily: '"Google Sans Flex", sans-serif',
                     color: '#7a6a52',
                     border: '1px solid rgba(180,145,60,0.22)',
                     background: 'transparent',

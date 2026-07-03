@@ -148,7 +148,7 @@ export default function CookieConsent() {
                 <div>
                   <h2
                     style={{
-                      fontFamily: "'Cormorant Garamond', serif",
+                      fontFamily: '"Google Sans Flex", sans-serif',
                       fontSize: "1.25rem",
                       fontWeight: 600,
                       color: "var(--text)",
@@ -160,7 +160,7 @@ export default function CookieConsent() {
                   </h2>
                   <p
                     style={{
-                      fontFamily: "'Josefin Sans', sans-serif",
+                      fontFamily: '"Google Sans Flex", sans-serif',
                       fontSize: "0.65rem",
                       letterSpacing: "0.14em",
                       color: "var(--gold)",
@@ -192,7 +192,7 @@ export default function CookieConsent() {
             {/* Body text */}
             <p
               style={{
-                fontFamily: "'Josefin Sans', sans-serif",
+                fontFamily: '"Google Sans Flex", sans-serif',
                 fontSize: "0.8rem",
                 lineHeight: 1.7,
                 color: "var(--text-secondary)",
@@ -266,7 +266,7 @@ export default function CookieConsent() {
                   flex: 1,
                   width: "100%",
                   padding: "11px 20px",
-                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontFamily: '"Google Sans Flex", sans-serif',
                   fontSize: "0.65rem",
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -292,7 +292,7 @@ export default function CookieConsent() {
                   flex: 1,
                   width: "100%",
                   padding: "10px 20px",
-                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontFamily: '"Google Sans Flex", sans-serif',
                   fontSize: "0.65rem",
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -319,7 +319,7 @@ export default function CookieConsent() {
                   alignItems: "center",
                   gap: "5px",
                   padding: "10px 14px",
-                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontFamily: '"Google Sans Flex", sans-serif',
                   fontSize: "0.62rem",
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
@@ -388,7 +388,7 @@ function PreferenceRow({
       <div style={{ flex: 1 }}>
         <p
           style={{
-            fontFamily: "'Josefin Sans', sans-serif",
+            fontFamily: '"Google Sans Flex", sans-serif',
             fontSize: "0.7rem",
             fontWeight: 600,
             letterSpacing: "0.1em",
@@ -401,7 +401,7 @@ function PreferenceRow({
         </p>
         <p
           style={{
-            fontFamily: "'Josefin Sans', sans-serif",
+            fontFamily: '"Google Sans Flex", sans-serif',
             fontSize: "0.72rem",
             color: "var(--text-secondary)",
             lineHeight: 1.5,
@@ -416,7 +416,7 @@ function PreferenceRow({
         {locked ? (
           <div
             style={{
-              fontFamily: "'Josefin Sans', sans-serif",
+              fontFamily: '"Google Sans Flex", sans-serif',
               fontSize: "0.58rem",
               letterSpacing: "0.12em",
               textTransform: "uppercase",

@@ -40,7 +40,7 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
 
     // Send shipped notification email when admin marks order as shipped
     if (status === 'shipped') {
-      const tracking = trackingNumber ?? order.trackingNumber ?? order.fedex?.trackingNumber;
+const tracking = trackingNumber ?? order.trackingNumber;
       if (tracking) {
         void resend.emails.send({
           from: EMAIL_FROM,
@@ -52,7 +52,7 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
             trackingNumber: tracking,
             trackingUrl: (trackingUrl ?? order.trackingUrl) || undefined,
             shippingCarrier: (shippingCarrier ?? order.shippingCarrier) || undefined,
-            estimatedDelivery: order.shippingEstimatedDelivery ?? order.fedex?.estimatedDelivery,
+            estimatedDelivery: order.shippingEstimatedDelivery ?? undefined,
           }),
         });
       }

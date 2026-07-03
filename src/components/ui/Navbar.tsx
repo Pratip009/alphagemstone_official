@@ -257,7 +257,7 @@ export default function Navbar({
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@200;300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
 
         :root {
           --navy:    #1a1a2e;
@@ -269,8 +269,8 @@ export default function Navbar({
           --petal:   #c4b5fd;
           --silver:  #9f9fc0;
           --border:  #e8e4f8;
-          --display: 'Playfair Display', Georgia, serif;
-          --label:   'Barlow Condensed', sans-serif;
+          --display: "Google Sans Flex", sans-serif;
+          --label:   "Google Sans Flex", sans-serif;
         }
 
         /* ── Keyframes ── */
@@ -820,7 +820,7 @@ export default function Navbar({
   align-items: center;
   gap: 10px;
   padding: 6px 16px;
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: "Google Sans Flex", sans-serif;
   font-size: 13px;
   font-weight: 400;
   letter-spacing: 0.01em;
@@ -855,7 +855,7 @@ export default function Navbar({
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: "Google Sans Flex", sans-serif;
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.01em;

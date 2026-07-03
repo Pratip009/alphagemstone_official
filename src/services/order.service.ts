@@ -5,7 +5,7 @@ import User from '@/models/User';
 import { clearCart, calculateCartTotals } from './cart.service';
 import { capturePayPalOrder, createPayPalOrder } from './paypal.service';
 import { validateCoupon, redeemCoupon } from './coupon.service';
-import { purchaseLabelFromRate } from './shipengine.service';
+import { purchaseLabelFromRate, trackShipEnginePackage } from './shipengine.service';
 import { Resend } from 'resend';
 import { orderConfirmationEmailHtml, orderShippedEmailHtml } from '@/lib/email-templates';
 
@@ -201,6 +201,44 @@ export async function getAllOrders(page = 1, limit = 20, status?: string) {
 
   return { orders, total };
 }
+
+// ─── Tracking ─────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches live tracking info for an order.
+ * When userId is provided, only returns the order if it belongs to that user
+ * (so customers can't view other people's orders); admins pass no userId.
+ */
+export async function getOrderTracking(orderId: string, userId?: string) {
+  const query: Record<string, unknown> = { _id: orderId };
+  if (userId) query.user = userId;
+
+  const order = await Order.findOne(query).lean() as IOrder | null;
+  if (!order) throw new Error('Order not found');
+
+  const trackingNumber = (order as any).trackingNumber as string | undefined;
+  if (!trackingNumber) {
+    throw new Error('No tracking number available for this order yet');
+  }
+
+  const tracking = await trackShipEnginePackage(trackingNumber);
+
+  return {
+    trackingNumber:     tracking.trackingNumber,
+    status:             tracking.status,
+    statusDescription:  tracking.status,
+    estimatedDelivery:  tracking.estimatedDelivery,
+    actualDelivery:     tracking.deliveredAt ?? null,
+    events:             tracking.events.map((e) => ({
+      timestamp:   e.timestamp,
+      eventType:   e.description,
+      description: e.description,
+      location:    e.location,
+    })),
+  };
+}
+
+// ─── Order status update ──────────────────────────────────────────────────────
 
 export async function updateOrderStatus(orderId: string, status: string) {
   const validStatuses = [

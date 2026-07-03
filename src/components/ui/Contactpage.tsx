@@ -155,7 +155,7 @@ export default function ContactPage() {
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30"
-      style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+      style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
     >
       {/* ── Hero ── */}
       <div className="relative bg-[#112c52] overflow-hidden">

@@ -108,7 +108,7 @@ function ProductCard({ product, featured = false }: { product: ApiProduct; featu
           {getSubtitle(product) || product.category?.name}
         </p>
         <p style={{
-          fontFamily: "'Cormorant Garamond', serif",
+          fontFamily: '"Google Sans Flex", sans-serif',
           fontSize: featured ? 20 : 16,
           fontWeight: 500,
           color: "#0f172a",
@@ -122,7 +122,7 @@ function ProductCard({ product, featured = false }: { product: ApiProduct; featu
           {product.name}
         </p>
         <p style={{
-          fontFamily: "'Cormorant Garamond', serif",
+          fontFamily: '"Google Sans Flex", sans-serif',
           fontSize: featured ? 22 : 18,
           fontWeight: 600,
           color: "#0f172a",
@@ -287,7 +287,7 @@ export default function SpecialsMarquee() {
                 Curated selection
               </p>
               <h2 style={{
-                fontFamily: "'Cormorant Garamond', serif",
+                fontFamily: '"Google Sans Flex", sans-serif',
                 fontSize: "clamp(32px, 3.5vw, 48px)",
                 fontWeight: 500, color: "#0f172a",
                 lineHeight: 1, margin: 0, letterSpacing: "-0.02em",
