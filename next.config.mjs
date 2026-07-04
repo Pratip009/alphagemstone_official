@@ -34,8 +34,8 @@ const nextConfig = {
               "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://images.unsplash.com https://www.paypalobjects.com https://t.paypal.com",
               // ── PayPal API calls + SDK fingerprinting ──
               "connect-src 'self' https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://api.postalpincode.in",
-              // ── PayPal renders its buttons in iframes ──
-              "frame-src https://www.paypal.com https://www.sandbox.paypal.com",
+              // ── PayPal renders its buttons in iframes; Google Maps embed on /contact ──
+              "frame-src https://www.paypal.com https://www.sandbox.paypal.com https://www.google.com",
               "frame-ancestors 'none'",
             ].join("; "),
           },

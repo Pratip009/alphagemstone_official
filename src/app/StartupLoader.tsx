@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+const GEM_PALETTE = [
+  { name: 'ruby',      color: '#e0115f' },
+  { name: 'emerald',   color: '#2ecc71' },
+  { name: 'sapphire',  color: '#2e6fdb' },
+  { name: 'amethyst',  color: '#9b59d0' },
+  { name: 'citrine',   color: '#f0b90b' },
+  { name: 'aqua',      color: '#3fd9c7' },
+];
+
 export default function StartupLoader({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
@@ -9,11 +18,11 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
   const canvasRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  // ── Three.js diamond ───────────────────────────────────────────────────────
+  // ── Three.js diamond + colored gem satellites ──────────────────────────────
   useEffect(() => {
     let cancelled = false;
     let animId: number;
-    let renderer: any, scene: any, camera: any, gem: any, envGroup: any;
+    let renderer: any, scene: any, camera: any, gem: any, envGroup: any, satelliteGroup: any;
 
     async function init() {
       const THREE = await import('three');
@@ -36,37 +45,42 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
       camera.lookAt(0, 0, 0);
 
       // ── Lighting ──────────────────────────────────────────────────────────
-      // Warm key light (gold)
-      const key = new THREE.DirectionalLight('#ffe4a0', 3.5);
+      const key = new THREE.DirectionalLight('#ffe4a0', 3.2);
       key.position.set(2, 3, 2);
       key.castShadow = true;
       scene.add(key);
 
-      // Cool fill (sky blue)
-      const fill = new THREE.DirectionalLight('#c8e8ff', 1.8);
+      const fill = new THREE.DirectionalLight('#c8e8ff', 1.6);
       fill.position.set(-2.5, 1.5, 1);
       scene.add(fill);
 
-      // Rim (warm)
-      const rim = new THREE.DirectionalLight('#ffd080', 2.0);
+      const rim = new THREE.DirectionalLight('#ffd080', 1.8);
       rim.position.set(0, -2, -2.5);
       scene.add(rim);
 
-      // Top sparkle
-      const top = new THREE.DirectionalLight('#ffffff', 1.2);
+      const top = new THREE.DirectionalLight('#ffffff', 1.1);
       top.position.set(0, 5, 0);
       scene.add(top);
 
-      // Ambient
-      scene.add(new THREE.AmbientLight('#f0e8d8', 0.6));
+      // Colored accent lights — these are what throw ruby/emerald/sapphire
+      // glints onto the clear diamond's facets as the satellites orbit,
+      // instead of it just reading as plain glass.
+      const accentLights = GEM_PALETTE.slice(0, 4).map((g, i) => {
+        const l = new THREE.PointLight(g.color, 0.9, 4);
+        const a = (i / 4) * Math.PI * 2;
+        l.position.set(Math.cos(a) * 2, 0.4, Math.sin(a) * 2);
+        scene.add(l);
+        return l;
+      });
 
-      // ── Diamond Geometry ──────────────────────────────────────────────────
-      // Build a proper brilliant-cut diamond with crown + pavilion
+      scene.add(new THREE.AmbientLight('#f0e8d8', 0.55));
+
+      // ── Diamond Geometry (unchanged brilliant-cut construction) ────────────
       const verts: number[] = [];
       const indices: number[] = [];
       const normals: number[] = [];
 
-      const SEGS = 16; // facet count
+      const SEGS = 16;
       const crown_r = 1.0;
       const table_r = 0.55;
       const gir_r = 1.0;
@@ -75,7 +89,6 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
       const table_y = crown_h;
       const culet_y = -1.12;
 
-      // Helper: add triangle with auto normal
       function addTri(
         ax: number, ay: number, az: number,
         bx: number, by: number, bz: number,
@@ -84,7 +97,6 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         const base = verts.length / 3;
         verts.push(ax, ay, az, bx, by, bz, cx, cy, cz);
         indices.push(base, base + 1, base + 2);
-        // flat normal
         const ux = bx - ax, uy = by - ay, uz = bz - az;
         const vx = cx - ax, vy = cy - ay, vz = cz - az;
         const nx = uy * vz - uz * vy;
@@ -106,20 +118,14 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         const c0x = Math.cos(a0) * crown_r, c0z = Math.sin(a0) * crown_r;
         const c1x = Math.cos(a1) * crown_r, c1z = Math.sin(a1) * crown_r;
 
-        // Table (flat top) — fan from center
         addTri(0, table_y, 0, t0x, table_y, t0z, t1x, table_y, t1z);
-
-        // Upper crown bezel (table → girdle edge)
         addTri(t0x, table_y, t0z, g0x, gir_y, g0z, t1x, table_y, t1z);
         addTri(t1x, table_y, t1z, g0x, gir_y, g0z, g1x, gir_y, g1z);
 
-        // Lower crown star (girdle → outer crown)
-        // Alternate between steeper and shallower to mimic star/bezel facets
         if (i % 2 === 0) {
           addTri(g0x, gir_y, g0z, c0x, gir_y * 0.5, c0z, g1x, gir_y, g1z);
         }
 
-        // Pavilion main facets
         addTri(g0x, gir_y, g0z, 0, culet_y, 0, g1x, gir_y, g1z);
       }
 
@@ -128,15 +134,13 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
       geo.setIndex(indices);
 
-      // ── Materials ─────────────────────────────────────────────────────────
-      // Main glass-like diamond body
       const mat = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#f0f8ff'),
         metalness: 0.0,
         roughness: 0.0,
-        transmission: 0.92,
+        transmission: 0.9,
         thickness: 1.8,
-        ior: 2.42,         // diamond IOR
+        ior: 2.42,
         reflectivity: 1.0,
         clearcoat: 1.0,
         clearcoatRoughness: 0.0,
@@ -146,7 +150,6 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         envMapIntensity: 2.5,
       });
 
-      // Subtle gold-tinted wireframe overlay for facet lines
       const wireMat = new THREE.MeshBasicMaterial({
         color: new THREE.Color('#c9a84c'),
         wireframe: true,
@@ -159,26 +162,64 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
       gem.add(new THREE.Mesh(geo, wireMat));
       scene.add(gem);
 
-      // ── Floating sparkle particles ─────────────────────────────────────────
+      // ── Colored gem satellites orbiting the main diamond ────────────────────
+      satelliteGroup = new THREE.Group();
+      const satMeshes: any[] = [];
+      GEM_PALETTE.forEach((g, i) => {
+        const size = 0.13 + (i % 3) * 0.02;
+        const satGeo = new THREE.OctahedronGeometry(size, 0);
+        const satMat = new THREE.MeshPhysicalMaterial({
+          color: new THREE.Color(g.color),
+          metalness: 0.0,
+          roughness: 0.08,
+          transmission: 0.75,
+          thickness: 0.8,
+          ior: 1.77,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.05,
+          transparent: true,
+          opacity: 0.95,
+          envMapIntensity: 2.0,
+        });
+        const mesh = new THREE.Mesh(satGeo, satMat);
+        const angle = (i / GEM_PALETTE.length) * Math.PI * 2;
+        const radius = 1.9 + (i % 2) * 0.25;
+        const height = Math.sin(i * 1.7) * 0.5;
+        mesh.position.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+        mesh.userData = { angle, radius, height, spinSpeed: 0.6 + Math.random() * 0.6 };
+        satMeshes.push(mesh);
+        satelliteGroup.add(mesh);
+      });
+      scene.add(satelliteGroup);
+
+      // ── Colorful floating sparkle particles ─────────────────────────────────
       envGroup = new THREE.Group();
       const sparkGeo = new THREE.BufferGeometry();
-      const sparkCount = 28;
+      const sparkCount = 36;
       const sparkPos = new Float32Array(sparkCount * 3);
+      const sparkColor = new Float32Array(sparkCount * 3);
+      const tmpColor = new THREE.Color();
       for (let i = 0; i < sparkCount; i++) {
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.random() * Math.PI;
-        const r = 1.6 + Math.random() * 1.2;
+        const r = 1.6 + Math.random() * 1.3;
         sparkPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
         sparkPos[i * 3 + 1] = r * Math.cos(phi);
         sparkPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+
+        tmpColor.set(GEM_PALETTE[i % GEM_PALETTE.length].color);
+        sparkColor[i * 3] = tmpColor.r;
+        sparkColor[i * 3 + 1] = tmpColor.g;
+        sparkColor[i * 3 + 2] = tmpColor.b;
       }
       sparkGeo.setAttribute('position', new THREE.Float32BufferAttribute(sparkPos, 3));
+      sparkGeo.setAttribute('color', new THREE.Float32BufferAttribute(sparkColor, 3));
       const sparkMat = new THREE.PointsMaterial({
-        color: '#c9a84c',
-        size: 0.045,
+        size: 0.05,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.85,
         sizeAttenuation: true,
+        vertexColors: true,
       });
       envGroup.add(new THREE.Points(sparkGeo, sparkMat));
       scene.add(envGroup);
@@ -188,7 +229,7 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
       const ringMat = new THREE.MeshBasicMaterial({
         color: '#c9a84c',
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.3,
       });
       const ring1 = new THREE.Mesh(ringGeo, ringMat);
       ring1.rotation.x = Math.PI / 2.8;
@@ -196,7 +237,7 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
 
       const ring2 = new THREE.Mesh(
         new THREE.TorusGeometry(1.72, 0.005, 6, 80),
-        new THREE.MeshBasicMaterial({ color: '#b8966e', transparent: true, opacity: 0.2 })
+        new THREE.MeshBasicMaterial({ color: '#b8966e', transparent: true, opacity: 0.18 })
       );
       ring2.rotation.x = Math.PI / 2;
       ring2.rotation.y = Math.PI / 5;
@@ -209,18 +250,31 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         animId = requestAnimationFrame(animate);
         t += 0.008;
 
-        // Slow elegant rotation
         gem.rotation.y = t * 0.55;
         gem.rotation.x = Math.sin(t * 0.3) * 0.18;
         gem.position.y = Math.sin(t * 0.6) * 0.08;
 
-        // Counter-rotate particles slightly
         envGroup.rotation.y = -t * 0.12;
         envGroup.rotation.z = t * 0.07;
 
-        // Rings
         ring1.rotation.z = t * 0.25;
         ring2.rotation.y = t * 0.18;
+
+        // Orbit the colored satellites around the diamond, each spinning
+        // on its own axis so their facets catch the light independently.
+        satelliteGroup.rotation.y = t * 0.35;
+        satMeshes.forEach((m) => {
+          m.rotation.x += 0.01 * m.userData.spinSpeed;
+          m.rotation.y += 0.014 * m.userData.spinSpeed;
+          m.position.y = m.userData.height + Math.sin(t * 1.2 + m.userData.angle * 3) * 0.12;
+        });
+
+        // Slowly swing the accent point lights so the colored glints
+        // drift across the diamond's facets instead of sitting static.
+        accentLights.forEach((l, i) => {
+          const a = t * 0.4 + (i / accentLights.length) * Math.PI * 2;
+          l.position.set(Math.cos(a) * 2, 0.4 + Math.sin(a * 0.6) * 0.4, Math.sin(a) * 2);
+        });
 
         renderer.render(scene, camera);
       }
@@ -249,7 +303,6 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
       'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Josefin+Sans:wght@300;400&display=swap';
     document.head.appendChild(link);
 
-    // Animate progress bar over the loading window
     let p = 0;
     const steps = [
       { target: 35, delay: 200 },
@@ -302,8 +355,13 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
           100% { transform: scale(0.95); opacity: 0.5; }
         }
         @keyframes sl-dot-pulse {
-          0%, 100% { opacity: 0.25; transform: scale(0.8); }
-          50%       { opacity: 1;   transform: scale(1.2); }
+          0%, 100% { opacity: 0.3; transform: scale(0.8); }
+          50%       { opacity: 1;   transform: scale(1.3); }
+        }
+        @keyframes sl-blob-drift {
+          0%   { transform: translate(-50%, -50%) scale(1);    }
+          50%  { transform: translate(-46%, -54%) scale(1.08); }
+          100% { transform: translate(-50%, -50%) scale(1);    }
         }
         .sl-brand    { animation: sl-fade-in 1s ease 0.4s both; }
         .sl-divider  { animation: sl-fade-in 0.8s ease 0.7s both; }
@@ -312,18 +370,24 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         .sl-shimmer-bar {
           background: linear-gradient(90deg,
             transparent 0%,
-            #c9a84c 30%,
-            #f0d080 50%,
-            #c9a84c 70%,
+            #e0115f 16%,
+            #f0b90b 34%,
+            #2ecc71 52%,
+            #2e6fdb 70%,
+            #9b59d0 86%,
             transparent 100%);
           background-size: 300% 100%;
-          animation: sl-shimmer 2s linear infinite;
+          animation: sl-shimmer 2.2s linear infinite;
         }
         .sl-dot-1 { animation: sl-dot-pulse 1.6s ease 0s infinite; }
         .sl-dot-2 { animation: sl-dot-pulse 1.6s ease 0.26s infinite; }
         .sl-dot-3 { animation: sl-dot-pulse 1.6s ease 0.52s infinite; }
+        .sl-dot-4 { animation: sl-dot-pulse 1.6s ease 0.78s infinite; }
         .sl-canvas-glow {
           animation: sl-pulse-ring 3.5s ease-in-out infinite;
+        }
+        .sl-blob {
+          animation: sl-blob-drift 7s ease-in-out infinite;
         }
       `}</style>
 
@@ -336,19 +400,40 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(160deg, #fdfcf8 0%, #f5f0e8 45%, #faf7f2 100%)',
+          background: '#ffffff',
           transition: 'opacity 0.75s ease',
           opacity: fadeOut ? 0 : 1,
           pointerEvents: fadeOut ? 'none' : 'all',
           overflow: 'hidden',
         }}
       >
-        {/* Subtle grain texture overlay */}
-        <div style={{
-          position: 'absolute', inset: 0, opacity: 0.018, pointerEvents: 'none',
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundSize: '180px',
-        }} />
+        {/* Colorful bokeh glow blobs behind the gem — this is what carries
+            the "colourful gems" feel onto the white background without
+            tinting the whole page. */}
+        {[
+          { color: '#e0115f', top: '38%', left: '34%', size: 260, delay: '0s' },
+          { color: '#2ecc71', top: '62%', left: '66%', size: 240, delay: '1.4s' },
+          { color: '#2e6fdb', top: '30%', left: '68%', size: 220, delay: '2.8s' },
+          { color: '#f0b90b', top: '68%', left: '32%', size: 200, delay: '4.2s' },
+        ].map((b, i) => (
+          <div
+            key={i}
+            className="sl-blob"
+            style={{
+              position: 'absolute',
+              top: b.top,
+              left: b.left,
+              width: b.size,
+              height: b.size,
+              borderRadius: '50%',
+              background: b.color,
+              opacity: 0.10,
+              filter: 'blur(50px)',
+              animationDelay: b.delay,
+              pointerEvents: 'none',
+            }}
+          />
+        ))}
 
         {/* Corner hairlines */}
         {(['tl','tr','bl','br'] as const).map((p) => (
@@ -369,17 +454,6 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
             ].join(' '),
           }} />
         ))}
-
-        {/* Ambient light bloom behind gem */}
-        <div style={{
-          position: 'absolute',
-          width: 380, height: 380,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(201,168,76,0.10) 0%, rgba(184,150,110,0.05) 50%, transparent 75%)',
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -54%)',
-          pointerEvents: 'none',
-        }} />
 
         {/* Three.js canvas container */}
         <div
@@ -410,14 +484,19 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
           </h1>
         </div>
 
-        {/* Ornamental divider */}
+        {/* Ornamental divider — now four tiny gem-colored dots instead of
+            a single gold diamond, echoing the palette used in the scene. */}
         <div className="sl-divider" style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          width: 240, marginBottom: 10,
+          display: 'flex', alignItems: 'center', gap: 10,
+          width: 240, marginBottom: 10, justifyContent: 'center',
         }}>
-          <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(to right, transparent, rgba(180,145,80,0.5))' }} />
-          <div style={{ width: 4, height: 4, background: '#c9a84c', transform: 'rotate(45deg)' }} />
-          <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(to left, transparent, rgba(180,145,80,0.5))' }} />
+          <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(to right, transparent, rgba(180,145,80,0.4))' }} />
+          {['#e0115f', '#f0b90b', '#2ecc71', '#2e6fdb'].map((c, i) => (
+            <div key={c} className={`sl-dot-${i + 1}`} style={{
+              width: 4, height: 4, borderRadius: '50%', background: c,
+            }} />
+          ))}
+          <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(to left, transparent, rgba(180,145,80,0.4))' }} />
         </div>
 
         {/* Tagline */}
@@ -436,8 +515,8 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         {/* Progress bar */}
         <div className="sl-progress" style={{ width: 180, textAlign: 'center' }}>
           <div style={{
-            width: '100%', height: '1px',
-            background: 'rgba(180,145,80,0.12)',
+            width: '100%', height: '2px',
+            background: 'rgba(20,20,20,0.06)',
             borderRadius: 1,
             overflow: 'hidden',
             marginBottom: 14,
@@ -451,19 +530,6 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
                 borderRadius: 1,
               }}
             />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 7 }}>
-            {['sl-dot-1', 'sl-dot-2', 'sl-dot-3'].map((cls) => (
-              <div
-                key={cls}
-                className={cls}
-                style={{
-                  width: 3, height: 3, borderRadius: '50%',
-                  background: '#c9a84c',
-                }}
-              />
-            ))}
           </div>
         </div>
       </div>

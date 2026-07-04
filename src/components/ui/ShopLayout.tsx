@@ -571,7 +571,7 @@ function LandingView({
   onSelectCat: (cat: ICategory) => void;
   showHero: boolean;
 }) {
-  const RANDOM_PICK = 4;
+  const RANDOM_PICK = 5;
 
   const randomSubsMap = useMemo(() => {
     const map: Record<string, ISubcategory[]> = {};
@@ -661,7 +661,7 @@ function LandingView({
               style={{
                 display: "grid",
                 gap: "28px 20px",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns: "repeat(5, 1fr)",
               }}
             >
               {pickedSubs.map((sub) => (
