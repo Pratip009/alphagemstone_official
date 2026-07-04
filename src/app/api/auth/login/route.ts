@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { login } from '@/services/auth.service';
 import { errorResponse } from '@/lib/api-response';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -11,6 +12,11 @@ const loginSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // IP-based: 10 attempts / 5 min stops scripted brute force without
+    // punishing someone who just mistypes their password a couple times.
+    const ipLimit = await rateLimit(req, { id: 'login-ip', limit: 10, windowSec: 300 });
+    if (!ipLimit.success) return rateLimitResponse(ipLimit);
+
     await connectDB();
     const body = await req.json();
 
@@ -20,6 +26,18 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password } = parsed.data;
+
+    // Per-account: 5 attempts / 15 min on this specific email, so a
+    // distributed attack (many IPs, one target account) is still capped.
+    const acctLimit = await rateLimit(req, {
+      id: 'login-acct',
+      limit: 5,
+      windowSec: 900,
+      extraKey: email.toLowerCase(),
+      scope: 'key',
+    });
+    if (!acctLimit.success) return rateLimitResponse(acctLimit);
+
     const result = await login(email, password);
 
     // Only `user` goes in the JSON body. The token is set below as an
