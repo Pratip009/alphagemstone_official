@@ -1,7 +1,9 @@
 // src/app/(shop)/account/page.tsx
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * ── Palette (flat, no gradients) — shared with /contact ──
@@ -29,7 +31,6 @@ type AddressState = {
 
 type FormState = {
   name: string;
-  email: string;
   phone: string;
   address: AddressState;
 };
@@ -42,42 +43,98 @@ type FormErrors = {
 };
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PHONE_REGEX = /^[+]?[\d\s().-]{7,20}$/;
+const REQUIRED_ADDRESS_KEYS: (keyof AddressState)[] = [
+  "line1",
+  "city",
+  "state",
+  "postalCode",
+  "country",
+];
+
+const EMPTY_ADDRESS: AddressState = {
+  line1: "",
+  line2: "",
+  city: "",
+  state: "",
+  postalCode: "",
+  country: "",
+};
 
 function initialsFrom(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "?";
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
 }
 
 export default function AccountPage() {
-  // In a real app this comes from the session / server component props.
-  const [form, setForm] = useState<FormState>({
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone: "",
-    address: {
-      line1: "",
-      line2: "",
-      city: "",
-      state: "",
-      postalCode: "",
-      country: "United States",
-    },
-  });
+  const router = useRouter();
+  const { user, loading: authLoading, updateUser, logout } = useAuth();
 
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [avatarFile, setAvatarFile]       = useState<File | null>(null);
-  const [errors, setErrors]               = useState<FormErrors>({});
-  const [loading, setLoading]             = useState(false);
-  const [serverError, setServerError]     = useState<string | null>(null);
-  const [saved, setSaved]                 = useState(false);
-  const [focused, setFocused]             = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    phone: "",
+    address: EMPTY_ADDRESS,
+  });
+  const [hydrated, setHydrated] = useState(false);
+
+  // Newly-picked file staged for upload (not yet saved).
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  // Local base64 preview of the staged file above.
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  // True when the user has asked to clear their already-saved avatar.
+  const [avatarRemoved, setAvatarRemoved] = useState(false);
+
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [saving, setSaving] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const savedTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Redirect unauthenticated visitors — this page needs a session.
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login?redirect=/account");
+    }
+  }, [authLoading, user, router]);
+
+  // Hydrate the form from the session exactly once, so it doesn't clobber
+  // in-progress edits if `user` is refreshed elsewhere in the app.
+  useEffect(() => {
+    if (user && !hydrated) {
+      setForm({
+        name: user.name ?? "",
+        phone: user.phone ?? "",
+        address: {
+          line1: user.address?.line1 ?? "",
+          line2: user.address?.line2 ?? "",
+          city: user.address?.city ?? "",
+          state: user.address?.state ?? "",
+          postalCode: user.address?.postalCode ?? "",
+          country: user.address?.country ?? "",
+        },
+      });
+      setHydrated(true);
+    }
+  }, [user, hydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimeout.current) clearTimeout(savedTimeout.current);
+    };
+  }, []);
+
+  const displayedAvatar =
+    pendingPreview ?? (avatarRemoved ? null : user?.avatarUrl || null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -100,45 +157,115 @@ export default function AccountPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    if (!ACCEPTED_AVATAR_TYPES.includes(file.type)) {
       setErrors((prev) => ({ ...prev, avatar: "Please upload a JPG, PNG, or WebP image." }));
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
       setErrors((prev) => ({ ...prev, avatar: "Image must be smaller than 5MB." }));
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     setErrors((prev) => ({ ...prev, avatar: undefined }));
     setAvatarFile(file);
+    setAvatarRemoved(false);
     setSaved(false);
 
     const reader = new FileReader();
-    reader.onload = () => setAvatarPreview(reader.result as string);
+    reader.onload = () => setPendingPreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
   const removeAvatar = () => {
-    setAvatarFile(null);
-    setAvatarPreview(null);
+    if (avatarFile) {
+      // Discard the pending, not-yet-saved selection and fall back to
+      // whatever avatar (if any) is already saved on the account.
+      setAvatarFile(null);
+      setPendingPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      // Nothing pending — this clears the avatar that's actually saved.
+      setAvatarRemoved(true);
+      setPendingPreview(null);
+    }
+    setErrors((prev) => ({ ...prev, avatar: undefined }));
     setSaved(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const validate = (): FormErrors => {
+    const next: FormErrors = {};
+
+    if (!form.name.trim()) {
+      next.name = "Full name is required.";
+    } else if (form.name.trim().length > 100) {
+      next.name = "Name cannot exceed 100 characters.";
+    }
+
+    if (form.phone && !PHONE_REGEX.test(form.phone.trim())) {
+      next.phone = "Enter a valid phone number.";
+    }
+
+    const addressTouched = Object.values(form.address).some((v) => v.trim().length > 0);
+    if (addressTouched) {
+      const addressErrors: Partial<Record<keyof AddressState, string>> = {};
+      for (const key of REQUIRED_ADDRESS_KEYS) {
+        if (!form.address[key].trim()) {
+          addressErrors[key] = "This field is required.";
+        }
+      }
+      if (
+        form.address.postalCode &&
+        !/^[a-zA-Z0-9\s-]{3,12}$/.test(form.address.postalCode.trim())
+      ) {
+        addressErrors.postalCode = "Enter a valid postal code.";
+      }
+      if (Object.keys(addressErrors).length > 0) {
+        next.address = addressErrors;
+      }
+    }
+
+    return next;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
     setServerError(null);
-    setLoading(true);
+
+    const clientErrors = validate();
+    if (Object.keys(clientErrors).length > 0) {
+      setErrors(clientErrors);
+      return;
+    }
+    setErrors({});
+    setSaving(true);
 
     try {
       const payload = new FormData();
-      payload.append("name", form.name);
-      payload.append("phone", form.phone);
-      Object.entries(form.address).forEach(([key, value]) => payload.append(`address[${key}]`, value));
-      if (avatarFile) payload.append("avatar", avatarFile);
+      payload.append("name", form.name.trim());
+      payload.append("phone", form.phone.trim());
+      Object.entries(form.address).forEach(([key, value]) =>
+        payload.append(`address[${key}]`, value.trim())
+      );
+      if (avatarFile) {
+        payload.append("avatar", avatarFile);
+      } else if (avatarRemoved) {
+        payload.append("removeAvatar", "true");
+      }
 
-      const res  = await fetch("/api/account", { method: "PATCH", body: payload });
+      const res = await fetch("/api/account", {
+        method: "PATCH",
+        credentials: "include",
+        body: payload,
+      });
+
+      if (res.status === 401) {
+        await logout();
+        router.replace("/login?redirect=/account");
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -150,13 +277,33 @@ export default function AccountPage() {
         return;
       }
 
+      // Sync the shared auth context immediately — this is what makes the
+      // navbar's name/avatar update without a page refresh.
+      updateUser(data.data);
+      setForm({
+        name: data.data.name ?? "",
+        phone: data.data.phone ?? "",
+        address: {
+          line1: data.data.address?.line1 ?? "",
+          line2: data.data.address?.line2 ?? "",
+          city: data.data.address?.city ?? "",
+          state: data.data.address?.state ?? "",
+          postalCode: data.data.address?.postalCode ?? "",
+          country: data.data.address?.country ?? "",
+        },
+      });
+      setAvatarFile(null);
+      setPendingPreview(null);
+      setAvatarRemoved(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
       setSaved(true);
       if (savedTimeout.current) clearTimeout(savedTimeout.current);
       savedTimeout.current = setTimeout(() => setSaved(false), 4000);
     } catch {
       setServerError("Network error. Please check your connection and try again.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -185,8 +332,23 @@ export default function AccountPage() {
       </p>
     ) : null;
 
+  // ── Loading / auth-gate states ──
+  if (authLoading || (!user && !authLoading)) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#F7F4EE]">
+        <svg className="w-6 h-6 animate-spin text-[#A9814A]" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <p className="text-sm text-[#6B6459]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+          Loading your account…
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#F7F4EE]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+    <div className="min-h-screen w-full bg-[#F7F4EE]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
       {/* Google Sans Flex — Next.js hoists <link> tags rendered in the tree into <head> automatically */}
       <link
         rel="stylesheet"
@@ -194,7 +356,7 @@ export default function AccountPage() {
       />
 
       {/* ── Header ── */}
-      <div className="relative bg-[#15181C] overflow-hidden">
+      <div className="relative bg-[#15181C] overflow-hidden w-full">
         <svg
           className="absolute right-0 top-0 h-full w-[40%] opacity-[0.12] pointer-events-none"
           viewBox="0 0 500 500"
@@ -206,7 +368,7 @@ export default function AccountPage() {
           <polygon points="160,300 250,460 340,300" stroke="#C9A876" strokeWidth="1" />
           <circle cx="250" cy="190" r="3" fill="#C9A876" />
         </svg>
-        <div className="relative z-10 max-w-5xl mx-auto px-6 py-14 md:py-16">
+        <div className="relative z-10 w-full px-6 md:px-10 xl:px-16 py-14 md:py-16">
           <p className="text-[#C9A876] text-xs font-semibold tracking-[0.15em] uppercase mb-3">
             Account
           </p>
@@ -223,7 +385,7 @@ export default function AccountPage() {
       </div>
 
       {/* ── Main ── */}
-      <form onSubmit={handleSubmit} className="max-w-5xl mx-auto px-6 -mt-8 relative z-10 pb-16" noValidate>
+      <form onSubmit={handleSubmit} className="w-full px-6 md:px-10 xl:px-16 -mt-8 relative z-10 pb-16" noValidate>
 
         {/* Top-level banners */}
         {serverError && (
@@ -250,15 +412,15 @@ export default function AccountPage() {
               <div className="p-8 flex flex-col items-center text-center">
                 <div className="relative">
                   <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-[#E4DFD2] bg-[#1F4D3E]/8 flex items-center justify-center">
-                    {avatarPreview ? (
+                    {displayedAvatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarPreview} alt="Your profile photo" className="w-full h-full object-cover" />
+                      <img src={displayedAvatar} alt="Your profile photo" className="w-full h-full object-cover" />
                     ) : (
                       <span
                         className="text-3xl text-[#1F4D3E]"
                         style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}
                       >
-                        {initialsFrom(form.name)}
+                        {initialsFrom(form.name || user?.name || "")}
                       </span>
                     )}
                   </div>
@@ -292,7 +454,7 @@ export default function AccountPage() {
                   >
                     Upload new photo
                   </button>
-                  {avatarPreview && (
+                  {displayedAvatar && (
                     <>
                       <span className="w-1 h-1 rounded-full bg-[#CFC7B0]" />
                       <button
@@ -309,6 +471,91 @@ export default function AccountPage() {
                 <p className="text-[11px] text-[#96907F] mt-3">JPG, PNG, or WebP · up to 5MB</p>
                 <FieldError message={errors.avatar} />
               </div>
+            </div>
+
+            {/* Quick Links */}
+            <div className="bg-[#FFFDF9] rounded-2xl border border-[#E4DFD2] shadow-xl shadow-black/[0.04] overflow-hidden mt-6">
+              <div className="bg-[#15181C] px-6 py-4">
+                <h2 className="text-base text-white" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
+                  Quick Links
+                </h2>
+                <p className="text-white/55 text-xs mt-0.5">Jump to the rest of your account.</p>
+              </div>
+
+              <nav className="p-2">
+                {[
+                  {
+                    href: "/orders",
+                    label: "My Orders",
+                    sub: "Track, review, and reorder",
+                    icon: (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    ),
+                  },
+                  {
+                    href: "/wishlist-saved",
+                    label: "Wishlist",
+                    sub: "Items you've saved",
+                    icon: (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
+                    ),
+                  },
+                  {
+                    href: "/cart",
+                    label: "Shopping Cart",
+                    sub: "Review items before checkout",
+                    icon: (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l3.6-8H5.4M7 13L5.4 5M7 13l-1.6 4h11.2M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
+                    ),
+                  },
+                  {
+                    href: "/where-is-my-order",
+                    label: "Track an Order",
+                    sub: "Real-time shipping status",
+                    icon: (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    ),
+                  },
+                  {
+                    href: "/help-center",
+                    label: "Help Center",
+                    sub: "FAQs and support",
+                    icon: (
+                      <>
+                        <circle cx="12" cy="12" r="9" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2 1.75-2 3.25M12 16.5h.01" />
+                      </>
+                    ),
+                  },
+                  {
+                    href: "/contact",
+                    label: "Contact Us",
+                    sub: "Get in touch with our team",
+                    icon: (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.12 2.18 2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" />
+                    ),
+                  },
+                ].map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-colors duration-150 hover:bg-[#1F4D3E]/[0.06]"
+                  >
+                    <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#1F4D3E]/8 text-[#1F4D3E] flex items-center justify-center group-hover:bg-[#1F4D3E] group-hover:text-white transition-colors duration-150">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        {link.icon}
+                      </svg>
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-[#23201A]">{link.label}</span>
+                      <span className="block text-xs text-[#96907F] truncate">{link.sub}</span>
+                    </span>
+                    <svg className="w-3.5 h-3.5 flex-shrink-0 text-[#CFC7B0] group-hover:text-[#A9814A] group-hover:translate-x-0.5 transition-all duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                ))}
+              </nav>
             </div>
           </div>
 
@@ -350,7 +597,7 @@ export default function AccountPage() {
                   <input
                     name="email"
                     type="email"
-                    value={form.email}
+                    value={user?.email ?? ""}
                     disabled
                     readOnly
                     aria-readonly="true"
@@ -482,6 +729,7 @@ export default function AccountPage() {
                       onBlur={() => setFocused(null)}
                       className={inputStyle("country", !!errors.address?.country)}
                     >
+                      <option value="">Select a country</option>
                       <option>United States</option>
                       <option>Canada</option>
                       <option>United Kingdom</option>
@@ -509,10 +757,10 @@ export default function AccountPage() {
               </div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={saving}
                 className="group flex items-center gap-2 bg-[#A9814A] hover:bg-[#8C6A3A] disabled:opacity-60 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg shadow-[#A9814A]/20 hover:-translate-y-0.5 disabled:hover:translate-y-0"
               >
-                {loading ? (
+                {saving ? (
                   <>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

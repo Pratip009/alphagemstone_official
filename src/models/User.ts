@@ -1,16 +1,41 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export interface IUserAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   email: string;
   password: string;
+  phone?: string;
+  avatarUrl?: string;
+  avatarPublicId?: string;
+  address?: IUserAddress;
   role: 'admin' | 'user';
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
+
+const AddressSchema = new Schema<IUserAddress>(
+  {
+    line1: { type: String, trim: true, maxlength: 200, default: '' },
+    line2: { type: String, trim: true, maxlength: 200, default: '' },
+    city: { type: String, trim: true, maxlength: 100, default: '' },
+    state: { type: String, trim: true, maxlength: 100, default: '' },
+    postalCode: { type: String, trim: true, maxlength: 20, default: '' },
+    country: { type: String, trim: true, maxlength: 100, default: '' },
+  },
+  { _id: false }
+);
 
 const UserSchema = new Schema<IUser>(
   {
@@ -34,6 +59,29 @@ const UserSchema = new Schema<IUser>(
       minlength: [6, 'Password must be at least 6 characters'],
       select: false,
     },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Phone number is too long'],
+      default: '',
+    },
+    // Cloudinary secure_url for the current avatar. Safe to expose to the client.
+    avatarUrl: {
+      type: String,
+      default: '',
+    },
+    // Cloudinary public_id for the current avatar — kept off the wire (select: false)
+    // so it never leaks to the client; only used server-side to delete the old
+    // asset when the avatar is replaced or removed.
+    avatarPublicId: {
+      type: String,
+      default: '',
+      select: false,
+    },
+    address: {
+      type: AddressSchema,
+      default: () => ({}),
+    },
     role: {
       type: String,
       enum: ['admin', 'user'],
@@ -45,6 +93,7 @@ const UserSchema = new Schema<IUser>(
     toJSON: {
       transform(_, ret) {
         delete (ret as Record<string, unknown>).password;
+        delete (ret as Record<string, unknown>).avatarPublicId;
         return ret;
       },
     },

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
@@ -539,6 +540,23 @@ export default function Navbar({
           color: #fff;
           font-family: var(--display);
           flex-shrink: 0;
+          overflow: hidden;
+        }
+        .nav-avatar-lg {
+          width: 38px;
+          height: 38px;
+          font-size: 15px;
+        }
+        .nav-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+        }
+        .profile-dropdown-header-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
 
         .nav-chevron {
@@ -1148,6 +1166,7 @@ export default function Navbar({
           font-weight: 400;
           color: #fff;
           flex-shrink: 0;
+          overflow: hidden;
         }
         .mobile-user-name {
           font-family: var(--display);
@@ -1340,13 +1359,28 @@ export default function Navbar({
 
               {user ? (
                 <>
+                  <CartIconButton />
+                  <a href="/orders" className="nav-link">
+                    Orders
+                  </a>
+
                   <div ref={profileRef} style={{ position: "relative" }}>
                     <button
                       className="nav-profile-btn"
                       onClick={() => setProfileOpen(!profileOpen)}
                     >
                       <div className="nav-avatar">
-                        {user.name?.charAt(0).toUpperCase()}
+                        {user.avatarUrl ? (
+                          <Image
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            width={26}
+                            height={26}
+                            className="nav-avatar-img"
+                          />
+                        ) : (
+                          user.name?.charAt(0).toUpperCase()
+                        )}
                       </div>
                       Account
                       <svg
@@ -1369,10 +1403,25 @@ export default function Navbar({
                     <div
                       className={`profile-dropdown${profileOpen ? " open" : " closed"}`}
                     >
-                      <div className="profile-dropdown-header">
-                        <p className="profile-dropdown-label">Signed in as</p>
-                        <p className="profile-dropdown-name">{user.name}</p>
-                        <p className="profile-dropdown-email">{user.email}</p>
+                      <div className="profile-dropdown-header profile-dropdown-header-row">
+                        <div className="nav-avatar nav-avatar-lg">
+                          {user.avatarUrl ? (
+                            <Image
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              width={38}
+                              height={38}
+                              className="nav-avatar-img"
+                            />
+                          ) : (
+                            user.name?.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <p className="profile-dropdown-label">Signed in as</p>
+                          <p className="profile-dropdown-name">{user.name}</p>
+                          <p className="profile-dropdown-email">{user.email}</p>
+                        </div>
                       </div>
                       <div style={{ padding: "6px 0" }}>
                         <a
@@ -1414,11 +1463,6 @@ export default function Navbar({
                       </div>
                     </div>
                   </div>
-
-                  <CartIconButton />
-                  <a href="/orders" className="nav-link">
-                    Orders
-                  </a>
                 </>
               ) : (
                 <>
@@ -1863,7 +1907,17 @@ export default function Navbar({
               </p>
               <div className="mobile-user-block">
                 <div className="mobile-user-avatar">
-                  {user.name?.charAt(0).toUpperCase()}
+                  {user.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      width={42}
+                      height={42}
+                      className="nav-avatar-img"
+                    />
+                  ) : (
+                    user.name?.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div>
                   <p className="mobile-user-name">{user.name}</p>
