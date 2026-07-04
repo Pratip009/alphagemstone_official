@@ -1,0 +1,330 @@
+/* ShopLayout.css
+ *
+ * Moved out of an inline `<style>{`...`}</style>` block in ShopLayout.tsx.
+ * That block was a template literal rendered as JSX, so it was re-created
+ * (and had to be diffed/re-parsed by the browser) on every render of the
+ * component — sort changes, mobile menu toggles, hover state, etc. As a
+ * plain imported stylesheet, the browser parses it once and it no longer
+ * competes with re-renders for main-thread work. Content is unchanged
+ * from the original block; this is a lift-and-shift, not a rewrite.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:       #14213d;
+  --gold:       #a67c2e;
+  --gold-l:     #d4af6a;
+  --bg:         #ffffff;
+  --surface:    #ffffff;
+  --border:     rgba(20,33,61,0.08);
+  --text:       #14213d;
+  --text-muted: #6b7280;
+  --sidebar-w:  224px;
+}
+
+.shop-root {
+  font-family: "Google Sans Flex", sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+}
+
+/* ── Shimmer skeleton ── */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.skeleton-pulse {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f7f7f7 50%, #f0f0f0 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* ── Fade up ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.fade-up { animation: fadeUp 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Landing section stagger ── */
+.landing-section {
+  opacity: 0;
+  animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+/* ── Layout ── */
+.shop-body {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+  scrollbar-width: thin;
+  scrollbar-color: #e2e2e2 transparent;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: #e2e2e2; }
+
+.sidebar-header {
+  padding: 16px 18px 14px;
+  background: var(--navy);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.sidebar-header-title {
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold-l);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mob-close {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.6);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.sidebar-quicklinks {
+  padding: 10px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-quicklink {
+  display: block;
+  padding: 5px 18px;
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  transition: color 0.2s, padding-left 0.2s;
+}
+.sidebar-quicklink:hover { color: var(--gold); padding-left: 22px; }
+
+/* ── Main content ── */
+.shop-main-wrap {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-main {
+  flex: 1;
+  padding: 28px 28px 64px;
+  min-width: 0;
+}
+
+/* ── Toolbar ── */
+.shop-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.shop-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+.breadcrumb-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 11.5px; color: var(--text);
+  letter-spacing: 0.02em;
+  transition: color 0.2s;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.breadcrumb-btn:hover { color: var(--gold); }
+.breadcrumb-sep { color: #c9c9c9; font-size: 11px; }
+.breadcrumb-current { color: var(--text-muted); }
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.item-count {
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.sort-select {
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 7px 12px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.sort-select:focus { border-color: var(--gold); }
+
+/* ── Product grid ── */
+.product-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 520px)  { .product-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 860px)  { .product-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1200px) { .product-grid { grid-template-columns: repeat(5, 1fr); } }
+
+/* ── Landing grid ── */
+.landing-sub-grid {
+  display: grid;
+  gap: 28px 20px;
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 680px) { .landing-sub-grid { grid-template-columns: repeat(2, 1fr); gap: 22px 16px; } }
+
+/* ── Mobile ── */
+.mob-bar {
+  display: none;
+  align-items: center;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.mob-menu-btn {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  background: var(--navy);
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  color: var(--gold-l);
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(20,33,61,0.5);
+  z-index: 40;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Error block ── */
+.error-block {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: rgba(192,57,43,0.05);
+  border: 1px solid rgba(192,57,43,0.2);
+  border-left: 3px solid rgba(192,57,43,0.5);
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 12.5px; letter-spacing: 0.01em;
+  color: #c0392b;
+  margin-bottom: 20px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  padding: 80px 20px;
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.empty-gem {
+  font-size: 40px;
+  opacity: 0.1;
+  animation: orbPulse 3s ease-in-out infinite;
+}
+@keyframes orbPulse {
+  0%,100% { opacity: 0.1; transform: scale(1); }
+  50%      { opacity: 0.18; transform: scale(1.08); }
+}
+
+/* ── Section heading ── */
+.section-heading-row {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 22px;
+}
+.section-heading-text {
+  font-family: "Google Sans Flex", sans-serif;
+  font-size: 26px; font-weight: 600; color: var(--navy);
+  white-space: nowrap;
+}
+.section-heading-rule {
+  flex: 1; height: 1px;
+  background: var(--border);
+}
+
+/* ── Responsive breakpoints ── */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    box-shadow: 8px 0 32px rgba(20,33,61,0.18);
+    max-height: 100vh;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay.open { display: block; }
+  .mob-menu-btn   { display: flex !important; }
+  .mob-close      { display: block !important; }
+  .mob-bar        { display: flex !important; }
+  .shop-main      { padding: 16px 14px 48px; }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e2e2e2; border-radius: 2px; }
