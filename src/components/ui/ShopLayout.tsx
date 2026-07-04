@@ -158,8 +158,8 @@ function SubcategoryCard({
           width: "100%",
           aspectRatio: "1",
           overflow: "hidden",
-          background: "#fafafa",
-          border: "1px solid var(--border)",
+          background: "#ffffff",
+          // border: "1px solid var(--border)",
         }}
       >
         <img

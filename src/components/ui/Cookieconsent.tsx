@@ -61,6 +61,7 @@ export default function CookieConsent() {
         }
         .cc-wrap {
           animation: ${animatingOut ? "ccSlideDown" : "ccSlideUp"} 0.55s cubic-bezier(0.34,1.2,0.64,1) both;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
         }
         .cc-gem-glow {
           animation: ccGlow 3s ease-in-out infinite;
@@ -80,6 +81,13 @@ export default function CookieConsent() {
         }
         .cc-details-panel.open  { max-height: 400px; opacity: 1; }
         .cc-details-panel.shut  { max-height: 0;     opacity: 0; }
+
+        /* Small-phone tightening (inline styles below already use clamp(),
+           this just trims a bit more layout slack on very narrow viewports) */
+        @media (max-width: 380px) {
+          .cc-actions { gap: 8px !important; }
+          .cc-header  { gap: 10px !important; }
+        }
       `}</style>
 
       {/* Backdrop blur */}
@@ -94,7 +102,7 @@ export default function CookieConsent() {
 
       {/* Card */}
       <div
-        className="cc-wrap fixed z-[9999] bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[640px]"
+        className="cc-wrap fixed z-[9999] bottom-3 sm:bottom-5 inset-x-0 mx-auto w-[calc(100%-1.25rem)] sm:w-[calc(100%-2rem)] max-w-[640px]"
         role="dialog"
         aria-label="Cookie preferences"
         aria-modal="true"
@@ -118,14 +126,19 @@ export default function CookieConsent() {
             className="cc-shimmer-btn"
           />
 
-          <div className="px-6 pt-5 pb-6">
+          <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-5 sm:pb-6">
             {/* Header row */}
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
+            <div
+              className="cc-header flex items-start justify-between gap-3 sm:gap-4 mb-4"
+              style={{ flexWrap: "nowrap" }}
+            >
+              <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
                 {/* Diamond gem icon */}
                 <div
-                  className="relative flex-shrink-0 flex items-center justify-center w-10 h-10"
+                  className="relative flex-shrink-0 flex items-center justify-center"
                   style={{
+                    width: "clamp(34px, 8vw, 40px)",
+                    height: "clamp(34px, 8vw, 40px)",
                     background: "linear-gradient(135deg, var(--gold-light), var(--accent-light))",
                     border: "1px solid var(--gold)",
                     borderRadius: "2px",
@@ -145,11 +158,11 @@ export default function CookieConsent() {
                   />
                 </div>
 
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <h2
                     style={{
                       fontFamily: '"Google Sans Flex", sans-serif',
-                      fontSize: "1.25rem",
+                      fontSize: "clamp(1.05rem, 4.2vw, 1.25rem)",
                       fontWeight: 600,
                       color: "var(--text)",
                       letterSpacing: "0.02em",
@@ -161,11 +174,14 @@ export default function CookieConsent() {
                   <p
                     style={{
                       fontFamily: '"Google Sans Flex", sans-serif',
-                      fontSize: "0.65rem",
-                      letterSpacing: "0.14em",
+                      fontSize: "clamp(0.58rem, 2vw, 0.65rem)",
+                      letterSpacing: "0.12em",
                       color: "var(--gold)",
                       textTransform: "uppercase",
                       marginTop: "2px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     Alpha Imports · Cookie Preferences
@@ -181,6 +197,8 @@ export default function CookieConsent() {
                   transition: "color 0.2s",
                   flexShrink: 0,
                   marginTop: "2px",
+                  padding: "4px",
+                  margin: "-4px -4px 0 0",
                 }}
                 onMouseEnter={e => (e.currentTarget.style.color = "var(--text)")}
                 onMouseLeave={e => (e.currentTarget.style.color = "var(--muted)")}
@@ -193,7 +211,7 @@ export default function CookieConsent() {
             <p
               style={{
                 fontFamily: '"Google Sans Flex", sans-serif',
-                fontSize: "0.8rem",
+                fontSize: "clamp(0.76rem, 2.4vw, 0.8rem)",
                 lineHeight: 1.7,
                 color: "var(--text-secondary)",
                 letterSpacing: "0.02em",
@@ -257,7 +275,7 @@ export default function CookieConsent() {
             </div>
 
             {/* Action row */}
-            <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="cc-actions flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
               {/* Accept All — gold shimmer CTA */}
               <button
                 onClick={() => dismiss(true)}
@@ -265,9 +283,9 @@ export default function CookieConsent() {
                 style={{
                   flex: 1,
                   width: "100%",
-                  padding: "11px 20px",
+                  padding: "clamp(10px, 2.5vw, 11px) 20px",
                   fontFamily: '"Google Sans Flex", sans-serif',
-                  fontSize: "0.65rem",
+                  fontSize: "clamp(0.62rem, 2vw, 0.65rem)",
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
                   fontWeight: 600,
@@ -291,9 +309,9 @@ export default function CookieConsent() {
                 style={{
                   flex: 1,
                   width: "100%",
-                  padding: "10px 20px",
+                  padding: "clamp(9px, 2.5vw, 10px) 20px",
                   fontFamily: '"Google Sans Flex", sans-serif',
-                  fontSize: "0.65rem",
+                  fontSize: "clamp(0.62rem, 2vw, 0.65rem)",
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
                   fontWeight: 500,
@@ -317,10 +335,11 @@ export default function CookieConsent() {
                   flexShrink: 0,
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
                   gap: "5px",
-                  padding: "10px 14px",
+                  padding: "clamp(9px, 2.5vw, 10px) 14px",
                   fontFamily: '"Google Sans Flex", sans-serif',
-                  fontSize: "0.62rem",
+                  fontSize: "clamp(0.6rem, 1.9vw, 0.62rem)",
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
                   fontWeight: 500,
@@ -385,11 +404,11 @@ function PreferenceRow({
       </div>
 
       {/* Text */}
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
             fontFamily: '"Google Sans Flex", sans-serif',
-            fontSize: "0.7rem",
+            fontSize: "clamp(0.66rem, 2vw, 0.7rem)",
             fontWeight: 600,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
@@ -402,7 +421,7 @@ function PreferenceRow({
         <p
           style={{
             fontFamily: '"Google Sans Flex", sans-serif',
-            fontSize: "0.72rem",
+            fontSize: "clamp(0.68rem, 2.1vw, 0.72rem)",
             color: "var(--text-secondary)",
             lineHeight: 1.5,
           }}
@@ -437,9 +456,9 @@ function PreferenceRow({
             onClick={() => onChange(!checked)}
             className={`cc-toggle ${checked ? "on" : "off"}`}
             style={{
-              width: "40px",
-              height: "22px",
-              borderRadius: "11px",
+              width: "42px",
+              height: "24px",
+              borderRadius: "12px",
               border: "none",
               cursor: "pointer",
               position: "relative",
@@ -450,9 +469,9 @@ function PreferenceRow({
               style={{
                 position: "absolute",
                 top: "3px",
-                left: checked ? "20px" : "3px",
-                width: "16px",
-                height: "16px",
+                left: checked ? "21px" : "3px",
+                width: "18px",
+                height: "18px",
                 background: "#fff",
                 borderRadius: "50%",
                 transition: "left 0.25s cubic-bezier(0.34,1.56,0.64,1)",

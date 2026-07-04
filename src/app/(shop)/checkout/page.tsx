@@ -539,6 +539,7 @@ export default function CheckoutPage() {
             background: 'rgba(15, 15, 20, 0.85)',
             backdropFilter: 'blur(8px)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24,
+            padding: '0 20px', textAlign: 'center',
           }}>
             <div style={{ position: 'relative', width: 72, height: 72 }}>
               <svg width="72" height="72" viewBox="0 0 72 72" style={{ animation: 'spin 1s linear infinite', position: 'absolute', inset: 0 }}>
@@ -552,7 +553,7 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 20, fontWeight: 600, color: '#f5f1eb', fontFamily: '"Google Sans Flex", sans-serif', letterSpacing: '-0.3px', marginBottom: 8 }}>
+              <p style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: 600, color: '#f5f1eb', fontFamily: '"Google Sans Flex", sans-serif', letterSpacing: '-0.3px', marginBottom: 8 }}>
                 Confirming your payment…
               </p>
               <p style={{ fontSize: 13, color: '#8a8278', maxWidth: 280 }}>
@@ -587,30 +588,61 @@ export default function CheckoutPage() {
           .submit-btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
           .back-btn:hover { background: #f1f5f9 !important; }
           ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+          /* ── Responsive layout ──────────────────────────────────────────── */
+          .co-header {
+            padding: 0 24px;
+          }
+          .co-main-grid {
+            max-width: 1060px; margin: 0 auto; padding: 40px 20px 60px;
+            display: grid; grid-template-columns: 1fr 380px; gap: 40px; align-items: start;
+          }
+          .co-card-body { padding: 28px 28px 32px; }
+          .co-steps { display: flex; align-items: center; gap: 0; margin-bottom: 32px; flex-wrap: wrap; row-gap: 10px; }
+          .co-step-connector { width: 48px; height: 2px; border-radius: 2px; margin: 0 12px; transition: background 0.4s; }
+          .co-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+          .co-coupon-row { display: flex; gap: 8px; }
+
+          @media (max-width: 900px) {
+            .co-main-grid { grid-template-columns: 1fr; gap: 28px; padding: 28px 16px 40px; }
+          }
+          @media (max-width: 480px) {
+            .co-header { padding: 0 14px; }
+            .co-card-body { padding: 20px 16px 24px; }
+            .co-step-connector { width: 20px; margin: 0 6px; }
+          }
+          @media (max-width: 420px) {
+            .co-two-col { grid-template-columns: 1fr; }
+          }
+          @media (max-width: 360px) {
+            .co-coupon-row { flex-wrap: wrap; }
+            .co-coupon-row input { flex: 1 1 100%; }
+            .co-coupon-row button { flex: 1 1 100%; }
+          }
         `}</style>
 
         <div className="co" style={{ minHeight: '100vh', background: '#ffffff', fontFamily: "'Google Sans Flex', sans-serif" }}>
 
           {/* Top nav */}
-          <header style={{ background: '#fff', borderBottom: '1px solid #f1f5f9', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.05)' }}>
+          <header className="co-header" style={{ background: '#fff', borderBottom: '1px solid #f1f5f9', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Package />
               </div>
               <span style={{ fontWeight: 700, fontSize: 16, color: '#1e293b', letterSpacing: '-0.01em' }}>Alpha Imports</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#64748b', fontSize: 12 }}>
-              <Lock /> <span>Secure Checkout</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#64748b', fontSize: 12, whiteSpace: 'nowrap' }}>
+              <Lock /> <span className="co-secure-label">Secure Checkout</span>
             </div>
           </header>
 
           {/* Main layout */}
-          <div style={{ maxWidth: 1060, margin: '0 auto', padding: '40px 20px 60px', display: 'grid', gridTemplateColumns: '1fr 380px', gap: 40, alignItems: 'start' }}>
+          <div className="co-main-grid">
 
             {/* LEFT COLUMN */}
             <div>
               <div style={{ marginBottom: 28, animation: 'fadeUp 0.4s ease both' }}>
-                <h1 style={{ fontSize: 26, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: 4 }}>
+                <h1 style={{ fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: 4 }}>
                   {step === 'shipping' ? 'Delivery Details' : step === 'rates' ? 'Choose Shipping' : 'Complete Payment'}
                 </h1>
                 <p style={{ fontSize: 13, color: '#94a3b8', fontWeight: 400 }}>
@@ -619,14 +651,14 @@ export default function CheckoutPage() {
               </div>
 
               {/* Step indicator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 32 }}>
+              <div className="co-steps">
                 {STEPS.map((s, i) => {
                   const done = STEPS.indexOf(step) > i;
                   const active = step === s;
                   return (
                     <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
                       {i > 0 && (
-                        <div style={{ width: 48, height: 2, borderRadius: 2, background: done ? '#6366f1' : '#e2e8f0', transition: 'background 0.4s', margin: '0 12px' }} />
+                        <div className="co-step-connector" style={{ background: done ? '#6366f1' : '#e2e8f0' }} />
                       )}
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: 8,
@@ -635,14 +667,14 @@ export default function CheckoutPage() {
                         border: `1.5px solid ${active ? '#6366f1' : done ? '#86efac' : '#e2e8f0'}`,
                       }}>
                         <div style={{
-                          width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                           background: active ? 'rgba(255,255,255,0.2)' : done ? '#22c55e' : '#e2e8f0',
                           fontSize: 10, fontWeight: 700,
                           color: active ? '#fff' : done ? '#fff' : '#94a3b8',
                         }}>
                           {done ? '✓' : i + 1}
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: active ? '#fff' : done ? '#166534' : '#94a3b8', textTransform: 'capitalize' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: active ? '#fff' : done ? '#166534' : '#94a3b8', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
                           {STEP_LABELS[s]}
                         </span>
                       </div>
@@ -654,7 +686,7 @@ export default function CheckoutPage() {
               {/* Main card */}
               <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.05)', overflow: 'hidden', animation: 'fadeUp 0.4s ease 0.08s both' }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa)' }} />
-                <div style={{ padding: '28px 28px 32px' }}>
+                <div className="co-card-body">
 
                   {/* ── STEP 1: SHIPPING ADDRESS ── */}
                   {step === 'shipping' && (
@@ -706,7 +738,7 @@ export default function CheckoutPage() {
                             <FieldError msg={errors.postalCode} />
                             <PincodeBanner postOffices={postOffices} onSelect={handlePostOfficeSelect} />
                             {pinVerified && form.city && form.state && (
-                              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #86efac' }}>
+                              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #86efac', flexWrap: 'wrap' }}>
                                 <MapPin />
                                 <span style={{ fontSize: 12.5, color: '#166534', fontWeight: 500 }}>{form.city}, {form.state}, India</span>
                                 <button type="button" onClick={() => { setForm((f) => ({ ...f, postalCode: '', city: '', state: '' })); setPinVerified(false); setPostOffices([]); setPinError(''); setErrors((prev) => { const u = { ...prev }; delete u.city; delete u.state; return u; }); }}
@@ -737,7 +769,7 @@ export default function CheckoutPage() {
                         </div>
 
                         {/* City + State */}
-                        <div className="field-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, animationDelay: '0.17s' }}>
+                        <div className="field-wrap co-two-col" style={{ animationDelay: '0.17s' }}>
                           <div>
                             <label style={labelStyle}>{isIndia ? 'District / City' : LABELS.city} <span style={{ color: '#6366f1' }}>*</span></label>
                             <div style={{ position: 'relative' }}>
@@ -805,14 +837,14 @@ export default function CheckoutPage() {
                             boxShadow: errors.phone ? '0 0 0 3px rgba(239,68,68,0.06)' : (touched.phone && !errors.phone && form.phone) ? '0 0 0 3px rgba(34,197,94,0.08)' : 'none',
                             transition: 'all 0.18s',
                           }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', background: '#f8fafc', color: '#374151', fontSize: 13, fontWeight: 600, borderRight: '1.5px solid #e2e8f0', whiteSpace: 'nowrap', minWidth: 52 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', background: '#f8fafc', color: '#374151', fontSize: 13, fontWeight: 600, borderRight: '1.5px solid #e2e8f0', whiteSpace: 'nowrap', minWidth: 52, flexShrink: 0 }}>
                               {form.country === 'IN' ? '+91' : form.country === 'US' || form.country === 'CA' ? '+1' : form.country === 'GB' ? '+44' : form.country === 'AU' ? '+61' : form.country === 'AE' ? '+971' : '+'}
                             </span>
-                            <input style={{ flex: 1, border: 'none', padding: '11px 14px', fontSize: 13.5, fontFamily: "'Google Sans Flex', sans-serif", outline: 'none', background: '#fff', color: '#1e293b' }}
+                            <input style={{ flex: 1, minWidth: 0, border: 'none', padding: '11px 14px', fontSize: 13.5, fontFamily: "'Google Sans Flex', sans-serif", outline: 'none', background: '#fff', color: '#1e293b' }}
                               type="tel" placeholder={isIndia ? '98765 43210' : '(555) 123-4567'}
                               value={form.phone ? formatPhone(form.phone, form.country) : ''}
                               onChange={(e) => handlePhoneChange(e.target.value)} onBlur={() => handleBlur('phone')} autoComplete="tel" inputMode="numeric" />
-                            {touched.phone && !errors.phone && form.phone && <span style={{ display: 'flex', alignItems: 'center', paddingRight: 12 }}><CheckCircle /></span>}
+                            {touched.phone && !errors.phone && form.phone && <span style={{ display: 'flex', alignItems: 'center', paddingRight: 12, flexShrink: 0 }}><CheckCircle /></span>}
                           </div>
                           <FieldError msg={errors.phone} />
                         </div>
@@ -841,12 +873,12 @@ export default function CheckoutPage() {
                   {step === 'rates' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                       {/* Address summary */}
-                      <div style={{ padding: '14px 16px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
+                      <div style={{ padding: '14px 16px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ minWidth: 0 }}>
                           <p style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>{form.fullName}</p>
                           <p style={{ fontSize: 11.5, color: '#64748b' }}>{form.addressLine1}, {form.city}, {form.state} {form.postalCode}</p>
                         </div>
-                        <button onClick={() => setStep('shipping')} style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <button onClick={() => setStep('shipping')} style={{ fontSize: 12, color: '#6366f1', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                           Edit
                         </button>
                       </div>
@@ -939,7 +971,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div style={{ textAlign: 'center', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#94a3b8', fontSize: 12 }}>
+              <div style={{ textAlign: 'center', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#94a3b8', fontSize: 12, flexWrap: 'wrap' }}>
                 <Lock /> 256-bit SSL encrypted · Your information is always secure
               </div>
             </div>
@@ -954,7 +986,7 @@ export default function CheckoutPage() {
                   Coupon Code
                 </p>
                 {couponDiscount > 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', flexWrap: 'wrap', gap: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>✓ {couponCode} — $10 off applied!</span>
                     <button
                       onClick={() => { setCouponCode(''); setCouponInput(''); setCouponDiscount(0); setCouponMsg(''); }}
@@ -965,13 +997,13 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   <>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="co-coupon-row">
                       <input
                         type="text"
                         value={couponInput}
                         onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponMsg(''); }}
                         placeholder="Enter code"
-                        style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontFamily: 'Google Sans Flex', letterSpacing: '0.08em', outline: 'none' }}
+                        style={{ flex: 1, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontFamily: 'Google Sans Flex', letterSpacing: '0.08em', outline: 'none' }}
                       />
                       <button
                         disabled={couponLoading || !couponInput.trim()}
@@ -995,7 +1027,7 @@ export default function CheckoutPage() {
                           } catch { setCouponMsg('Network error. Try again.'); }
                           finally { setCouponLoading(false); }
                         }}
-                        style={{ padding: '9px 16px', background: '#0f3460', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: couponLoading || !couponInput.trim() ? 0.6 : 1 }}
+                        style={{ padding: '9px 16px', background: '#0f3460', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: couponLoading || !couponInput.trim() ? 0.6 : 1, flexShrink: 0, whiteSpace: 'nowrap' }}
                       >
                         {couponLoading ? '…' : 'Apply'}
                       </button>

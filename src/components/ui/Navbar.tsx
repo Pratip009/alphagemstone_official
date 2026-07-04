@@ -385,7 +385,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           z-index: 2;
           flex-shrink: 0;
         }
-        .announcement-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .announcement-close:hover { color: #fff; background: rgb(255, 255, 255); }
 
         /* ── Main Nav ── */
         .main-nav {
@@ -398,7 +398,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           font-family: var(--label);
         }
         .main-nav.scrolled {
-          background: rgba(255,255,255,0.97);
+          background: rgb(255, 255, 255);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           box-shadow: 0 4px 32px rgba(15,52,96,0.08), 0 1px 0 var(--border);

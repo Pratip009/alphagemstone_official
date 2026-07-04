@@ -145,7 +145,7 @@ export default function JewelryModal({
                 style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
               >
                 Enjoy{" "}
-                <em className="italic text-[#c9a96e]">$10 off</em>
+                <em className="italic text-[#c9a96e]">10% off</em>
                 <br />
                 your first piece
               </h2>
