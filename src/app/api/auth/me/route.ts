@@ -9,7 +9,14 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
     await connectDB();
     const user = await getUserById(req.user.userId);
     if (!user) return errorResponse('User not found', 404);
-    return successResponse(user);
+    // Normalize to the same { id, name, email, role } shape returned by
+    // login/signup, since this is a lean() Mongoose doc (still has _id).
+    return successResponse({
+      id: (user as any)._id?.toString?.() ?? (user as any)._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
   } catch {
     return errorResponse('Failed to get user', 500);
   }

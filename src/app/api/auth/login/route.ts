@@ -22,8 +22,11 @@ export async function POST(req: NextRequest) {
     const { email, password } = parsed.data;
     const result = await login(email, password);
 
+    // Only `user` goes in the JSON body. The token is set below as an
+    // httpOnly cookie — putting it in the body too would hand any XSS
+    // the same plaintext token that httpOnly is meant to keep out of JS.
     const response = NextResponse.json(
-      { success: true, data: result },
+      { success: true, data: { user: result.user } },
       { status: 200 }
     );
 

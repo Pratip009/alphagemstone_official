@@ -1,6 +1,5 @@
 'use client';
 import { useState, useRef, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 
 /* ── Inline styles ─────────────────────────────────────────────────────────── */
@@ -123,7 +122,6 @@ function stepClass(current: Step, forStep: 'select' | 'uploading' | 'done'): str
 }
 
 export default function AdminUploadPage() {
-  const { token } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [drag, setDrag] = useState(false);
@@ -162,7 +160,7 @@ export default function AdminUploadPage() {
     try {
       const res = await fetch('/api/admin/bulk-upload', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
         body: formData,
       });
       clearInterval(tick);
@@ -181,7 +179,7 @@ export default function AdminUploadPage() {
 
   const handleDownloadTemplate = async () => {
     const res = await fetch('/api/admin/bulk-upload', {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
     });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);

@@ -71,7 +71,7 @@ function StatCard({ label, value, icon: Icon, accent }: {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AdminBlogsPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
 
   const [blogs, setBlogs]       = useState<BlogRow[]>([]);
@@ -85,15 +85,15 @@ export default function AdminBlogsPage() {
 
   // Fetch stats
   useEffect(() => {
-    if (authLoading || !token) return;
+    if (authLoading || !user) return;
     authFetch('/api/admin/blogs/stats').then(r => r.json()).then(d => {
       if (d.success) setStats(d.data);
     });
-  }, [authLoading, token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch blogs
   const fetchBlogs = useCallback(() => {
-    if (authLoading || !token) return;
+    if (authLoading || !user) return;
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '10', status: statusFilter });
     if (search) params.set('search', search);
@@ -105,7 +105,7 @@ export default function AdminBlogsPage() {
         setPagination(d.pagination ?? null);
       })
       .finally(() => setLoading(false));
-  }, [authLoading, token, page, search, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user, page, search, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchBlogs(); }, [fetchBlogs]);
 

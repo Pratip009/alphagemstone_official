@@ -473,7 +473,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminOrdersPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -487,7 +487,7 @@ export default function AdminOrdersPage() {
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
   useEffect(() => {
-    if (authLoading || !token) return;
+    if (authLoading || !user) return;
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '15' });
     if (statusFilter) params.set('status', statusFilter);
@@ -496,7 +496,7 @@ export default function AdminOrdersPage() {
       .then(j => { setOrders(j.data ?? []); setPagination(j.pagination ?? null); })
       .catch(e => console.error('[orders]', e))
       .finally(() => setLoading(false));
-  }, [authLoading, token, page, statusFilter, authFetch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user, page, statusFilter, authFetch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStatusUpdate = (id: string, newStatus: string) => {
     setOrders(prev => prev.map(o => o._id === id ? { ...o, status: newStatus } : o));

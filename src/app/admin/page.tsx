@@ -111,7 +111,7 @@ function StatCard({
 
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
 
   const [stats, setStats]         = useState<Stats | null>(null);
@@ -121,27 +121,27 @@ export default function AdminDashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
 
-  // Fetch stats — wait for auth to hydrate from localStorage
+  // Fetch stats — wait for the auth cookie check (/api/auth/me) to resolve
   useEffect(() => {
-    if (authLoading || !token) return;
+    if (authLoading || !user) return;
     setStatsLoading(true);
     authFetch('/api/admin/stats')
       .then(r => r.json())
       .then(j => setStats(j.data))
       .catch((e: unknown) => console.error('[stats]', e))
       .finally(() => setStatsLoading(false));
-  }, [authLoading, token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch users — wait for auth, re-run when page changes
   useEffect(() => {
-    if (authLoading || !token) return;
+    if (authLoading || !user) return;
     setUsersLoading(true);
     authFetch(`/api/admin/users?page=${page}&limit=8`)
       .then(r => r.json())
       .then(j => setUsersData(j.data))
       .catch((e: unknown) => console.error('[stats]', e))
       .finally(() => setUsersLoading(false));
-  }, [authLoading, token, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredUsers = usersData?.users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||

@@ -53,16 +53,11 @@ export default function ShippingRateSelector({
     setLoading(true);
     setError(null);
     try {
-      const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('auth_token')
-          : null;
-
       const res = await fetch('/api/shipping/rates', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ origin, destination, package: pkg }),
       });

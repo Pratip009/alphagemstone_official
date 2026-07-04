@@ -49,16 +49,11 @@ export default function OrderTracking({
     setError(null);
     setIsRateLimit(false);
     try {
-      const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('auth_token')
-          : null;
-
       const res = await fetch('/api/shipping/track', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ trackingNumber, carrierCode }),
       });

@@ -391,7 +391,7 @@ function CommentItem({
 
 export default function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const authFetch = useAuthFetch();
 
   const [blog, setBlog]         = useState<Blog | null>(null);
@@ -435,7 +435,7 @@ export default function BlogDetailPage() {
   }, [blog]);
 
   const handleLike = async () => {
-    if (!token) { alert('Please sign in to like this article'); return; }
+    if (!user) { alert('Please sign in to like this article'); return; }
     const optimistic = !liked;
     setLiked(optimistic);
     setLikesCount(c => optimistic ? c + 1 : c - 1);
@@ -453,7 +453,7 @@ export default function BlogDetailPage() {
   };
 
   const handleComment = async () => {
-    if (!token) { alert('Please sign in to comment'); return; }
+    if (!user) { alert('Please sign in to comment'); return; }
     if (!commentText.trim()) return;
     setCommentLoading(true);
     await authFetch(`/api/blogs/${slug}/comments`, {
@@ -621,7 +621,7 @@ export default function BlogDetailPage() {
                 {blog.comments.length} Comment{blog.comments.length !== 1 ? 's' : ''}
               </h2>
 
-              {token ? (
+              {user ? (
                 <div className="mb-6 flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#c9a84c]/15 border border-[#c9a84c]/20 flex items-center justify-center shrink-0 text-[0.7rem] font-bold text-[#c9a84c]">
                     {user?.name?.charAt(0).toUpperCase()}

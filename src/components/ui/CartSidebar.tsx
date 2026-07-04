@@ -97,7 +97,7 @@ export default function CartSidebar({
         method: "PUT",
         body: JSON.stringify({ productId, quantity: newQty }),
       });
-      console.log("PUT response:", d); // ← check this
+      
       // Try all possible response shapes
       const cartData = d.data?.cart ?? d.data ?? d;
       const totals = d.data?.totals ?? d.totals ?? null;

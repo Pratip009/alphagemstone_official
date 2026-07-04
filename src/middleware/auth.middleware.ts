@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken, extractTokenFromHeader, JWTPayload } from '@/lib/jwt';
+import { verifyToken, extractTokenFromCookie, JWTPayload } from '@/lib/jwt';
 
 export type AuthenticatedRequest = NextRequest & {
   user: JWTPayload;
@@ -16,7 +16,7 @@ export function withAuth(handler: RouteHandler) {
     context: any
   ): Promise<Response> => {
     try {
-      const token = extractTokenFromHeader(req.headers.get('authorization'));
+      const token = extractTokenFromCookie(req);
 
       if (!token) {
         return NextResponse.json(
@@ -66,7 +66,7 @@ export function withOptionalAuth(
     context: any
   ): Promise<Response> => {
     try {
-      const token = extractTokenFromHeader(req.headers.get('authorization'));
+      const token = extractTokenFromCookie(req);
       if (token) {
         const payload = verifyToken(token);
         (req as NextRequest & { user?: JWTPayload }).user = payload;

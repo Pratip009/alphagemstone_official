@@ -73,13 +73,12 @@ function Toast({ msg, type, onClose }: { msg: string; type: 'success' | 'error';
 
 // ── Image Upload field ────────────────────────────────────────────────────────
 function ImageUploadField({
-  label, icon: Icon, value, onChange, token,
+  label, icon: Icon, value, onChange,
 }: {
   label: string;
   icon: React.ElementType;
   value: string;
   onChange: (url: string) => void;
-  token: string | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -99,11 +98,12 @@ function ImageUploadField({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      // Must use plain fetch — useAuthFetch injects "Content-Type: application/json"
-      // which overwrites the browser-generated "multipart/form-data; boundary=…" header.
+      // Must use plain fetch (not useAuthFetch) so the browser can set its own
+      // "multipart/form-data; boundary=…" header for this FormData body.
+      // Auth is via the httpOnly cookie, sent automatically with credentials: 'include'.
       const res = await fetch('/api/admin/hero-slides/upload', {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
         body: fd,
       });
       const json = await res.json();
@@ -187,12 +187,10 @@ function SlideModal({
   initial,
   onSave,
   onClose,
-  token,
 }: {
   initial?: HeroSlide;
   onSave: (data: SlideFormData) => Promise<void>;
   onClose: () => void;
-  token: string | null;
 }) {
   const [form, setForm] = useState<SlideFormData>(
     initial
@@ -305,7 +303,6 @@ function SlideModal({
             icon={Monitor}
             value={form.desktopImage}
             onChange={(url) => set('desktopImage', url)}
-            token={token}
           />
           {errors.desktopImage && <p className={`${errCls} -mt-4`}>{errors.desktopImage}</p>}
 
@@ -315,7 +312,6 @@ function SlideModal({
             icon={Smartphone}
             value={form.mobileImage || ''}
             onChange={(url) => set('mobileImage', url)}
-            token={token}
           />
 
           {/* Accent colors */}
@@ -592,7 +588,7 @@ function SlideCard({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HeroSlidesAdminPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
 
   // null = modal closed | { mode:'new' } = creating | { mode:'edit', slide } = editing
@@ -617,7 +613,7 @@ export default function HeroSlidesAdminPage() {
 
   // ── Fetch all slides ────────────────────────────────────────────────────────
   const fetchSlides = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     try {
       const res = await authFetch('/api/admin/hero-slides');
       const json = await res.json();
@@ -627,11 +623,11 @@ export default function HeroSlidesAdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, token, showToast]);
+  }, [authFetch, user, showToast]);
 
   useEffect(() => {
-    if (!authLoading && token) fetchSlides();
-  }, [authLoading, token, fetchSlides]);
+    if (!authLoading && user) fetchSlides();
+  }, [authLoading, user, fetchSlides]);
 
   // ── Create / Update ─────────────────────────────────────────────────────────
   const handleSave = async (data: SlideFormData) => {
@@ -827,7 +823,6 @@ export default function HeroSlidesAdminPage() {
           initial={editTarget.mode === 'edit' ? editTarget.slide : undefined}
           onSave={handleSave}
           onClose={() => setEditTarget(null)}
-          token={token}
         />
       )}
 

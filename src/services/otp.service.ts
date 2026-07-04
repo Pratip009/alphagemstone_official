@@ -43,9 +43,9 @@ async function sendOtpEmail(
       ? 'Your Alpha Imports verification code'
       : 'Reset your Alpha Imports password';
 
-  console.log('[sendOtpEmail] Preparing to send:', { to: email, from: FROM, subject });
-  console.log('[sendOtpEmail] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
-  console.log('[sendOtpEmail] RESEND_API_KEY prefix:', process.env.RESEND_API_KEY?.slice(0, 8) ?? 'MISSING');
+  // console.log('[sendOtpEmail] Preparing to send:', { to: email, from: FROM, subject });
+  // console.log('[sendOtpEmail] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
+  // console.log('[sendOtpEmail] RESEND_API_KEY prefix:', process.env.RESEND_API_KEY?.slice(0, 8) ?? 'MISSING');
 
   try {
     const result = await resend.emails.send({
@@ -54,9 +54,9 @@ async function sendOtpEmail(
       subject,
       html: otpEmailHtml(otp, purpose),
     });
-    console.log('[sendOtpEmail] Resend response:', JSON.stringify(result));
+    // console.log('[sendOtpEmail] Resend response:', JSON.stringify(result));
   } catch (err) {
-    console.error('[sendOtpEmail] Resend threw an error:', err);
+    // console.error('[sendOtpEmail] Resend threw an error:', err);
     throw err;
   }
 }
@@ -68,25 +68,25 @@ export async function sendSignupOtp(
   email: string,
   password: string
 ): Promise<void> {
-  console.log('[sendSignupOtp] Called with email:', email);
+  // console.log('[sendSignupOtp] Called with email:', email);
   const normalizedEmail = email.toLowerCase();
 
   const existing = await User.findOne({ email: normalizedEmail }).lean();
   if (existing) {
-    console.log('[sendSignupOtp] Email already exists:', normalizedEmail);
+    // //console.log('[sendSignupOtp] Email already exists:', normalizedEmail);
     throw new Error('An account with this email already exists.');
   }
 
-  console.log('[sendSignupOtp] Checking rate limit...');
+  // console.log('[sendSignupOtp] Checking rate limit...');
   await checkRateLimit(normalizedEmail, 'signup');
 
   const otp = generateOtp();
-  console.log('[sendSignupOtp] Generated OTP (dev only):', otp);
+  // console.log('[sendSignupOtp] Generated OTP (dev only):', otp);
   const otpHash = await bcrypt.hash(otp, 10);
   const passwordHash = await bcrypt.hash(password, 12);
 
   await Otp.deleteMany({ email: normalizedEmail, purpose: 'signup' });
-  console.log('[sendSignupOtp] Cleared old OTP records');
+  // console.log('[sendSignupOtp] Cleared old OTP records');
 
   await Otp.create({
     email: normalizedEmail,
@@ -98,10 +98,10 @@ export async function sendSignupOtp(
     verified: false,
     attempts: 0,
   });
-  console.log('[sendSignupOtp] OTP record saved to DB');
+  // console.log('[sendSignupOtp] OTP record saved to DB');
 
   await sendOtpEmail(normalizedEmail, otp, 'signup');
-  console.log('[sendSignupOtp] Done — email send attempted');
+  // console.log('[sendSignupOtp] Done — email send attempted');
 }
 
 export async function verifySignupOtp(

@@ -112,9 +112,20 @@ export async function createOrderFromCart(
 
 // ─── PayPal ───────────────────────────────────────────────────────────────────
 
-export async function initiatePayPalPayment(orderId: string) {
+export async function initiatePayPalPayment(
+  orderId: string,
+  userId?: string,
+  { skipOwnerCheck = false }: { skipOwnerCheck?: boolean } = {}
+) {
   const order = await Order.findById(orderId) as IOrder | null;
   if (!order) throw new Error('Order not found');
+
+  // IDOR guard: only the order's owner (or an explicit admin/webhook caller
+  // that passes skipOwnerCheck) may initiate payment on this order.
+  if (!skipOwnerCheck) {
+    if (!userId) throw new Error('Unauthorized');
+    if (order.user.toString() !== userId) throw new Error('Order not found');
+  }
 
   const paypalOrder = await createPayPalOrder(order.totalAmount);
   order.paypalOrderId = paypalOrder.id;
@@ -133,12 +144,26 @@ export async function initiatePayPalPayment(orderId: string) {
  * ShipEngine label. Label failure is non-fatal — admin can buy it manually
  * via POST /api/admin/orders/:id/purchase-label.
  */
-export async function capturePayment(paypalOrderId: string) {
-  const captureData = await capturePayPalOrder(paypalOrderId);
-  if (captureData.status !== 'COMPLETED') throw new Error('Payment not completed');
-
+export async function capturePayment(
+  paypalOrderId: string,
+  userId?: string,
+  { skipOwnerCheck = false }: { skipOwnerCheck?: boolean } = {}
+) {
   const order = await Order.findOne({ paypalOrderId }) as IOrder | null;
   if (!order) throw new Error('Order not found');
+
+  // IDOR guard: only the order's owner (or an explicit admin/webhook caller
+  // that passes skipOwnerCheck) may capture payment on this order. Checked
+  // before calling PayPal so a guessed paypalOrderId can't trigger a real
+  // capture, stock decrement, cart clear, or confirmation email for someone
+  // else's order.
+  if (!skipOwnerCheck) {
+    if (!userId) throw new Error('Unauthorized');
+    if (order.user.toString() !== userId) throw new Error('Order not found');
+  }
+
+  const captureData = await capturePayPalOrder(paypalOrderId);
+  if (captureData.status !== 'COMPLETED') throw new Error('Payment not completed');
 
   // Decrement stock
   for (const item of order.items) {

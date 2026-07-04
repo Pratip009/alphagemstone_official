@@ -50,11 +50,10 @@ interface TrackingInfo {
 
 interface Props {
   order:     OrderShippingData;
-  authToken?: string;
   onUpdate?: (updated: Partial<OrderShippingData>) => void;
 }
 
-export default function AdminOrderShipping({ order, authToken, onUpdate }: Props) {
+export default function AdminOrderShipping({ order, onUpdate }: Props) {
   const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? '');
   const [labelUrl,       setLabelUrl]       = useState(order.labelUrl ?? '');
   const [shippedAt,      setShippedAt]      = useState(order.shippedAt ?? '');
@@ -75,8 +74,8 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
   const labelPurchased = Boolean(trackingNumber);
   const canPurchase    = order.paymentStatus === 'completed' && Boolean(order.shippingRateId) && !labelPurchased;
 
+  // Auth is via the httpOnly cookie (credentials: 'include' below), not a header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
   // ── Purchase label ────────────────────────────────────────────────────────
   async function handlePurchaseLabel() {
@@ -86,6 +85,7 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
     try {
       const res  = await fetch(`/api/admin/orders/${order._id}/purchase-label`, {
         method: 'POST',
+        credentials: 'include',
         headers,
         body: JSON.stringify({}),
       });
@@ -119,6 +119,7 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
     try {
       const res  = await fetch('/api/shipping/track', {
         method: 'POST',
+        credentials: 'include',
         headers,
         body: JSON.stringify({ trackingNumber }),
       });
@@ -162,6 +163,7 @@ export default function AdminOrderShipping({ order, authToken, onUpdate }: Props
     try {
       const res  = await fetch(`/api/admin/orders/${order._id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers,
         body: JSON.stringify({
           trackingNumber:  manualTracking.trim(),

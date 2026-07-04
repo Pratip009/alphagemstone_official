@@ -21,7 +21,10 @@ export async function POST(req: NextRequest) {
     const { email, otp } = parsed.data;
     const result = await verifySignupOtp(email, otp);
 
-    const response = NextResponse.json({ success: true, data: result }, { status: 201 });
+    // Only `user` goes in the JSON body. The token is set below as an
+    // httpOnly cookie — putting it in the body too would hand any XSS
+    // the same plaintext token that httpOnly is meant to keep out of JS.
+    const response = NextResponse.json({ success: true, data: { user: result.user } }, { status: 201 });
     response.cookies.set('auth_token', result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

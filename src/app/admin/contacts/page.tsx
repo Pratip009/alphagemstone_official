@@ -31,7 +31,7 @@ const FILTERS = [
 ];
 
 export default function AdminContactsPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
 
   const [messages, setMessages]         = useState<ContactMsg[]>([]);
   const [total, setTotal]               = useState(0);
@@ -44,19 +44,16 @@ export default function AdminContactsPage() {
   const [updating, setUpdating]         = useState<string | null>(null);
   const [deleting, setDeleting]         = useState<string | null>(null);
 
-  const authHeaders = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
+  const authHeaders = { "Content-Type": "application/json" };
 
   const fetchMessages = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
       params.set("page", String(page));
-      const res  = await fetch(`/api/admin/contacts?${params.toString()}`, { headers: authHeaders });
+      const res  = await fetch(`/api/admin/contacts?${params.toString()}`, { headers: authHeaders, credentials: "include" });
       const data = await res.json();
       if (data.success) {
         setMessages(data.messages);
@@ -68,9 +65,9 @@ export default function AdminContactsPage() {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, page, token]);
+  }, [statusFilter, page, user]);
 
-  useEffect(() => { if (token) fetchMessages(); }, [fetchMessages, token]);
+  useEffect(() => { if (user) fetchMessages(); }, [fetchMessages, user]);
 
   const openMessage = async (msg: ContactMsg) => {
     setSelected(msg);
@@ -81,7 +78,7 @@ export default function AdminContactsPage() {
     setUpdating(id);
     try {
       const res  = await fetch(`/api/admin/contacts/${id}`, {
-        method: "PATCH", headers: authHeaders, body: JSON.stringify({ status }),
+        method: "PATCH", headers: authHeaders, credentials: "include", body: JSON.stringify({ status }),
       });
       const data = await res.json();
       if (data.success) {
@@ -96,7 +93,7 @@ export default function AdminContactsPage() {
     if (!confirm("Permanently delete this message?")) return;
     setDeleting(id);
     try {
-      const res  = await fetch(`/api/admin/contacts/${id}`, { method: "DELETE", headers: authHeaders });
+      const res  = await fetch(`/api/admin/contacts/${id}`, { method: "DELETE", headers: authHeaders, credentials: "include" });
       const data = await res.json();
       if (data.success) {
         setMessages((prev) => prev.filter((m) => m._id !== id));

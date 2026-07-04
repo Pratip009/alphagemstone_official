@@ -52,9 +52,7 @@ export default function OrderTracking({ orderId, trackingNumber }: Props) {
     setError(null);
     try {
       const res = await fetch(`/api/orders/${orderId}/tracking`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') ?? ''}`,
-        },
+        credentials: 'include',
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message ?? 'Could not load tracking');
