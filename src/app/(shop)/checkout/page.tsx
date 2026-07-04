@@ -6,6 +6,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import ShippingRateSelector from '@/components/shipping/ShippingRateSelector';
 import type { ShippingRate } from '@/types/shipping';
 import { STORE_ORIGIN, DEFAULT_PACKAGE } from '@/lib/shipping-config';
+ import { cartEvents } from '@/hooks/useCart';
 
 interface ShippingForm {
   fullName: string;
@@ -468,6 +469,7 @@ export default function CheckoutPage() {
         method: 'POST',
         body: JSON.stringify({ paypalOrderId: data.orderID }),
       });
+      cartEvents.refresh();
       router.push('/orders?success=true');
     } catch (err) {
       setPaymentProcessing(false);

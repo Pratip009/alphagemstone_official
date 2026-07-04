@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Gem, Package } from 'lucide-react';
-
+import { cartEvents } from '@/hooks/useCart';
 interface CartItem {
   product: { _id: string; name: string; images: string[]; price: number; stock: number };
   quantity: number;
@@ -241,6 +241,7 @@ export default function CartPage() {
         body: JSON.stringify({ productId, quantity }),
       });
       await fetchCart();
+      cartEvents.refresh();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update quantity');
     } finally {

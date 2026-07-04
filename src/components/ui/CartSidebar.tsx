@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { useApi } from "@/hooks/useApi";
+import { cartEvents } from "@/hooks/useCart";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CartItem {
@@ -104,6 +105,9 @@ export default function CartSidebar({
       if (cartData?.items) {
         setCart({ items: cartData.items, totals });
       }
+      // Keep the navbar badge (useCart) in sync — it only recomputes on
+      // this event, not on every cart mutation.
+      cartEvents.refresh();
     } catch {
       // Revert by re-fetching
       apiFetch("/api/cart").then((d) =>
@@ -132,11 +136,16 @@ export default function CartSidebar({
     if (cartData?.items) {
       setCart({ items: cartData.items, totals });
     }
-  } catch {
+  } catch (err) {
+    console.error('Failed to remove cart item:', err);
     apiFetch('/api/cart').then((d) =>
       setCart({ items: d.data.cart.items, totals: d.data.totals })
     );
   } finally {
+    // Always fire this — even if the block above threw — so the navbar
+    // badge (useCart) never gets left showing a stale count.
+    cartEvents.refresh();
+
     setUpdatingId(null);
   }
 };
