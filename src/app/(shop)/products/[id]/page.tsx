@@ -5,7 +5,7 @@ import Product from '@/models/Product';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import ProductGallery from '@/components/products/ProductGallery';
 import Link from 'next/link';
-
+import WishlistButton from '@/components/wishlist/WishlistButton';
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -586,12 +586,10 @@ export default async function ProductDetailPage({
 
               <AddToCartButton productId={String(p._id)} inStock={p.stock > 0} />
 
-              <button className="pd-btn-secondary" style={{ marginTop: 10 }}>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-                </svg>
-                Save to Wishlist
-              </button>
+
+              <div style={{ marginTop: 10 }}>
+                <WishlistButton productId={String(p._id)} />
+              </div>
 
               <div className="pd-mini-trust">
                 {[

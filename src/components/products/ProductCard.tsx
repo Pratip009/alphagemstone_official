@@ -2,6 +2,9 @@
 import Link from 'next/link';
 import { useState, useRef, useCallback } from 'react';
 
+ 
+
+import { WishlistIconButton } from '@/components/wishlist/WishlistButton';
 interface ProductCardProps {
   productType?: 'watch' | 'diamond';
   product: {
@@ -438,6 +441,7 @@ background: #ffffff;
           align-items: baseline;
           justify-content: space-between;
         }
+
         .pc6-price {
           font-family: "Google Sans Flex", sans-serif;
           font-size: 16px;
@@ -457,6 +461,11 @@ background: #ffffff;
         .pc6-avail .pc6-dot { width: 5px; height: 5px; border-radius: 50%; background: #1F7A4D; }
         .pc6-avail.out { color: #8E8E93; }
         .pc6-avail.out .pc6-dot { background: #8E8E93; }
+        .pc6-wishlist {
+          position: absolute;
+         bottom: 8px; right: 8px;
+          z-index: 2;
+        }
       `}</style>
 
       <Link
@@ -500,6 +509,9 @@ background: #ffffff;
             <div className={`pc6-badge pc6-badge-type ${watch ? 'watch' : 'gem'}`}>
               {watch ? <WatchIcon /> : <GemIcon />}
               {watch ? 'Watch' : 'Gem'}
+            </div>
+            <div className="pc6-wishlist">
+              <WishlistIconButton productId={product._id} size="sm" />
             </div>
           </div>
 

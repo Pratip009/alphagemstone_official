@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/hooks/useCart";
 import SearchBar from "./SearchBar";
 import CartSidebar from "./CartSidebar";
-
+import { useWishlist } from "@/hooks/useWishlist";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface NavSubcategory {
@@ -116,6 +116,7 @@ export default function Navbar({
 }) {
   const { user, logout, isAdmin } = useAuth();
   const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const router = useRouter();
   const { categories, loading } = useNavCategories(initialCategories);
 
@@ -254,7 +255,23 @@ export default function Navbar({
       )}
     </button>
   );
-
+const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
+    <button
+      onClick={() => { setMenuOpen(false); router.push("/wishlist"); }}
+      aria-label="Open wishlist"
+      className={mobile ? "nav-mobile-icon-btn" : "nav-cart-btn"}
+    >
+      <svg width={mobile ? 20 : 16} height={mobile ? 20 : 16} viewBox="0 0 24 24" fill="none">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {!mobile && <span className="nav-btn-label">Wishlist</span>}
+      {wishlistCount > 0 && (
+        <span className={mobile ? "cart-badge-mobile" : "cart-badge-desktop"}>
+          {wishlistCount > 99 ? "99+" : wishlistCount}
+        </span>
+      )}
+    </button>
+  );
   return (
     <>
       <style>{`
@@ -1359,6 +1376,7 @@ export default function Navbar({
 
               {user ? (
                 <>
+                <WishlistNavButton />
                   <CartIconButton />
                   <a href="/orders" className="nav-link">
                     Orders
@@ -1526,6 +1544,7 @@ export default function Navbar({
             className="mobile-only"
             style={{ alignItems: "center", gap: "10px" }}
           >
+            {user && <WishlistNavButton mobile />}
             {user && <CartIconButton mobile />}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
