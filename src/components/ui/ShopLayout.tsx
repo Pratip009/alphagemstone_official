@@ -571,7 +571,7 @@ function LandingView({
   onSelectCat: (cat: ICategory) => void;
   showHero: boolean;
 }) {
-  const RANDOM_PICK = 5;
+  const RANDOM_PICK = 4;
 
   const randomSubsMap = useMemo(() => {
     const map: Record<string, ISubcategory[]> = {};
@@ -657,13 +657,7 @@ function LandingView({
               )}
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gap: "28px 20px",
-                gridTemplateColumns: "repeat(5, 1fr)",
-              }}
-            >
+            <div className="landing-sub-grid">
               {pickedSubs.map((sub) => (
                 <SubcategoryCard
                   key={sub._id}
@@ -806,9 +800,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                 padding: "12px 14px",
                 borderBottom: "1px solid var(--border)",
                 cursor: "pointer",
-                background: isHovered
-                  ? "rgba(166,124,46,0.05)"
-                  : "transparent",
+                background: isHovered ? "rgba(166,124,46,0.05)" : "transparent",
                 transition: "background 0.25s",
                 display: "flex",
                 gap: 10,
@@ -891,13 +883,11 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
         <div style={{ padding: "14px 14px 18px" }}>
           <button
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "var(--gold)";
+              (e.currentTarget as HTMLElement).style.background = "var(--gold)";
               (e.currentTarget as HTMLElement).style.color = "var(--navy)";
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "var(--navy)";
+              (e.currentTarget as HTMLElement).style.background = "var(--navy)";
               (e.currentTarget as HTMLElement).style.color = "var(--gold-l)";
             }}
             style={{
@@ -977,7 +967,11 @@ export default function ShopLayout() {
 
         // Persist in module-level cache for future remounts, timestamped so
         // the next mount can tell whether it's still fresh.
-        _catsCache = { categories: cats, subcategories: subs, fetchedAt: Date.now() };
+        _catsCache = {
+          categories: cats,
+          subcategories: subs,
+          fetchedAt: Date.now(),
+        };
         setCategories(cats);
         setSubcategories(subs);
       })
