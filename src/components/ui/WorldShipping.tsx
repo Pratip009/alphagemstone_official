@@ -29,10 +29,12 @@ const TEXTURES = {
 
 const HUB = { lat: 40.71, lng: -74.0, name: "New York" };
 
-const CONTINENT_COLOR: Record<"europe" | "africa" | "asia", string> = {
+const CONTINENT_COLOR: Record<"europe" | "africa" | "asia" | "north_america" | "south_america", string> = {
   europe: "#C9973A",
   africa: "#B23A32",
   asia: "#2E8F63",
+  north_america: "#0015ff",
+  south_america: "#df00df",
 };
 
 type Continent = keyof typeof CONTINENT_COLOR;
@@ -57,7 +59,77 @@ const EUROPE: [string, number, number][] = [
   ["Turkey", 39.9334, 32.8597], ["Georgia", 41.7151, 44.8271], ["Armenia", 40.1792, 44.4991],
   ["Azerbaijan", 40.4093, 49.8671], ["Kosovo", 42.6629, 21.1655],
 ];
+const USA: [string, number, number][] = [
+  ["Alabama", 32.3668, -86.3000],
+  ["Alaska", 58.3019, -134.4197],
+  ["Arizona", 33.4484, -112.0740],
+  ["Arkansas", 34.7465, -92.2896],
+  ["California", 38.5816, -121.4944],
+  ["Colorado", 39.7392, -104.9903],
+  ["Connecticut", 41.7658, -72.6734],
+  ["Delaware", 39.1582, -75.5244],
+  ["Florida", 30.4383, -84.2807],
+  ["Georgia", 33.7490, -84.3880],
+  ["Hawaii", 21.3069, -157.8583],
+  ["Idaho", 43.6150, -116.2023],
+  ["Illinois", 39.7817, -89.6501],
+  ["Indiana", 39.7684, -86.1581],
+  ["Iowa", 41.5868, -93.6250],
+  ["Kansas", 39.0473, -95.6752],
+  ["Kentucky", 38.2009, -84.8733],
+  ["Louisiana", 30.4515, -91.1871],
+  ["Maine", 44.3106, -69.7795],
+  ["Maryland", 38.9784, -76.4922],
+  ["Massachusetts", 42.3601, -71.0589],
+  ["Michigan", 42.7325, -84.5555],
+  ["Minnesota", 44.9537, -93.0900],
+  ["Mississippi", 32.2988, -90.1848],
+  ["Missouri", 38.5767, -92.1735],
+  ["Montana", 46.5891, -112.0391],
+  ["Nebraska", 40.8136, -96.7026],
+  ["Nevada", 39.1638, -119.7674],
+  ["New Hampshire", 43.2081, -71.5376],
+  ["New Jersey", 40.2206, -74.7699],
+  ["New Mexico", 35.6870, -105.9378],
+  ["New York", 42.6526, -73.7562],
+  ["North Carolina", 35.7796, -78.6382],
+  ["North Dakota", 46.8083, -100.7837],
+  ["Ohio", 39.9612, -82.9988],
+  ["Oklahoma", 35.4676, -97.5164],
+  ["Oregon", 44.9429, -123.0351],
+  ["Pennsylvania", 40.2732, -76.8867],
+  ["Rhode Island", 41.8240, -71.4128],
+  ["South Carolina", 34.0007, -81.0348],
+  ["South Dakota", 44.3683, -100.3510],
+  ["Tennessee", 36.1627, -86.7816],
+  ["Texas", 30.2672, -97.7431],
+  ["Utah", 40.7608, -111.8910],
+  ["Vermont", 44.2601, -72.5754],
+  ["Virginia", 37.5407, -77.4360],
+  ["Washington", 47.0379, -122.9007],
+  ["West Virginia", 38.3498, -81.6326],
+  ["Wisconsin", 43.0731, -89.4012],
+  ["Wyoming", 41.1400, -104.8202],
+  ["District of Columbia", 38.9072, -77.0369],
+];
 
+const SOUTH_AMERICA: [string, number, number][] = [
+  ["Argentina", -34.6037, -58.3816],
+  ["Bolivia", -16.4897, -68.1193],
+  ["Brazil", -15.7939, -47.8828],
+  ["Chile", -33.4489, -70.6693],
+  ["Colombia", 4.7110, -74.0721],
+  ["Ecuador", -0.1807, -78.4678],
+  ["Guyana", 6.8013, -58.1551],
+  ["Paraguay", -25.2637, -57.5759],
+  ["Peru", -12.0464, -77.0428],
+  ["Suriname", 5.8520, -55.2038],
+  ["Uruguay", -34.9011, -56.1645],
+  ["Venezuela", 10.4806, -66.9036],
+  ["French Guiana", 4.9224, -52.3135],
+  ["Falkland Islands", -51.6964, -57.8517],
+  ["South Georgia & South Sandwich Islands", -54.4296, -36.5879],
+];
 const AFRICA: [string, number, number][] = [
   ["Nigeria", 9.0765, 7.3986], ["Egypt", 30.0444, 31.2357], ["South Africa", -25.7479, 28.2293],
   ["Kenya", -1.2921, 36.8219], ["Morocco", 34.0209, -6.8416], ["Ethiopia", 9.025, 38.7469],
@@ -86,6 +158,8 @@ function buildRoutesAndPoints() {
     ["europe", EUROPE],
     ["africa", AFRICA],
     ["asia", ASIA],
+    ["north_america", USA],
+    ["south_america", SOUTH_AMERICA],
   ];
 
   const routes: any[] = [];
@@ -211,9 +285,11 @@ function GlobeCanvas() {
 }
 
 const STATS = [
-  { value: "50", label: "European Countries" },
-  { value: "20", label: "African Countries" },
-  { value: "30", label: "Asian Countries" },
+  { value: "50", label: "Europe" },
+  { value: "20", label: "Africa" },
+  { value: "30", label: "Asia" },
+  { value: "25", label: "North America" },
+  { value: "15", label: "South America" }
 ];
 
 const FEATURES = [
@@ -226,6 +302,8 @@ const LEGEND = [
   { label: "Europe", color: CONTINENT_COLOR.europe },
   { label: "Africa", color: CONTINENT_COLOR.africa },
   { label: "Asia", color: CONTINENT_COLOR.asia },
+  { label: "North America", color: CONTINENT_COLOR.north_america },
+  { label: "South America", color: CONTINENT_COLOR.south_america },
 ];
 
 export default function WorldShipping() {
@@ -263,7 +341,7 @@ export default function WorldShipping() {
           </p>
 
           {/* Stat bar */}
-          <div className="mt-5 grid grid-cols-3 gap-3 border-y border-[#ECE8DD] py-4 lg:mt-6 lg:gap-6 lg:py-5">
+          <div className="mt-5 grid grid-cols-5 gap-3 border-y border-[#ECE8DD] py-4 lg:mt-6 lg:gap-6 lg:py-5">
             {STATS.map((s) => (
               <div key={s.label}>
                 <div
