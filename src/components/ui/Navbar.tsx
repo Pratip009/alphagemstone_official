@@ -328,7 +328,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
         /* ── Announcement Bar ── */
         .announcement-bar {
           background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-          color: #e2e8f0;
+          color: #ffffff;
           overflow: hidden;
           position: relative;
           height: 36px;
@@ -354,7 +354,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           font-weight: 400;
           letter-spacing: 0.1em;
           padding: 0 48px;
-          color: #cbd5e1;
+          color: #ffffff;
           display: flex;
           align-items: center;
           gap: 16px;
@@ -590,7 +590,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           letter-spacing: 0.12em;
           text-transform: uppercase;
           color: #fff;
-          background: linear-gradient(135deg, var(--deep) 0%, var(--violet) 100%);
+          background: #000000;
           text-decoration: none;
           padding: 7px 18px;
           border-radius: 4px;
@@ -610,7 +610,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 0.1em;
-          text-transform: uppercase;
+          
           color: #b45309;
           background: #fffbeb;
           border: 1px solid #fde68a;
@@ -677,7 +677,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           font-size: 9px;
           font-weight: 600;
           letter-spacing: 0.2em;
-          text-transform: uppercase;
+          
           color: var(--silver);
           margin-bottom: 4px;
         }
@@ -703,7 +703,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
           font-size: 12px;
           font-weight: 400;
           letter-spacing: 0.08em;
-          text-transform: uppercase;
+         
           color: var(--ink);
           text-decoration: none;
           transition: background 0.12s, color 0.12s, padding-left 0.15s;
@@ -729,7 +729,7 @@ const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
         /* ── Category Row ── */
         .cat-row {
           border-top: 1px solid var(--border);
-          background: linear-gradient(180deg, #fdfcff 0%, #f8f6ff 100%);
+          background: #ffffff;
         }
         .cat-row-inner {
           max-width: 1280px;
