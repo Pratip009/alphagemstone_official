@@ -9,6 +9,8 @@ import JewelryModal from "@/components/ui/Jewelrymodal";
 import { connectDB } from "@/lib/db";
 import HeroSlide from "@/models/HeroSlide";
 import BestSellersMarquee from "@/components/ui/BestSellersMarquee";
+import WorldShipping from "@/components/ui/WorldShipping";
+import BirthstoneCarousel from "@/components/ui/BirthstoneCarousel";
 
 // Pre-fetch hero slides at request time on the server so the carousel renders
 // immediately with data — no client-side loading skeleton on first paint.
@@ -35,7 +37,9 @@ export default async function HomePage() {
       </section>
       <TrustBadges />
       <ShopByCategory />
+      <WorldShipping/>
       <GemsPromise />
+      <BirthstoneCarousel/>
       <SpecialsMarquee />
       <Testimonials />
       <FeaturedInNews />
