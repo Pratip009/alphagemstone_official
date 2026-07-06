@@ -1,21 +1,32 @@
-'use client';
-import { useState, useRef, useCallback } from 'react';
+"use client";
+import { useState, useRef, useCallback } from "react";
+import { cldUrl } from "@/lib/cloudinary-client";
 
 // ─── Unsplash fallbacks ───────────────────────────────────────────────────────
 const SHAPE_UNSPLASH: Record<string, string> = {
-  round:     'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80&fit=crop',
-  brilliant: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80&fit=crop',
-  oval:      'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800&q=80&fit=crop',
-  pear:      'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=80&fit=crop',
-  cushion:   'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?w=800&q=80&fit=crop',
-  princess:  'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=80&fit=crop',
-  emerald:   'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=800&q=80&fit=crop',
-  radiant:   'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=80&fit=crop',
-  marquise:  'https://images.unsplash.com/photo-1616750819459-8abd8e2d5626?w=800&q=80&fit=crop',
-  heart:     'https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=800&q=80&fit=crop',
-  asscher:   'https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=800&q=80&fit=crop',
+  round:
+    "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80&fit=crop",
+  brilliant:
+    "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80&fit=crop",
+  oval: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800&q=80&fit=crop",
+  pear: "https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=800&q=80&fit=crop",
+  cushion:
+    "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?w=800&q=80&fit=crop",
+  princess:
+    "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800&q=80&fit=crop",
+  emerald:
+    "https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=800&q=80&fit=crop",
+  radiant:
+    "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&q=80&fit=crop",
+  marquise:
+    "https://images.unsplash.com/photo-1616750819459-8abd8e2d5626?w=800&q=80&fit=crop",
+  heart:
+    "https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=800&q=80&fit=crop",
+  asscher:
+    "https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=800&q=80&fit=crop",
 };
-const FALLBACK_UNSPLASH = 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80&fit=crop';
+const FALLBACK_UNSPLASH =
+  "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80&fit=crop";
 
 function getPlaceholder(shape: string): string {
   return SHAPE_UNSPLASH[shape.toLowerCase()] ?? FALLBACK_UNSPLASH;
@@ -36,7 +47,7 @@ export default function ProductGallery({
   name,
   certBadge,
   inStock,
-  shape = 'round',
+  shape = "round",
 }: ProductGalleryProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isZooming, setIsZooming] = useState(false);
@@ -52,26 +63,26 @@ export default function ProductGallery({
 
   function resolvedSrc(i: number): string {
     const stage = errorStages[i];
-    if (!stage || stage === 'ok') return realImages[i] ?? shapePlaceholder;
-    if (stage === 'placeholder') return shapePlaceholder;
-    if (stage === 'fallback') return FALLBACK_UNSPLASH;
+    if (!stage || stage === "ok") return realImages[i] ?? shapePlaceholder;
+    if (stage === "placeholder") return shapePlaceholder;
+    if (stage === "fallback") return FALLBACK_UNSPLASH;
     return FALLBACK_UNSPLASH; // dead — stays on fallback, no more retries
   }
 
   function handleImgError(i: number) {
-    setErrorStages(prev => {
+    setErrorStages((prev) => {
       const cur = prev[i];
-      if (!cur || cur === 'ok') return { ...prev, [i]: 'placeholder' };
-      if (cur === 'placeholder') return { ...prev, [i]: 'fallback' };
+      if (!cur || cur === "ok") return { ...prev, [i]: "placeholder" };
+      if (cur === "placeholder") return { ...prev, [i]: "fallback" };
       // already on fallback or dead — stop
       return prev;
     });
   }
 
-  const activeSrc = realImages.length > 0
-    ? resolvedSrc(activeIdx)
-    : shapePlaceholder;
-
+  const activeSrc =
+    realImages.length > 0 ? resolvedSrc(activeIdx) : shapePlaceholder;
+  const displaySrc = cldUrl(activeSrc, { width: 900 });
+  const zoomSrc = cldUrl(activeSrc, { width: 2200 });
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = containerRef.current;
     if (!el) return;
@@ -166,33 +177,78 @@ export default function ProductGallery({
             onMouseLeave={() => setIsZooming(false)}
             onMouseMove={handleMouseMove}
           >
-            <div
-              className="pg-zoom-wrap"
+            <img
+              key={`main-${activeIdx}-${errorStages[activeIdx] ?? "ok"}`}
+              src={displaySrc}
+              alt={name}
+              onError={() => handleImgError(activeIdx)}
+              draggable={false}
               style={{
-                transformOrigin: `${origin.x}% ${origin.y}%`,
-                transform: isZooming ? 'scale(2.2)' : 'scale(1)',
-                transition: isZooming ? 'transform 0.06s linear' : 'transform 0.3s ease',
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
               }}
-            >
-              <img
-                key={`main-${activeIdx}-${errorStages[activeIdx] ?? 'ok'}`}
-                src={activeSrc}
-                alt={name}
-                onError={() => handleImgError(activeIdx)}
-                draggable={false}
-              />
-            </div>
+            />
 
             {isZooming && (
-              <div className="pg-lens" style={{ left: `${origin.x}%`, top: `${origin.y}%` }} />
+              <div
+                className="pg-zoom-pane"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage: `url(${zoomSrc})`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundSize: "220%",
+                  backgroundPosition: `${origin.x}% ${origin.y}%`,
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+
+            {isZooming && (
+              <div
+                className="pg-lens"
+                style={{ left: `${origin.x}%`, top: `${origin.y}%` }}
+              />
             )}
             {!isZooming && (
               <div className="pg-hint">
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1"/>
-                  <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-                  <line x1="4" y1="6" x2="8" y2="6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-                  <line x1="6" y1="4" x2="6" y2="8" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                  <circle
+                    cx="6"
+                    cy="6"
+                    r="4.5"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1="9.5"
+                    y1="9.5"
+                    x2="13"
+                    y2="13"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="4"
+                    y1="6"
+                    x2="8"
+                    y2="6"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="6"
+                    y1="4"
+                    x2="6"
+                    y2="8"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 Hover to zoom
               </div>
@@ -200,27 +256,49 @@ export default function ProductGallery({
           </div>
 
           {certBadge && (
-            <div style={{
-              position:'absolute', top:12, left:12, zIndex:20,
-              background:'#faf9f6', border:'1px solid #c8b87a',
-              color:'#8a6e2a', fontSize:'9px', fontWeight:500,
-              letterSpacing:'0.18em', textTransform:'uppercase', padding:'4px 10px',
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: 12,
+                left: 12,
+                zIndex: 20,
+                background: "#faf9f6",
+                border: "1px solid #c8b87a",
+                color: "#8a6e2a",
+                fontSize: "9px",
+                fontWeight: 500,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                padding: "4px 10px",
+              }}
+            >
               {certBadge} Certified
             </div>
           )}
 
           {!inStock && (
-            <div style={{
-              position:'absolute', inset:0, zIndex:20,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              background:'rgba(250,249,246,0.80)',
-            }}>
-              <span style={{
-                border:'1px solid #c8c2b8', color:'#a09a90',
-                fontSize:'9px', fontWeight:500,
-                letterSpacing:'0.2em', textTransform:'uppercase', padding:'6px 18px',
-              }}>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 20,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(250,249,246,0.80)",
+              }}
+            >
+              <span
+                style={{
+                  border: "1px solid #c8c2b8",
+                  color: "#a09a90",
+                  fontSize: "9px",
+                  fontWeight: 500,
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  padding: "6px 18px",
+                }}
+              >
                 Unavailable
               </span>
             </div>
@@ -232,11 +310,14 @@ export default function ProductGallery({
           {realImages.map((_, i) => (
             <div
               key={i}
-              className={`pg-thumb ${i === activeIdx ? 'active' : ''}`}
-              onClick={() => { setActiveIdx(i); setIsZooming(false); }}
+              className={`pg-thumb ${i === activeIdx ? "active" : ""}`}
+              onClick={() => {
+                setActiveIdx(i);
+                setIsZooming(false);
+              }}
             >
               <img
-                key={`thumb-${i}-${errorStages[i] ?? 'ok'}`}
+                key={`thumb-${i}-${errorStages[i] ?? "ok"}`}
                 src={resolvedSrc(i)}
                 alt={`${name} view ${i + 1}`}
                 onError={() => handleImgError(i)}
