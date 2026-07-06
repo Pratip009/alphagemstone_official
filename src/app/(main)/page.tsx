@@ -12,6 +12,7 @@ import BestSellersMarquee from "@/components/ui/BestSellersMarquee";
 import WorldShipping from "@/components/ui/WorldShipping";
 import BirthstoneCarousel from "@/components/ui/BirthstoneCarousel";
 import AwardsAccolades from "@/components/ui/AwardsAccolades";
+import DiamondStudsSection from "@/components/ui/DiamondStudsSection";
 
 // Pre-fetch hero slides at request time on the server so the carousel renders
 // immediately with data — no client-side loading skeleton on first paint.
@@ -43,6 +44,7 @@ export default async function HomePage() {
       <BirthstoneCarousel/>
       <AwardsAccolades/>
       <SpecialsMarquee />
+      <DiamondStudsSection videoSrc="/video/shop.mp4" />
       <Testimonials />
       <FeaturedInNews />
       <JewelryModal />
