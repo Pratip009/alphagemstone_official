@@ -250,7 +250,7 @@ background: #ffffff;
           max-width: 78%;
           max-height: 78%;
           object-fit: contain;
-          filter: drop-shadow(0 10px 14px rgba(20,20,22,0.14));
+       
           transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
         .pc6-card.is-active .pc6-photo { transform: scale(1.06); }
