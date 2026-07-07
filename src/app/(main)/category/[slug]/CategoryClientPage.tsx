@@ -174,12 +174,13 @@ export default function CategoryClientPage({
   return (
     <>
       <style>{`
-       @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .cat-page-root {
-            font-family: "Google Sans Flex", sans-serif;
+            font-family: "Elms Sans", sans-serif;
 
           background: #fff;
           min-height: 100vh;
@@ -228,7 +229,7 @@ export default function CategoryClientPage({
           letter-spacing: 0.35em;
           text-transform: uppercase;
           color: #c8a96e;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-weight: 500;
         }
         .cat-hero-eyebrow-line {
@@ -240,7 +241,7 @@ export default function CategoryClientPage({
           background: linear-gradient(90deg, #c8a96e, transparent);
         }
         .cat-hero-title {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: clamp(32px, 5.5vw, 52px);
           font-weight: 700;
           color: #fff;
@@ -279,7 +280,7 @@ export default function CategoryClientPage({
           align-items: center;
           gap: 6px;
           font-size: 11px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           color: #c8c2b8;
           font-weight: 400;
           width: 100%;
@@ -290,7 +291,7 @@ export default function CategoryClientPage({
           border: none;
           cursor: pointer;
           font-size: 11px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           padding: 0;
           font-weight: 500;
           transition: color 0.15s;
@@ -333,7 +334,7 @@ export default function CategoryClientPage({
           background: #ede9e0;
         }
         .cat-desc-name {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 28px;
           font-weight: 700;
           color: #1a1714;
@@ -366,7 +367,7 @@ export default function CategoryClientPage({
           font-size: 14.5px;
           line-height: 1.85;
           font-weight: 300;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
         }
         .cat-desc-text p {
           margin-bottom: 18px;
@@ -421,7 +422,7 @@ export default function CategoryClientPage({
           border: 1.5px solid #ffffff;
           border-radius: 100px;
           background: #ffffff;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 13px;
           font-weight: 400;
           color: #1a1714;
@@ -482,7 +483,7 @@ export default function CategoryClientPage({
           font-size: 22px;
         }
         .cat-empty p {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 15px;
           font-weight: 500;
           color: #6b6560;
@@ -490,7 +491,7 @@ export default function CategoryClientPage({
         }
         .cat-empty span {
           font-size: 12px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           color: #c8c2b8;
           letter-spacing: 0.05em;
         }

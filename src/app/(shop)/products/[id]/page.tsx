@@ -453,9 +453,9 @@ export default async function ProductDetailPage({
         .pd-stock { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
         .pd-stock-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
         .pd-stock-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
-        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: "Google Sans Flex", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
+        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: "Elms Sans", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
         .pd-btn-primary:hover { background: #2a2a2a; }
-        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: "Google Sans Flex", sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: "Elms Sans", sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .pd-btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
         .pd-mini-trust { display: flex; gap: 20px; padding-top: 20px; border-top: 1px solid var(--border); margin-top: 16px; flex-wrap: wrap; }
         .pd-mini-trust-item { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
@@ -469,7 +469,7 @@ export default async function ProductDetailPage({
         .pd-trust-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
         .pd-trust-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
         .pd-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .pd-section-title { font-family: "Google Sans Flex", sans-serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
+        .pd-section-title { font-family: "Elms Sans", sans-serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
         .pd-section-link { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; font-weight: 500; }
         .pd-section-link:hover { color: var(--gold); }
         .pd-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 80px; }
@@ -481,10 +481,10 @@ export default async function ProductDetailPage({
         .pd-related-card:hover .pd-related-img img { transform: scale(1.06); }
         .pd-related-img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0); transition: background 0.3s; }
         .pd-related-card:hover .pd-related-img-overlay { background: rgba(0,0,0,0.06); }
-        .pd-related-name { font-family: "Google Sans Flex", sans-serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
+        .pd-related-name { font-family: "Elms Sans", sans-serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
         .pd-related-card:hover .pd-related-name { color: var(--gold); }
         .pd-related-meta { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-        .pd-related-price { font-family: "Google Sans Flex", sans-serif; font-size: 16px; color: var(--ink); }
+        .pd-related-price { font-family: "Elms Sans", sans-serif; font-size: 16px; color: var(--ink); }
         .pd-related-empty { grid-column: 1/-1; text-align: center; padding: 48px; color: var(--muted); font-size: 13px; letter-spacing: 0.06em; border: 1px dashed var(--border); }
         .pd-related-type-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; margin-bottom: 6px; }
         .pd-related-type-pip.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
@@ -494,8 +494,8 @@ export default async function ProductDetailPage({
         .pd-testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; }
         @media (max-width: 768px) { .pd-testimonial-grid { grid-template-columns: 1fr; } }
         .pd-testimonial-card { background: #fff; padding: 32px 28px; border: 1px solid var(--border); }
-        .pd-testimonial-quote { font-family: "Google Sans Flex", sans-serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
-        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: "Google Sans Flex", sans-serif; }
+        .pd-testimonial-quote { font-family: "Elms Sans", sans-serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
+        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: "Elms Sans", sans-serif; }
         .pd-testimonial-author { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); }
         .pd-testimonial-loc { font-size: 10px; color: var(--muted); margin-top: 2px; }
         .pd-stars { display: flex; gap: 2px; margin-bottom: 12px; color: var(--gold); font-size: 12px; }

@@ -191,12 +191,13 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
   return (
     <>
       <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
         .pc6 {
           display: block;
           text-decoration: none;
           color: inherit;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           perspective: 1000px;
         }
 
@@ -336,7 +337,7 @@ background: #ffffff;
         }
         .pc6-eyebrow {
           margin-top: 12px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 9.5px;
           font-weight: 200;
           letter-spacing: 0.07em;
@@ -345,7 +346,7 @@ background: #ffffff;
         }
         .pc6-name {
           margin-top: 3px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 13px;
           font-weight: 400;
           color: #000000;
@@ -357,7 +358,7 @@ background: #ffffff;
         }
         .pc6-subtitle {
           margin-top: 1px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-style: italic;
           font-size: 11px;
           font-weight: 500;
@@ -371,7 +372,7 @@ background: #ffffff;
           gap: 5px;
         }
         .pc6-chip {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 9.5px;
           font-weight: 500;
           letter-spacing: 0.01em;
@@ -398,7 +399,7 @@ background: #ffffff;
         }
         .pc6-ledger-label {
           flex-shrink: 0;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 8.5px;
           font-weight: 600;
           letter-spacing: 0.08em;
@@ -416,7 +417,7 @@ background: #ffffff;
           display: flex;
           align-items: center;
           gap: 4px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 11px;
           font-weight: 600;
           color: #000000;
@@ -443,7 +444,7 @@ background: #ffffff;
         }
 
         .pc6-price {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 16px;
           font-weight: 600;
           color: #000000;
@@ -453,7 +454,7 @@ background: #ffffff;
           display: flex;
           align-items: center;
           gap: 5px;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 10.5px;
           font-weight: 400;
           color: #1F7A4D;

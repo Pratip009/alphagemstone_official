@@ -200,7 +200,7 @@ export default function CartSidebar({
           font-size: 15px;
           font-weight: 600;
           color: #0f3460;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           transition: background 0.12s, border-color 0.12s, transform 0.1s;
           flex-shrink: 0;
         }
@@ -230,7 +230,7 @@ export default function CartSidebar({
           padding: 15px 24px;
           background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 60%, #7c3aed 100%);
           color: #fff;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 14px;
           font-weight: 600;
           letter-spacing: 0.03em;
@@ -252,7 +252,7 @@ export default function CartSidebar({
           padding: 11px 24px;
           border: 1.5px solid #e0ddf5;
           color: #0f3460;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 13.5px;
           font-weight: 500;
           border-radius: 12px;
@@ -314,7 +314,7 @@ export default function CartSidebar({
           boxShadow: "-8px 0 48px rgba(79,70,229,0.14)",
           transform: open ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
         }}
       >
         {/* Header */}

@@ -102,7 +102,7 @@ function LandingHero() {
     >
       <p
         style={{
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
           fontSize: 11,
           letterSpacing: "0.28em",
           textTransform: "uppercase",
@@ -115,7 +115,7 @@ function LandingHero() {
       </p>
       <h1
         style={{
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
           fontSize: "clamp(30px, 4vw, 50px)",
           fontWeight: 600,
           color: "var(--navy)",
@@ -177,7 +177,7 @@ function SubcategoryCard({
       <div style={{ padding: "14px 2px 0" }}>
         <p
           style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: 14,
             fontWeight: 500,
             color: "var(--navy)",
@@ -188,7 +188,7 @@ function SubcategoryCard({
         </p>
         <span
           style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: 10,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
@@ -265,7 +265,7 @@ function ProductCard({ product }: { product: IProduct }) {
               letterSpacing: "0.24em",
               textTransform: "uppercase",
               color: "#fff",
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontWeight: 500,
               border: "1px solid rgba(255,255,255,0.6)",
               padding: "6px 14px",
@@ -284,7 +284,7 @@ function ProductCard({ product }: { product: IProduct }) {
               fontSize: 9,
               letterSpacing: "0.16em",
               textTransform: "uppercase",
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontWeight: 600,
               background: "var(--navy)",
               color: "var(--gold-l)",
@@ -299,7 +299,7 @@ function ProductCard({ product }: { product: IProduct }) {
       <div style={{ padding: "14px 12px 16px" }}>
         <p
           style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: 13.5,
             color: "var(--navy)",
             lineHeight: 1.4,
@@ -316,7 +316,7 @@ function ProductCard({ product }: { product: IProduct }) {
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               color: "var(--gold)",
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               marginBottom: 6,
               fontWeight: 500,
             }}
@@ -326,7 +326,7 @@ function ProductCard({ product }: { product: IProduct }) {
         )}
         <p
           style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: 14.5,
             color: "var(--navy)",
             fontWeight: 600,
@@ -397,7 +397,7 @@ function SidebarGroup({
         >
           <span
             style={{
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: 13,
               fontWeight: 600,
               color: "var(--navy)",
@@ -484,7 +484,7 @@ function SidebarGroup({
                 <span
                   style={{
                     fontSize: 12,
-                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                     color: isActive ? "var(--gold)" : "var(--text-muted)",
                     fontWeight: isActive ? 600 : 400,
                     letterSpacing: "0.01em",
@@ -505,7 +505,7 @@ function SidebarGroup({
                 cursor: "pointer",
                 fontSize: 10.5,
                 color: "var(--gold)",
-                fontFamily: '"Google Sans Flex", sans-serif',
+                fontFamily: '"Elms Sans", sans-serif',
                 letterSpacing: "0.06em",
                 fontWeight: 500,
               }}
@@ -626,7 +626,7 @@ function LandingView({
               >
                 <span
                   style={{
-                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                     fontSize: 26,
                     fontWeight: 600,
                     color: "var(--navy)",
@@ -646,7 +646,7 @@ function LandingView({
                     padding: 0,
                     fontSize: 10.5,
                     color: "var(--gold)",
-                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
                     fontWeight: 500,
@@ -761,7 +761,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                 letterSpacing: "0.24em",
                 textTransform: "uppercase",
                 color: "var(--gold-l)",
-                fontFamily: '"Google Sans Flex", sans-serif',
+                fontFamily: '"Elms Sans", sans-serif',
                 fontWeight: 600,
               }}
             >
@@ -770,7 +770,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
           </div>
           <p
             style={{
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: 17,
               fontWeight: 600,
               color: "#fff",
@@ -819,7 +819,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: '"Google Sans Flex", sans-serif',
+                  fontFamily: '"Elms Sans", sans-serif',
                 }}
               >
                 {i + 1}
@@ -848,7 +848,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p
                   style={{
-                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                     fontSize: 12,
                     color: "var(--navy)",
                     lineHeight: 1.35,
@@ -865,7 +865,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
                 </p>
                 <span
                   style={{
-                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                     fontSize: 12.5,
                     fontWeight: 600,
                     color: "var(--navy)",
@@ -896,7 +896,7 @@ function BuyersPicks({ products }: { products: IPickProduct[] }) {
               background: "var(--navy)",
               border: "none",
               cursor: "pointer",
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: 10,
               letterSpacing: "0.18em",
               textTransform: "uppercase",
@@ -1081,7 +1081,7 @@ export default function ShopLayout() {
           </button>
           <span
             style={{
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: 15,
               fontWeight: 600,
               color: "var(--navy)",
@@ -1128,7 +1128,7 @@ export default function ShopLayout() {
                   fontSize: 11.5,
                   color: "#b91c1c",
                   padding: "10px 18px",
-                  fontFamily: '"Google Sans Flex", sans-serif',
+                  fontFamily: '"Elms Sans", sans-serif',
                 }}
               >
                 {catError}
@@ -1177,7 +1177,7 @@ export default function ShopLayout() {
                   >
                     <span
                       style={{
-                        fontFamily: '"Google Sans Flex", sans-serif',
+                        fontFamily: '"Elms Sans", sans-serif',
                         fontSize: 13,
                         fontWeight: 600,
                         color: "var(--navy)",
@@ -1313,7 +1313,7 @@ export default function ShopLayout() {
                     <div className="empty-gem">◆</div>
                     <p
                       style={{
-                        fontFamily: '"Google Sans Flex", sans-serif',
+                        fontFamily: '"Elms Sans", sans-serif',
                         fontSize: 20,
                         color: "var(--navy)",
                         fontWeight: 500,
@@ -1323,7 +1323,7 @@ export default function ShopLayout() {
                     </p>
                     <p
                       style={{
-                        fontFamily: '"Google Sans Flex", sans-serif',
+                        fontFamily: '"Elms Sans", sans-serif',
                         fontSize: 12.5,
                         color: "var(--text-muted)",
                         letterSpacing: "0.02em",
@@ -1339,7 +1339,7 @@ export default function ShopLayout() {
                         background: "var(--navy)",
                         border: "none",
                         cursor: "pointer",
-                        fontFamily: '"Google Sans Flex", sans-serif',
+                        fontFamily: '"Elms Sans", sans-serif',
                         fontSize: 10,
                         letterSpacing: "0.18em",
                         textTransform: "uppercase",

@@ -120,7 +120,7 @@ function ProductCard({ product, featured = false }: { product: ApiProduct; featu
           {getSubtitle(product) || product.category?.name}
         </p>
         <p style={{
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
           fontSize: featured ? 18 : 14.5,
           fontWeight: 500,
           color: "#0f172a",
@@ -134,7 +134,7 @@ function ProductCard({ product, featured = false }: { product: ApiProduct; featu
           {product.name}
         </p>
         <p style={{
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
           fontSize: featured ? 19 : 15.5,
           fontWeight: 600,
           color: "#0f172a",
@@ -226,7 +226,8 @@ export default function SpecialsMarquee() {
   return (
     <>
       <style>{`
-       @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         @keyframes shimmer {
           from { background-position: -600px 0; }
@@ -321,7 +322,7 @@ export default function SpecialsMarquee() {
                 Curated selection
               </p>
               <h2 className="our-collection-title" style={{
-                fontFamily: '"Google Sans Flex", sans-serif',
+                fontFamily: '"Elms Sans", sans-serif',
                 fontSize: "clamp(30px, 3.2vw, 44px)",
                 fontWeight: 500, color: "#0f172a",
                 lineHeight: 1, margin: 0, letterSpacing: "-0.02em",

@@ -99,13 +99,14 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
-        body, .products-page *:not(.pc6, .pc6 *) { font-family: 'Google Sans Flex', sans-serif !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+        body, .products-page *:not(.pc6, .pc6 *) { font-family: 'Gilda Display', serif !important; }
       `}</style>
 
       <div
         className="products-page min-h-screen bg-[#ffffff]"
-        style={{ fontFamily: "'Google Sans Flex', sans-serif" }}
+        style={{ fontFamily: "'Gilda Display', serif" }}
       >
         {/* ── Top accent line ── */}
         <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#B8975A] to-transparent" />
@@ -139,7 +140,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                 <div>
                   <h1
                     className="text-3xl sm:text-4xl font-normal text-[#1A1612] leading-tight"
-                    style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+                    style={{ fontFamily: '"Elms Sans", sans-serif' }}
                   >
                     {productType === "watch" ? "Timepieces" : "Diamonds"}
                   </h1>
@@ -222,7 +223,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
             <div className="w-2.5 h-2.5 bg-[#B8975A] rotate-45 rounded-[1px]" />
             <span
               className="text-[11px] tracking-[0.2em] uppercase text-[#8A7F72]"
-              style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+              style={{ fontFamily: '"Elms Sans", sans-serif' }}
             >
               Alpha Imports
             </span>
@@ -289,7 +290,7 @@ function ActiveFilterChips({ searchParams }: { searchParams: Record<string, stri
         <span
           key={`${chip.key}-${chip.label}-${i}`}
           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-medium tracking-wide bg-[#F5EDD6] text-[#8A6C38] border border-[#D4C4A0]"
-          style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+          style={{ fontFamily: '"Elms Sans", sans-serif' }}
         >
           {chip.label}
         </span>
@@ -313,7 +314,7 @@ function EmptyState() {
       </div>
       <p
         className="text-lg font-normal text-[#1A1612] mb-2"
-        style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+        style={{ fontFamily: '"Elms Sans", sans-serif' }}
       >
         No results found
       </p>

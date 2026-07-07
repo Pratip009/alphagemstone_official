@@ -695,10 +695,10 @@ export default function BlogDetailPage() {
           color: #3c3830;
           font-size: 0.95rem;
           line-height: 1.85;
-           font-family: "Google Sans Flex", sans-serif;
+           font-family: "Elms Sans", sans-serif;
         }
         .prose-blog h2 {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 1.7rem;
           font-weight: 600;
           color: #1a1714;
@@ -707,7 +707,7 @@ export default function BlogDetailPage() {
           border-bottom: 1px solid #ede9e1;
         }
         .prose-blog h3 {
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 1.3rem;
           font-weight: 600;
           color: #1a1714;
@@ -726,7 +726,7 @@ export default function BlogDetailPage() {
           margin: 1.5rem 0;
           background: #faf9f7;
           border-radius: 0 8px 8px 0;
-           font-family: "Google Sans Flex", sans-serif;
+           font-family: "Elms Sans", sans-serif;
           font-size: 1.05rem;
           color: #5c5852;
           font-style: italic;
@@ -741,7 +741,7 @@ export default function BlogDetailPage() {
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
           font-size: 0.85em;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           color: #c9a84c;
         }
         .prose-blog pre {

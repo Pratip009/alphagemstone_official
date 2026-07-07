@@ -142,7 +142,7 @@ export default function JewelryModal({
 
               <h2
                 className="mb-2 text-[38px] font-light leading-tight text-[#0f3460]"
-                style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+                style={{ fontFamily: '"Elms Sans", sans-serif' }}
               >
                 Enjoy{" "}
                 <em className="italic text-[#c9a96e]">10% off</em>
@@ -245,7 +245,7 @@ export default function JewelryModal({
               </div>
               <h3
                 className="mb-2 text-[28px] font-light text-[#0f3460]"
-                style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+                style={{ fontFamily: '"Elms Sans", sans-serif' }}
               >
                 You're in
               </h3>

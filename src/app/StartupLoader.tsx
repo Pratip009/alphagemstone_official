@@ -471,7 +471,7 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
         {/* Brand name */}
         <div className="sl-brand" style={{ textAlign: 'center', marginBottom: 10 }}>
           <h1 style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontWeight: 400,
             fontSize: 26,
             letterSpacing: '0.45em',
@@ -501,7 +501,7 @@ export default function StartupLoader({ children }: { children: React.ReactNode 
 
         {/* Tagline */}
         <p className="sl-tagline" style={{
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
           fontWeight: 300,
           fontSize: 10,
           letterSpacing: '0.3em',

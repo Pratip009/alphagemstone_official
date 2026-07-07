@@ -248,7 +248,7 @@ export default function BirthstoneCarousel() {
           --ink: #1f2733;
           --accent: #c8862a;
           --muted: #5b6472;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           text-align: center;
           padding: 56px 16px 40px;
           background: #ffffff;

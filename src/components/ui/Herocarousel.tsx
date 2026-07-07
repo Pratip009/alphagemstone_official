@@ -206,8 +206,8 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
-        .hc-display, .hc-body, .hc-mono { font-family: "Google Sans Flex", sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+        .hc-display, .hc-body, .hc-mono { font-family: "Elms Sans", sans-serif; }
         :root { --stage-h: 62svh; }
         @media (min-width: 640px) { :root { --stage-h: 78vh; } }
         @keyframes hc-rise {

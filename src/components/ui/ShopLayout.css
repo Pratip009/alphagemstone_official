@@ -9,7 +9,8 @@
  * from the original block; this is a lift-and-shift, not a rewrite.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,7 +27,7 @@
 }
 
 .shop-root {
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   background: var(--bg);
   min-height: 100vh;
   color: var(--text);
@@ -94,7 +95,7 @@
   z-index: 2;
 }
 .sidebar-header-title {
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 9.5px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -122,7 +123,7 @@
 .sidebar-quicklink {
   display: block;
   padding: 5px 18px;
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 12px;
   color: var(--text);
   text-decoration: none;
@@ -166,7 +167,7 @@
 }
 .breadcrumb-btn {
   background: none; border: none; cursor: pointer;
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 11.5px; color: var(--text);
   letter-spacing: 0.02em;
   transition: color 0.2s;
@@ -184,7 +185,7 @@
   gap: 12px;
 }
 .item-count {
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 10.5px;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -192,7 +193,7 @@
 }
 
 .sort-select {
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 11.5px;
   letter-spacing: 0.02em;
   color: var(--text);
@@ -251,7 +252,7 @@
   cursor: pointer;
   padding: 8px 12px;
   color: var(--gold-l);
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 9.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -275,7 +276,7 @@
   background: rgba(192,57,43,0.05);
   border: 1px solid rgba(192,57,43,0.2);
   border-left: 3px solid rgba(192,57,43,0.5);
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 12.5px; letter-spacing: 0.01em;
   color: #c0392b;
   margin-bottom: 20px;
@@ -302,7 +303,7 @@
   display: flex; align-items: center; gap: 14px; margin-bottom: 22px;
 }
 .section-heading-text {
-  font-family: "Google Sans Flex", sans-serif;
+  font-family: "Elms Sans", sans-serif;
   font-size: 26px; font-weight: 600; color: var(--navy);
   white-space: nowrap;
 }

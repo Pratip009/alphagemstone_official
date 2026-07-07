@@ -144,7 +144,7 @@ export default function ProductGallery({
           border: 0.5px solid #e2ddd5;
           padding: 4px 10px;
           pointer-events: none;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           z-index: 10;
         }
         .pg-thumbs {

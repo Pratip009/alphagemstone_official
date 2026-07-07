@@ -310,10 +310,11 @@ export default function WorldShipping() {
   return (
     <section
       className="relative overflow-hidden bg-white py-8 lg:flex lg:h-screen lg:items-center lg:py-6"
-      style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+      style={{ fontFamily: '"Elms Sans", sans-serif' }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
       `}</style>
 
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 px-6 lg:grid-cols-2 lg:gap-14">

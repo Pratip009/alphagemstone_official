@@ -141,7 +141,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
   return (
     <aside
       className="w-full space-y-0 bg-white"
-      style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+      style={{ fontFamily: '"Elms Sans", sans-serif' }}
     >
     
 

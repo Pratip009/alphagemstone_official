@@ -128,7 +128,7 @@ const markdownComponents: Components = {
     <strong className="font-semibold text-blue-700">{children}</strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-slate-500" style={{ fontFamily: '"Google Sans Flex", sans-serif' }}>
+    <em className="italic text-slate-500" style={{ fontFamily: '"Elms Sans", sans-serif' }}>
       {children}
     </em>
   ),
@@ -165,7 +165,7 @@ const markdownComponents: Components = {
   blockquote: ({ children }) => (
     <blockquote
       className="border-l-2 border-blue-300 pl-3 my-2 italic text-slate-500 text-[13px]"
-      style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+      style={{ fontFamily: '"Elms Sans", sans-serif' }}
     >
       {children}
     </blockquote>
@@ -305,7 +305,7 @@ function CategoryTile({
       <div className="p-2.5 space-y-2">
         <p
           className="text-slate-800 text-[11px] font-semibold leading-snug line-clamp-2"
-          style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+          style={{ fontFamily: '"Elms Sans", sans-serif' }}
         >
           {category.name}
         </p>
@@ -504,7 +504,7 @@ function ComparisonView({ data }: { data: ComparisonData }) {
         className="p-3 border-t border-blue-100 text-[11px] leading-relaxed text-blue-800/70 italic"
         style={{
           background: "linear-gradient(135deg, #f0f7ff, #eff6ff)",
-          fontFamily: '"Google Sans Flex", sans-serif',
+          fontFamily: '"Elms Sans", sans-serif',
         }}
       >
         {data.reasoning}
@@ -577,7 +577,7 @@ function MessageBubble({
           style={{
             background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
             borderColor: "rgba(59,130,246,0.15)",
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -689,7 +689,7 @@ function SuggestedQuestions({
             className="w-1 h-1 rounded-full flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
             style={{ background: "#3b82f6" }}
           />
-          <span style={{ fontFamily: '"Google Sans Flex", sans-serif' }}>{q}</span>
+          <span style={{ fontFamily: '"Elms Sans", sans-serif' }}>{q}</span>
         </motion.button>
       ))}
     </div>
@@ -813,7 +813,7 @@ function FabTooltip() {
               background: "linear-gradient(90deg, #e0f2fe, #93c5fd, #60a5fa)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
             }}
           >
             Ask Victoria
@@ -1178,7 +1178,7 @@ export default function GemConsultant() {
                 <div>
                   <p
                     className="text-sm font-semibold text-slate-800 leading-none"
-                    style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+                    style={{ fontFamily: '"Elms Sans", sans-serif' }}
                   >
                     Victoria
                   </p>
@@ -1253,7 +1253,7 @@ export default function GemConsultant() {
                         </p>
                         <p
                           className="text-sm text-slate-600 leading-relaxed"
-                          style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+                          style={{ fontFamily: '"Elms Sans", sans-serif' }}
                         >
                           Good day. I&apos;m Victoria — your personal gemologist at GMStone.
                           Whether you seek the perfect engagement diamond, a rare coloured stone, or
@@ -1274,7 +1274,7 @@ export default function GemConsultant() {
                       </div>
                       <p
                         className="text-[10px] text-slate-400 italic"
-                        style={{ fontFamily: '"Google Sans Flex", sans-serif' }}
+                        style={{ fontFamily: '"Elms Sans", sans-serif' }}
                       >
                         Every recommendation drawn from live inventory
                       </p>
@@ -1367,7 +1367,7 @@ export default function GemConsultant() {
                   style={{
                     maxHeight: 120,
                     minHeight: 22,
-                    fontFamily: '"Google Sans Flex", sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                   }}
                 />
                 <div className="flex items-center gap-1 flex-shrink-0 pb-0.5">

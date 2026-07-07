@@ -71,7 +71,7 @@ export default function AwardsAccolades() {
       <style>{`
         .aa-wrap {
           --ink: #1f2733;
-          font-family: "Google Sans Flex", sans-serif;
+          font-family: "Elms Sans", sans-serif;
           text-align: center;
           padding: 56px 16px 48px;
           background: #ffffff;

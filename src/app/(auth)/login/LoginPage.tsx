@@ -33,7 +33,7 @@ export default function LoginPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
         :root {
           --navy:   #1a1a2e;
@@ -48,8 +48,8 @@ export default function LoginPage() {
           --petal:  #c4b5fd;
           --silver: #9f9fc0;
           --border: #e8e4f8;
-          --display: "Google Sans Flex", sans-serif;
-          --label:   "Google Sans Flex", sans-serif;
+          --display: "Gilda Display", serif;
+          --label:   "Gilda Display", serif;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -940,7 +940,7 @@ export default function LoginPage() {
                 <Link
                   href="/forgot-password"
                   style={{
-                    fontFamily: '"Google Sans Flex",sans-serif',
+                    fontFamily: '"Elms Sans", sans-serif',
                     fontSize: 11,
                     fontWeight: 500,
                     letterSpacing: "0.1em",

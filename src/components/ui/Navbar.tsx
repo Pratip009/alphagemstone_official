@@ -195,16 +195,31 @@ export default function Navbar({
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const update = () => {
-      if (navRef.current) {
-        const h = navRef.current.getBoundingClientRect().height;
-        document.documentElement.style.setProperty("--navbar-height", `${h}px`);
-      }
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+  const update = () => {
+    if (navRef.current) {
+      // Use the nav's actual distance from the top of the viewport
+      // (its bottom edge), not just its own height. When the
+      // announcement bar is visible, the nav sits below it, so
+      // height alone under-counts the offset and the dropdown ends
+      // up overlapping the nav links.
+      const bottom = navRef.current.getBoundingClientRect().bottom;
+      document.documentElement.style.setProperty(
+        "--navbar-height",
+        `${bottom}px`,
+      );
+    }
+  };
+  update();
+  window.addEventListener("resize", update);
+  // Recompute on scroll too — the announcement bar scrolls away as
+  // the sticky nav settles at top:0, which changes this offset
+  // independently of resize events.
+  window.addEventListener("scroll", update, { passive: true });
+  return () => {
+    window.removeEventListener("resize", update);
+    window.removeEventListener("scroll", update);
+  };
+}, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -244,9 +259,25 @@ export default function Navbar({
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
+const updateNavbarHeight = () => {
+  if (navRef.current) {
+    const bottom = navRef.current.getBoundingClientRect().bottom;
+    document.documentElement.style.setProperty("--navbar-height", `${bottom}px`);
+  }
+};
 
+useEffect(() => {
+  updateNavbarHeight();
+  window.addEventListener("resize", updateNavbarHeight);
+  window.addEventListener("scroll", updateNavbarHeight, { passive: true });
+  return () => {
+    window.removeEventListener("resize", updateNavbarHeight);
+    window.removeEventListener("scroll", updateNavbarHeight);
+  };
+}, []);
   const openCat = (slug: string) => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
+    updateNavbarHeight();
     setOpenDropdown(slug);
   };
 
@@ -345,7 +376,8 @@ export default function Navbar({
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         :root {
           --navy:    #1a1a2e;
@@ -357,8 +389,8 @@ export default function Navbar({
           --petal:   #c4b5fd;
           --silver:  #9f9fc0;
           --border:  #e8e4f8;
-          --display: "Google Sans Flex", sans-serif;
-          --label:   "Google Sans Flex", sans-serif;
+          --display: "Elms Sans", sans-serif;
+          --label:   "Elms Sans", sans-serif;
         }
 
         /* ── Keyframes ── */

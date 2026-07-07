@@ -553,7 +553,7 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: 600, color: '#f5f1eb', fontFamily: '"Google Sans Flex", sans-serif', letterSpacing: '-0.3px', marginBottom: 8 }}>
+              <p style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: 600, color: '#f5f1eb', fontFamily: '"Elms Sans", sans-serif', letterSpacing: '-0.3px', marginBottom: 8 }}>
                 Confirming your payment…
               </p>
               <p style={{ fontSize: 13, color: '#8a8278', maxWidth: 280 }}>

@@ -161,7 +161,7 @@ export default function CookieConsent() {
                 <div style={{ minWidth: 0 }}>
                   <h2
                     style={{
-                      fontFamily: '"Google Sans Flex", sans-serif',
+                      fontFamily: '"Elms Sans", sans-serif',
                       fontSize: "clamp(1.05rem, 4.2vw, 1.25rem)",
                       fontWeight: 600,
                       color: "var(--text)",
@@ -173,7 +173,7 @@ export default function CookieConsent() {
                   </h2>
                   <p
                     style={{
-                      fontFamily: '"Google Sans Flex", sans-serif',
+                      fontFamily: '"Elms Sans", sans-serif',
                       fontSize: "clamp(0.58rem, 2vw, 0.65rem)",
                       letterSpacing: "0.12em",
                       color: "var(--gold)",
@@ -210,7 +210,7 @@ export default function CookieConsent() {
             {/* Body text */}
             <p
               style={{
-                fontFamily: '"Google Sans Flex", sans-serif',
+                fontFamily: '"Elms Sans", sans-serif',
                 fontSize: "clamp(0.76rem, 2.4vw, 0.8rem)",
                 lineHeight: 1.7,
                 color: "var(--text-secondary)",
@@ -284,7 +284,7 @@ export default function CookieConsent() {
                   flex: 1,
                   width: "100%",
                   padding: "clamp(10px, 2.5vw, 11px) 20px",
-                  fontFamily: '"Google Sans Flex", sans-serif',
+                  fontFamily: '"Elms Sans", sans-serif',
                   fontSize: "clamp(0.62rem, 2vw, 0.65rem)",
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -310,7 +310,7 @@ export default function CookieConsent() {
                   flex: 1,
                   width: "100%",
                   padding: "clamp(9px, 2.5vw, 10px) 20px",
-                  fontFamily: '"Google Sans Flex", sans-serif',
+                  fontFamily: '"Elms Sans", sans-serif',
                   fontSize: "clamp(0.62rem, 2vw, 0.65rem)",
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
@@ -338,7 +338,7 @@ export default function CookieConsent() {
                   justifyContent: "center",
                   gap: "5px",
                   padding: "clamp(9px, 2.5vw, 10px) 14px",
-                  fontFamily: '"Google Sans Flex", sans-serif',
+                  fontFamily: '"Elms Sans", sans-serif',
                   fontSize: "clamp(0.6rem, 1.9vw, 0.62rem)",
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
@@ -407,7 +407,7 @@ function PreferenceRow({
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: "clamp(0.66rem, 2vw, 0.7rem)",
             fontWeight: 600,
             letterSpacing: "0.1em",
@@ -420,7 +420,7 @@ function PreferenceRow({
         </p>
         <p
           style={{
-            fontFamily: '"Google Sans Flex", sans-serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: "clamp(0.68rem, 2.1vw, 0.72rem)",
             color: "var(--text-secondary)",
             lineHeight: 1.5,
@@ -435,7 +435,7 @@ function PreferenceRow({
         {locked ? (
           <div
             style={{
-              fontFamily: '"Google Sans Flex", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: "0.58rem",
               letterSpacing: "0.12em",
               textTransform: "uppercase",
