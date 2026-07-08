@@ -387,7 +387,7 @@ useEffect(() => {
           --mist:    #f5f3ff;
           --lilac:   #ede9fe;
           --petal:   #c4b5fd;
-          --silver:  #9f9fc0;
+          --silver:  #939191;
           --border:  #e8e4f8;
           --display: "Elms Sans", sans-serif;
           --label:   "Elms Sans", sans-serif;
@@ -603,7 +603,7 @@ useEffect(() => {
         /* ── Nav links ── */
         .nav-link {
           font-family: var(--display);
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           letter-spacing: 0;
           color: var(--ink);
@@ -634,7 +634,11 @@ useEffect(() => {
           transition: color 0.15s, background 0.15s;
         }
         .nav-cart-btn:hover { color: var(--deep); background: var(--mist); }
-        .nav-btn-label { white-space: nowrap; }
+        .nav-btn-label { white-space: nowrap;font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--ink);
+    text-decoration: none; }
 
         /* ── Profile button ── */
         .nav-profile-btn {
@@ -646,7 +650,7 @@ useEffect(() => {
           cursor: pointer;
           padding: 6px 13px;
           font-family: var(--display);
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           letter-spacing: 0;
           color: var(--ink);
@@ -722,30 +726,31 @@ useEffect(() => {
           font-weight: 600;
           letter-spacing: 0.1em;
           
-          color: #b45309;
-          background: #fffbeb;
-          border: 1px solid #fde68a;
+          color: #fff;
+          background: #da0000;
+          border: 1px solid #d67041;
           text-decoration: none;
           padding: 4px 10px;
           border-radius: 4px;
           margin-left: 4px;
           transition: background 0.15s;
         }
-        .nav-admin-badge:hover { background: #fef3c7; }
+        .nav-admin-badge:hover { background: #fff; color: #da0000; }
 
         /* ── Contact row ── */
         .nav-contact-row {
           display: flex;
           align-items: center;
           gap: 20px;
+
         }
         .nav-contact-link {
           display: flex;
           align-items: center;
           gap: 5px;
           font-family: var(--label);
-          font-size: 11px;
-          font-weight: 300;
+          font-size: 12px;
+          font-weight: 500;
           letter-spacing: 0.06em;
           color: var(--silver);
           text-decoration: none;
@@ -861,7 +866,7 @@ useEffect(() => {
           align-items: center;
           gap: 5px;
           font-family: var(--display);
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           letter-spacing: 0;
           color: var(--ink);
