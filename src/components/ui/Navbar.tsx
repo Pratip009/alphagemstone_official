@@ -189,37 +189,37 @@ export default function Navbar({
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
-
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const HOVER_OPEN_DELAY = 500;
   useEffect(() => {
-  const update = () => {
-    if (navRef.current) {
-      // Use the nav's actual distance from the top of the viewport
-      // (its bottom edge), not just its own height. When the
-      // announcement bar is visible, the nav sits below it, so
-      // height alone under-counts the offset and the dropdown ends
-      // up overlapping the nav links.
-      const bottom = navRef.current.getBoundingClientRect().bottom;
-      document.documentElement.style.setProperty(
-        "--navbar-height",
-        `${bottom}px`,
-      );
-    }
-  };
-  update();
-  window.addEventListener("resize", update);
-  // Recompute on scroll too — the announcement bar scrolls away as
-  // the sticky nav settles at top:0, which changes this offset
-  // independently of resize events.
-  window.addEventListener("scroll", update, { passive: true });
-  return () => {
-    window.removeEventListener("resize", update);
-    window.removeEventListener("scroll", update);
-  };
-}, []);
+    const update = () => {
+      if (navRef.current) {
+        // Use the nav's actual distance from the top of the viewport
+        // (its bottom edge), not just its own height. When the
+        // announcement bar is visible, the nav sits below it, so
+        // height alone under-counts the offset and the dropdown ends
+        // up overlapping the nav links.
+        const bottom = navRef.current.getBoundingClientRect().bottom;
+        document.documentElement.style.setProperty(
+          "--navbar-height",
+          `${bottom}px`,
+        );
+      }
+    };
+    update();
+    window.addEventListener("resize", update);
+    // Recompute on scroll too — the announcement bar scrolls away as
+    // the sticky nav settles at top:0, which changes this offset
+    // independently of resize events.
+    window.addEventListener("scroll", update, { passive: true });
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update);
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -259,28 +259,38 @@ export default function Navbar({
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
-const updateNavbarHeight = () => {
-  if (navRef.current) {
-    const bottom = navRef.current.getBoundingClientRect().bottom;
-    document.documentElement.style.setProperty("--navbar-height", `${bottom}px`);
-  }
-};
-
-useEffect(() => {
-  updateNavbarHeight();
-  window.addEventListener("resize", updateNavbarHeight);
-  window.addEventListener("scroll", updateNavbarHeight, { passive: true });
-  return () => {
-    window.removeEventListener("resize", updateNavbarHeight);
-    window.removeEventListener("scroll", updateNavbarHeight);
+  const updateNavbarHeight = () => {
+    if (navRef.current) {
+      const bottom = navRef.current.getBoundingClientRect().bottom;
+      document.documentElement.style.setProperty(
+        "--navbar-height",
+        `${bottom}px`,
+      );
+    }
   };
-}, []);
-  const openCat = (slug: string) => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
+
+  useEffect(() => {
     updateNavbarHeight();
-    setOpenDropdown(slug);
+    window.addEventListener("resize", updateNavbarHeight);
+    window.addEventListener("scroll", updateNavbarHeight, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateNavbarHeight);
+      window.removeEventListener("scroll", updateNavbarHeight);
+    };
+  }, []);
+  
+  const scheduleOpen = (slug: string) => {
+    cancelClose();
+    if (openTimer.current) clearTimeout(openTimer.current);
+    updateNavbarHeight();
+    openTimer.current = setTimeout(() => {
+      setOpenDropdown(slug);
+    }, HOVER_OPEN_DELAY);
   };
 
+  const cancelOpen = () => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+  };
   const schedulClose = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setOpenDropdown(null), 150);
@@ -1775,11 +1785,12 @@ useEffect(() => {
                   <div
                     key={cat._id}
                     style={{ position: "relative" }}
-                    onMouseEnter={() => {
-                      cancelClose();
-                      openCat(cat.slug);
+                    onMouseEnter={() => scheduleOpen(cat.slug)}
+
+                    onMouseLeave={() => {
+                      cancelOpen();
+                      schedulClose();
                     }}
-                    onMouseLeave={schedulClose}
                   >
                     <Link
                       href={`/products?category=${cat.slug}`}
@@ -1819,7 +1830,10 @@ useEffect(() => {
         <div
           className={`mega-backdrop${openDropdown ? " visible" : ""}`}
           onMouseEnter={schedulClose}
-          onClick={() => setOpenDropdown(null)}
+          onClick={() => {
+            cancelOpen();
+            setOpenDropdown(null);
+          }}
         />
         {!loading &&
           categories.map((cat, i) => {
@@ -1830,7 +1844,10 @@ useEffect(() => {
                 key={cat._id}
                 className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
                 onMouseEnter={cancelClose}
-                onMouseLeave={schedulClose}
+                onMouseLeave={() => {
+                  cancelOpen();
+                  schedulClose();
+                }}
               >
                 <div className="mega-inner">
                   <div className="mega-feature">
@@ -1851,7 +1868,12 @@ useEffect(() => {
                       className="mega-cta"
                     >
                       Shop all {cat.name}
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
                         <path
                           d="M3 8h10M9 4l4 4-4 4"
                           stroke="currentColor"
@@ -1871,7 +1893,9 @@ useEffect(() => {
                           href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
                           onClick={() => setOpenDropdown(null)}
                           className="mega-sub-item"
-                          style={{ animationDelay: `${Math.min(si, 12) * 18}ms` }}
+                          style={{
+                            animationDelay: `${Math.min(si, 12) * 18}ms`,
+                          }}
                         >
                           {sub.imageUrl ? (
                             <img

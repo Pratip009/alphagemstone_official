@@ -65,11 +65,6 @@ export async function getShipEngineRates(
 
   const carrierIds = await resolveCarrierIds(client);
 
-  // The SDK's Params type is ShipmentParam & RateOptions where RateOptions
-  // requires rateOptions.carrierIds to always be present — the type doesn't
-  // allow omitting the key even though the API accepts its absence (uses all
-  // account carriers when omitted). We cast to `any` on the call site only,
-  // keeping all surrounding logic fully typed.
   const shipment = {
     shipFrom: toShipEngineAddress(origin),
     shipTo:   toShipEngineAddress(destination),
@@ -92,14 +87,29 @@ export async function getShipEngineRates(
     ],
   };
 
-  // Only include rateOptions when carrier IDs are configured; an empty object
-  // causes a ShipEngine business-rules error at runtime.
   const payload = carrierIds.length > 0
     ? { shipment, rateOptions: { carrierIds } }
     : { shipment };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await client.getRatesWithShipmentDetails(payload as any);
+  let result: any;
+  try {
+    result = await client.getRatesWithShipmentDetails(payload as any);
+  } catch (err: any) {
+    // shipengine-js throws an unhelpful TypeError ("reading 'name'") when the
+    // API returns an error_type it doesn't recognize — this happens when the
+    // ShipEngine account/API key lacks access to the Rates API (billing plan
+    // restriction). Surface something actionable instead of a raw crash.
+    const raw = err?.message ?? String(err);
+    if (raw.includes("reading 'name'") || raw.includes('undefined')) {
+      throw new Error(
+        'ShipEngine rejected the rate request — your account/API key likely ' +
+        'lacks access to the Rates API (billing plan restriction). ' +
+        'Check https://app.shipengine.com/settings for plan/feature access.'
+      );
+    }
+    throw new Error(`ShipEngine rate request failed: ${raw}`);
+  }
 
   const rates: ShippingRate[] = (result.rateResponse?.rates ?? [])
     .filter(
@@ -126,7 +136,7 @@ export async function getShipEngineRates(
       guaranteed:    r.guaranteedService ?? false,
       negotiatedRate: r.negotiatedRate   ?? false,
     }))
-    .sort((a, b) => a.rate - b.rate);
+    .sort((a: { rate: number; }, b: { rate: number; }) => a.rate - b.rate);
 
   return rates;
 }
