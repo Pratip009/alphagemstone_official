@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const tracking = await trackShipEnginePackage(
       trackingNumber.trim(),
-      carrierCode?.toLowerCase()
+      
     );
 
     return apiSuccess(tracking);
