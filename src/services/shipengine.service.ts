@@ -1,17 +1,25 @@
 /**
- * ShipEngine Service
- * ──────────────────
- * All ShipEngine SDK interactions live here:
+ * ShipStation V2 API Service
+ * ───────────────────────────
+ * All ShipStation V2 REST API interactions live here:
  *   getShipEngineRates        — fetch rates for a shipment
- *   trackShipEnginePackage    — track by tracking number + carrier code
+ *   trackShipEnginePackage    — track by label ID (V2 has no carrier_code+tracking_number
+ *                                endpoint yet — see note below)
  *   purchaseLabelFromRate     — buy a label using a rate ID
  *   validateShipEngineAddress — validate/normalize an address
  *
- * Required env var: SHIPENGINE_API_KEY (sandbox keys start with "TEST_")
- * Optional env var: SHIPENGINE_CARRIER_IDS (comma-separated carrier IDs from dashboard)
+ * Docs: https://docs.shipstation.com
+ * Base URL: https://api.shipstation.com/v2
+ *
+ * Required env var: SHIPSTATION_API_KEY
+ *   Generate this from your ShipStation.com account (Settings → API Keys → V2 API Key),
+ *   NOT from app.shipengine.com — those are separate accounts.
+ * Optional env var: SHIPSTATION_CARRIER_IDS (comma-separated carrier IDs from dashboard)
+ *
+ * Function names are kept identical to the old ShipEngine version so
+ * src/services/order.service.ts doesn't need any changes.
  */
 
-import ShipEngine from 'shipengine';
 import type {
   ShippingAddress,
   PackageDimensions,
@@ -20,134 +28,186 @@ import type {
   TrackingEvent,
 } from '@/types/shipping';
 
-// ─── Client singleton ─────────────────────────────────────────────────────────
+const SHIPSTATION_BASE_URL = 'https://api.shipstation.com/v2';
 
-function getClient(): InstanceType<typeof ShipEngine> {
-  const apiKey = process.env.SHIPENGINE_API_KEY;
+// ─── Low-level fetch helper ────────────────────────────────────────────────────
+
+function getApiKey(): string {
+  const apiKey = process.env.SHIPSTATION_API_KEY;
   if (!apiKey) {
     throw new Error(
-      'SHIPENGINE_API_KEY is not set. Add it to your .env.local file.'
+      'SHIPSTATION_API_KEY is not set. Add it to your .env.local file. ' +
+      'Generate a V2 API key at https://www.shipstation.com (Settings → API Keys).'
     );
   }
-  return new ShipEngine({ apiKey, retries: 2, timeout: 30_000 });
+  return apiKey;
+}
+
+async function shipstationFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${SHIPSTATION_BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        'API-Key': getApiKey(),
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(options.headers || {}),
+      },
+    });
+  } catch (err: any) {
+    throw new Error(`ShipStation request failed (network error): ${err?.message ?? err}`);
+  }
+
+  const raw = await res.text();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let body: any = null;
+  try {
+    body = raw ? JSON.parse(raw) : null;
+  } catch {
+    body = raw;
+  }
+
+  if (!res.ok) {
+    const message =
+      body?.errors?.[0]?.message ??
+      body?.message ??
+      (typeof body === 'string' && body) ??
+      `ShipStation API error (status ${res.status})`;
+
+    if (res.status === 401 || body?.errors?.[0]?.error_code === 'invalid_billing_plan') {
+      throw new Error(
+        `ShipStation rejected the request — your account/API key likely lacks access ` +
+        `to this feature (billing plan restriction). Message: ${message}. ` +
+        `Check https://www.shipstation.com account settings for plan/feature access.`
+      );
+    }
+    throw new Error(`ShipStation request failed: ${message}`);
+  }
+
+  return body as T;
 }
 
 // ─── Address mapper ───────────────────────────────────────────────────────────
 
-function toShipEngineAddress(addr: ShippingAddress) {
+function toShipStationAddress(addr: ShippingAddress) {
   return {
-    name:          addr.fullName   ?? '',
-    phone:         addr.phone      ?? '',
-    companyName:   addr.company    ?? '',
-    addressLine1:  addr.street1,
-    addressLine2:  addr.street2    ?? '',
-    cityLocality:  addr.city,
-    stateProvince: addr.state,
-    postalCode:    addr.postalCode,
-    // ShipEngine requires a strict Country code union — cast after normalising to uppercase
-    countryCode:   (addr.country ?? 'US').toUpperCase() as 'US' & string,
-    // Default to 'unknown'; ShipEngine uses this to optimise routing and rates
-    addressResidentialIndicator: (
-      addr.residential === true  ? 'yes' :
-      addr.residential === false ? 'no'  : 'unknown'
+    name: addr.fullName ?? '',
+    phone: addr.phone ?? '',
+    company_name: addr.company ?? '',
+    address_line1: addr.street1,
+    address_line2: addr.street2 ?? '',
+    city_locality: addr.city,
+    state_province: addr.state,
+    postal_code: addr.postalCode,
+    country_code: (addr.country ?? 'US').toUpperCase(),
+    address_residential_indicator: (
+      addr.residential === true ? 'yes' :
+      addr.residential === false ? 'no' : 'unknown'
     ) as 'unknown' | 'yes' | 'no',
   };
 }
 
 // ─── Get Rates ────────────────────────────────────────────────────────────────
 
+interface ShipStationRate {
+  rate_id: string;
+  rate_type: string;
+  carrier_id: string;
+  carrier_code?: string;
+  carrier_friendly_name?: string;
+  carrier_nickname?: string;
+  service_type?: string;
+  service_code?: string;
+  shipping_amount?: { currency: string; amount: number };
+  delivery_days?: number | null;
+  estimated_delivery_date?: string | null;
+  guaranteed_service?: boolean;
+  negotiated_rate?: boolean;
+  error_messages?: unknown[];
+}
+
+interface RatesResponse {
+  rate_response?: { rates?: ShipStationRate[] };
+  rates?: ShipStationRate[];
+}
+
 export async function getShipEngineRates(
   origin: ShippingAddress,
   destination: ShippingAddress,
   pkg: PackageDimensions
 ): Promise<ShippingRate[]> {
-  const client = getClient();
+  const carrierIds = await resolveCarrierIds();
 
-  const carrierIds = await resolveCarrierIds(client);
-
-  const shipment = {
-    shipFrom: toShipEngineAddress(origin),
-    shipTo:   toShipEngineAddress(destination),
-    packages: [
-      {
-        weight: {
-          value: pkg.weightLbs,
-          unit:  'pound',
-        },
-        dimensions: {
-          length: pkg.lengthIn,
-          width:  pkg.widthIn,
-          height: pkg.heightIn,
-          unit:   'inch',
-        },
-        ...(pkg.declaredValueUsd
-          ? { insuredValue: { currency: 'usd' as const, amount: pkg.declaredValueUsd } }
-          : {}),
-      },
-    ],
-  };
-
-  const payload = carrierIds.length > 0
-    ? { shipment, rateOptions: { carrierIds } }
-    : { shipment };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let result: any;
-  try {
-    result = await client.getRatesWithShipmentDetails(payload as any);
-  } catch (err: any) {
-    // shipengine-js throws an unhelpful TypeError ("reading 'name'") when the
-    // API returns an error_type it doesn't recognize — this happens when the
-    // ShipEngine account/API key lacks access to the Rates API (billing plan
-    // restriction). Surface something actionable instead of a raw crash.
-    const raw = err?.message ?? String(err);
-    if (raw.includes("reading 'name'") || raw.includes('undefined')) {
-      throw new Error(
-        'ShipEngine rejected the rate request — your account/API key likely ' +
-        'lacks access to the Rates API (billing plan restriction). ' +
-        'Check https://app.shipengine.com/settings for plan/feature access.'
-      );
-    }
-    throw new Error(`ShipEngine rate request failed: ${raw}`);
+  if (carrierIds.length === 0) {
+    throw new Error(
+      'No carriers are connected to this ShipStation account. ' +
+      'Add at least one carrier in your ShipStation account settings, ' +
+      'or set SHIPSTATION_CARRIER_IDS in your .env.local.'
+    );
   }
 
-  const rates: ShippingRate[] = (result.rateResponse?.rates ?? [])
-    .filter(
-      (r: any) =>
-        r.rateType === 'shipment' &&
-        (!r.errorMessages || r.errorMessages.length === 0)
-    )
-    .map((r: any): ShippingRate => ({
-      carrier:          r.carrierFriendlyName ?? r.carrierId ?? 'Unknown',
-      carrierId:        r.carrierId           ?? '',
-      service:          r.serviceType         ?? r.serviceCode ?? '',
-      serviceCode:      r.serviceCode         ?? '',
-      rateId:           r.rateId              ?? '',
-      rate:             r.shippingAmount?.amount ?? 0,
-      currency:         'USD',
-      estimatedDays:    r.deliveryDays        ?? null,
-      estimatedDelivery: r.estimatedDeliveryDate
-        ? new Date(r.estimatedDeliveryDate).toLocaleDateString('en-US', {
+  const payload = {
+    shipment: {
+      validate_address: 'no_validation',
+      ship_from: toShipStationAddress(origin),
+      ship_to: toShipStationAddress(destination),
+      packages: [
+        {
+          weight: { value: pkg.weightLbs, unit: 'pound' },
+          dimensions: {
+            length: pkg.lengthIn,
+            width: pkg.widthIn,
+            height: pkg.heightIn,
+            unit: 'inch',
+          },
+          ...(pkg.declaredValueUsd
+            ? { insured_value: { currency: 'usd', amount: pkg.declaredValueUsd } }
+            : {}),
+        },
+      ],
+    },
+    rate_options: { carrier_ids: carrierIds },
+  };
+
+  const result = await shipstationFetch<RatesResponse | ShipStationRate[]>('/rates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  const rawRates: ShipStationRate[] = Array.isArray(result)
+    ? result
+    : (result.rate_response?.rates ?? result.rates ?? []);
+
+  const rates: ShippingRate[] = rawRates
+    .filter((r) => r.rate_type === 'shipment' && (!r.error_messages || r.error_messages.length === 0))
+    .map((r): ShippingRate => ({
+      carrier: r.carrier_friendly_name ?? r.carrier_id ?? 'Unknown',
+      carrierId: r.carrier_id ?? '',
+      service: r.service_type ?? r.service_code ?? '',
+      serviceCode: r.service_code ?? '',
+      rateId: r.rate_id ?? '',
+      rate: r.shipping_amount?.amount ?? 0,
+      currency: 'USD',
+      estimatedDays: r.delivery_days ?? null,
+      estimatedDelivery: r.estimated_delivery_date
+        ? new Date(r.estimated_delivery_date).toLocaleDateString('en-US', {
             weekday: 'short',
-            month:   'short',
-            day:     'numeric',
+            month: 'short',
+            day: 'numeric',
           })
         : null,
-      guaranteed:    r.guaranteedService ?? false,
-      negotiatedRate: r.negotiatedRate   ?? false,
+      guaranteed: r.guaranteed_service ?? false,
+      negotiatedRate: r.negotiated_rate ?? false,
     }))
-    .sort((a: { rate: number; }, b: { rate: number; }) => a.rate - b.rate);
+    .sort((a, b) => a.rate - b.rate);
 
   return rates;
 }
 
-// ─── Rate-limit-aware fetch with exponential backoff ─────────────────────────
+// ─── Retry helper for 429s ────────────────────────────────────────────────────
 
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  baseDelayMs = 2000
-): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelayMs = 2000): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -156,12 +216,11 @@ async function withRetry<T>(
       lastErr = err;
       const isTooManyRequests =
         err?.message?.toLowerCase().includes('too many requests') ||
-        err?.code === 'rate_limit_exceeded' ||
+        err?.message?.toLowerCase().includes('rate_limit_exceeded') ||
         err?.statusCode === 429;
 
       if (!isTooManyRequests || attempt === maxRetries) break;
 
-      // Exponential back-off: 2 s, 4 s, 8 s …
       const delay = baseDelayMs * Math.pow(2, attempt);
       await new Promise((res) => setTimeout(res, delay));
     }
@@ -170,107 +229,141 @@ async function withRetry<T>(
 }
 
 // ─── Track Package ────────────────────────────────────────────────────────────
+//
+// IMPORTANT: As of this writing, ShipStation's V2 API only exposes tracking via
+// GET /v2/labels/{label_id}/track — there is no confirmed carrier_code +
+// tracking_number endpoint in V2 yet (V1 had one at api.shipengine.com/v1/tracking).
+// This means callers now need the ShipStation label_id, not just a tracking number.
+//
+// If your order flow only stores trackingNumber today, you'll need to also store
+// labelId at purchase time (see purchaseLabelFromRate below) and pass that here
+// instead. Check https://docs.shipstation.com/tracking for any newer endpoint
+// before relying on this.
 
-export async function trackShipEnginePackage(
-  trackingNumber: string,
-  carrierCode?: string
-): Promise<TrackingInfo> {
-  const client = getClient();
+interface ShipStationTrackEvent {
+  occurred_at?: string;
+  description?: string;
+  city_locality?: string;
+  state_province?: string;
+  country_code?: string;
+}
 
-  const resolvedCarrier = carrierCode ?? inferCarrierCode(trackingNumber);
+interface ShipStationTrackResponse {
+  tracking_number?: string;
+  status_description?: string;
+  status_code?: string;
+  estimated_delivery_date?: string | null;
+  actual_delivery_date?: string | null;
+  events?: ShipStationTrackEvent[];
+}
 
-  // Wrap in retry logic to handle ShipEngine "Too Many Requests" (429) errors
-  const result: any = await withRetry(() =>
-    client.trackUsingCarrierCodeAndTrackingNumber({
-      carrierCode:    resolvedCarrier,
-      trackingNumber,
-    })
+export async function trackShipEnginePackage(labelId: string): Promise<TrackingInfo> {
+  const result = await withRetry(() =>
+    shipstationFetch<ShipStationTrackResponse>(`/labels/${labelId}/track`)
   );
 
-  const events: TrackingEvent[] = (result.events ?? []).map((e: any) => ({
-    timestamp: e.occurredAt
-      ? new Date(e.occurredAt).toLocaleString('en-US')
-      : '',
-    description: e.description ?? e.eventCode ?? '',
-    location:    [e.cityLocality, e.stateProvince, e.countryCode]
-      .filter(Boolean)
-      .join(', '),
+  const events: TrackingEvent[] = (result.events ?? []).map((e) => ({
+    timestamp: e.occurred_at ? new Date(e.occurred_at).toLocaleString('en-US') : '',
+    description: e.description ?? '',
+    location: [e.city_locality, e.state_province, e.country_code].filter(Boolean).join(', '),
   }));
 
   return {
-    carrier:         result.carrierStatusDescription ?? resolvedCarrier,
-    trackingNumber,
-    status:          result.statusDescription ?? result.statusCode ?? 'Unknown',
+    carrier: '', // not returned by the track endpoint directly; pull from the label if needed
+    trackingNumber: result.tracking_number ?? '',
+    status: result.status_description ?? result.status_code ?? 'Unknown',
     currentLocation: events[0]?.location ?? 'Unknown',
-    lastUpdate:      events[0]?.timestamp ?? 'Unknown',
-    estimatedDelivery: result.estimatedDeliveryDate
-      ? new Date(result.estimatedDeliveryDate).toLocaleDateString('en-US', {
+    lastUpdate: events[0]?.timestamp ?? 'Unknown',
+    estimatedDelivery: result.estimated_delivery_date
+      ? new Date(result.estimated_delivery_date).toLocaleDateString('en-US', {
           weekday: 'short',
-          month:   'short',
-          day:     'numeric',
+          month: 'short',
+          day: 'numeric',
         })
       : null,
     events,
-    deliveredAt: result.actualDeliveryDate
-      ? new Date(result.actualDeliveryDate).toLocaleString('en-US')
+    deliveredAt: result.actual_delivery_date
+      ? new Date(result.actual_delivery_date).toLocaleString('en-US')
       : undefined,
   };
 }
 
 // ─── Purchase Label ───────────────────────────────────────────────────────────
 
-export async function purchaseLabelFromRate(rateId: string): Promise<{
-  labelId:       string;
-  trackingNumber: string;
-  labelUrl:      string;
-  carrierId:     string;
-  serviceCode:   string;
-  shipDate:      string;
-}> {
-  const client = getClient();
+interface ShipStationLabelResponse {
+  label_id: string;
+  tracking_number: string;
+  carrier_id: string;
+  service_code: string;
+  ship_date: string;
+  label_download?: { pdf?: string; png?: string; zpl?: string; href?: string };
+}
 
-  const label: any = await client.createLabelFromRate({ rateId });
+export async function purchaseLabelFromRate(rateId: string): Promise<{
+  labelId: string;
+  trackingNumber: string;
+  labelUrl: string;
+  carrierId: string;
+  serviceCode: string;
+  shipDate: string;
+}> {
+  const label = await shipstationFetch<ShipStationLabelResponse>(`/labels/rates/${rateId}`, {
+    method: 'POST',
+    body: JSON.stringify({ label_format: 'pdf', label_layout: '4x6' }),
+  });
 
   return {
-    labelId:        label.labelId        ?? '',
-    trackingNumber: label.trackingNumber ?? '',
-    labelUrl:       label.labelDownload?.href ?? '',
-    carrierId:      label.carrierId      ?? '',
-    serviceCode:    label.serviceCode    ?? '',
-    shipDate:       label.shipDate       ?? '',
+    labelId: label.label_id ?? '',
+    trackingNumber: label.tracking_number ?? '',
+    labelUrl: label.label_download?.pdf ?? label.label_download?.href ?? '',
+    carrierId: label.carrier_id ?? '',
+    serviceCode: label.service_code ?? '',
+    shipDate: label.ship_date ?? '',
   };
 }
 
 // ─── Validate Address ─────────────────────────────────────────────────────────
 
+interface ShipStationAddressValidationResult {
+  status: string; // "verified" | "warning" | "error" | "unverified"
+  messages?: (string | { message?: string })[];
+  matched_address?: {
+    name?: string;
+    company_name?: string;
+    address_line1?: string;
+    address_line2?: string;
+    city_locality?: string;
+    state_province?: string;
+    postal_code?: string;
+    country_code?: string;
+  };
+}
+
 export async function validateShipEngineAddress(addr: ShippingAddress): Promise<{
-  valid:      boolean;
+  valid: boolean;
   normalized?: ShippingAddress;
-  messages:  string[];
+  messages: string[];
 }> {
-  const client = getClient();
+  const [result] = await shipstationFetch<ShipStationAddressValidationResult[]>('/addresses/validate', {
+    method: 'POST',
+    body: JSON.stringify([toShipStationAddress(addr)]),
+  }) as unknown as ShipStationAddressValidationResult[];
 
-  const [result]: any[] = await client.validateAddresses([
-    toShipEngineAddress(addr),
-  ]);
-
-  const valid    = result.status === 'verified';
-  const messages = (result.messages ?? []).map((m: any) =>
-    typeof m === 'string' ? m : (m.message ?? String(m))
-  );
+  const valid = result.status === 'verified';
+  const messages = (result.messages ?? []).map((m) => (typeof m === 'string' ? m : m.message ?? String(m)));
 
   let normalized: ShippingAddress | undefined;
-  if (valid && result.normalizedAddress) {
-    const n = result.normalizedAddress as any;
+  if (valid && result.matched_address) {
+    const n = result.matched_address;
     normalized = {
-      fullName:   n.name          ?? addr.fullName,
-      company:    n.company       ?? addr.company,
-      street1:    n.addressLine1  ?? addr.street1,
-      street2:    n.addressLine2  ?? addr.street2,
-      city:       n.cityLocality  ?? addr.city,
-      state:      n.stateProvince ?? addr.state,
-      postalCode: n.postalCode    ?? addr.postalCode,
-      country:    n.countryCode   ?? addr.country,
+      fullName: n.name ?? addr.fullName,
+      company: n.company_name ?? addr.company,
+      street1: n.address_line1 ?? addr.street1,
+      street2: n.address_line2 ?? addr.street2,
+      city: n.city_locality ?? addr.city,
+      state: n.state_province ?? addr.state,
+      postalCode: n.postal_code ?? addr.postalCode,
+      country: n.country_code ?? addr.country,
     };
   }
 
@@ -279,67 +372,25 @@ export async function validateShipEngineAddress(addr: ShippingAddress): Promise<
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Returns carrier IDs to use for rate requests.
- *
- * Priority:
- *   1. SHIPENGINE_CARRIER_IDS env var (comma-separated) — fastest, no extra API call
- *   2. Auto-fetched from the account via listCarriers() — cached in memory for the
- *      lifetime of the server process so it only hits the API once.
- *
- * ShipEngine's API (and sandbox) requires at least one carrier ID in rate_options;
- * it does NOT fall back to "all carriers" when the field is omitted.
- *
- * Find your carrier IDs at: https://app.shipengine.com/settings/carriers
- */
+interface ShipStationCarrier {
+  carrier_id: string;
+  friendly_name?: string;
+}
+
 let _cachedCarrierIds: string[] | null = null;
 
-async function resolveCarrierIds(client: InstanceType<typeof ShipEngine>): Promise<string[]> {
-  // 1. Env var takes priority
-  const fromEnv = (process.env.SHIPENGINE_CARRIER_IDS ?? '')
+async function resolveCarrierIds(): Promise<string[]> {
+  const fromEnv = (process.env.SHIPSTATION_CARRIER_IDS ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 
   if (fromEnv.length > 0) return fromEnv;
 
-  // 2. Return cached value from a previous call
   if (_cachedCarrierIds !== null) return _cachedCarrierIds;
 
-  // 3. Fetch from account and cache
-  try {
-    const carriers = await client.listCarriers();
-    _cachedCarrierIds = (carriers ?? [])
-      .map((c: any) => c.carrierId as string)
-      .filter(Boolean);
+  const data = await shipstationFetch<{ carriers: ShipStationCarrier[] }>('/carriers');
+  _cachedCarrierIds = (data.carriers ?? []).map((c) => c.carrier_id).filter(Boolean);
 
-    if (_cachedCarrierIds.length === 0) {
-      throw new Error(
-        'No carriers are connected to this ShipEngine account. ' +
-        'Add at least one carrier at https://app.shipengine.com/settings/carriers ' +
-        'or set SHIPENGINE_CARRIER_IDS in your .env.local.'
-      );
-    }
-
-    return _cachedCarrierIds;
-  } catch (err: any) {
-    // Re-throw with a clearer message if it's just the empty-list case
-    if (err.message?.includes('No carriers')) throw err;
-    throw new Error(`Failed to list ShipEngine carriers: ${err.message ?? err}`);
-  }
-}
-
-/**
- * Infers ShipEngine carrier code from tracking number format.
- * Used as a fallback when caller doesn't provide a carrier code.
- *
- * ShipEngine carrier codes: "ups", "stamps_com" (USPS), "fedex", "dhl_express"
- */
-function inferCarrierCode(tn: string): string {
-  if (/^1Z[0-9A-Z]{16}$/i.test(tn))             return 'ups';
-  if (/^9[0-9]{19,21}$/.test(tn))               return 'stamps_com';
-  if (/^(7[0-9]{19}|[A-Z]{2}[0-9]{9}US)$/.test(tn)) return 'stamps_com';
-  if (/^(96|98)[0-9]{18,20}$/.test(tn))         return 'fedex';
-  if (/^[0-9]{12}$/.test(tn) || /^[0-9]{15}$/.test(tn)) return 'fedex';
-  return 'stamps_com';
+  return _cachedCarrierIds;
 }
