@@ -63,7 +63,7 @@ export default function ShippingRateSelector({
       });
 
       const json = await res.json();
-      if (!json.success) throw new Error(json.error ?? 'Failed to fetch rates');
+      if (!json.success) throw new Error(json.message ?? 'Failed to fetch rates');
 
       setRates(json.data.rates ?? []);
     } catch (err: any) {

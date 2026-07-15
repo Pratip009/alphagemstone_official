@@ -112,7 +112,13 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
   }
 
   // ── Live tracking ─────────────────────────────────────────────────────────
+  // ShipStation V2 only supports tracking lookups by labelId, not by the
+  // customer-facing trackingNumber — see shipengine.service.ts.
   async function handleTrack() {
+    if (!labelId) {
+      setError('No ShipStation label on this order — live tracking isn\'t available. Use "Carrier Site" instead.');
+      return;
+    }
     if (tracking) { setTrackOpen(o => !o); return; }
     setTrackLoading(true);
     setError(null);
@@ -121,7 +127,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
         method: 'POST',
         credentials: 'include',
         headers,
-        body: JSON.stringify({ trackingNumber }),
+        body: JSON.stringify({ labelId }),
       });
       const data = await res.json();
 
@@ -301,7 +307,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
             </a>
           )}
 
-          {trackingNumber && (
+          {labelId && (
             <button
               onClick={handleTrack}
               disabled={trackLoading}
@@ -313,6 +319,11 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
                 : <><MapPin size={13} strokeWidth={2} /> {trackOpen ? 'Hide Tracking' : 'Live Tracking'}</>
               }
             </button>
+          )}
+          {!labelId && trackingNumber && (
+            <span className="flex items-center gap-1.5 px-4 py-2 text-[0.7rem] text-[#a09a90] italic">
+              No live tracking (manually entered — use Carrier Site link if available)
+            </span>
           )}
 
           {order.trackingUrl && (

@@ -6,6 +6,7 @@ import { clearCart, calculateCartTotals } from './cart.service';
 import { capturePayPalOrder, createPayPalOrder } from './paypal.service';
 import { validateCoupon, redeemCoupon } from './coupon.service';
 import { purchaseLabelFromRate, trackShipEnginePackage } from './shipengine.service';
+import { buildTrackingUrl } from '@/models/ORDER_SHIPPING_FIELDS';
 import { Resend } from 'resend';
 import { orderConfirmationEmailHtml, orderShippedEmailHtml } from '@/lib/email-templates';
 
@@ -241,12 +242,22 @@ export async function getOrderTracking(orderId: string, userId?: string) {
   const order = await Order.findOne(query).lean() as IOrder | null;
   if (!order) throw new Error('Order not found');
 
-  const trackingNumber = (order as any).trackingNumber as string | undefined;
-  if (!trackingNumber) {
-    throw new Error('No tracking number available for this order yet');
+  // ShipStation V2 only supports tracking lookups by label_id (not by the
+  // customer-facing trackingNumber) — see trackShipEnginePackage's docblock.
+  const labelId = (order as any).labelId as string | undefined;
+  if (!labelId) {
+    if ((order as any).trackingNumber) {
+      // A tracking number exists (likely entered manually by an admin for a
+      // non-ShipStation shipment) but we have no label to look it up with.
+      throw new Error(
+        'Live tracking isn\'t available for this order — it was shipped without a ' +
+        'ShipStation label. Use the tracking number with the carrier directly.'
+      );
+    }
+    throw new Error('No tracking information available for this order yet');
   }
 
-  const tracking = await trackShipEnginePackage(trackingNumber);
+  const tracking = await trackShipEnginePackage(labelId);
 
   return {
     trackingNumber:     tracking.trackingNumber,
@@ -320,11 +331,17 @@ export async function purchaseAndSaveLabel(
   // When auto-purchased at payment capture, set 'processing' (label ready, not yet picked up).
   const newStatus = triggeredByAdmin ? 'shipped' : 'processing';
 
+  // Carrier name we already have on the order from checkout (e.g. "UPS", "FedEx").
+  // Falls back to the ShipStation carrier id if the friendly name isn't stored.
+  const carrierForUrl = (order as any).shippingCarrier ?? label.carrierId ?? null;
+  const trackingUrl = buildTrackingUrl(carrierForUrl, label.trackingNumber);
+
   await Order.findByIdAndUpdate(orderId, {
     $set: {
       labelId:        label.labelId,
       labelUrl:       label.labelUrl,
       trackingNumber: label.trackingNumber,
+      trackingUrl,
       shippedAt:      new Date(),
       status:         newStatus,
     },
@@ -336,6 +353,7 @@ export async function purchaseAndSaveLabel(
     const updatedOrder = {
       ...order,
       trackingNumber: label.trackingNumber,
+      trackingUrl,
       labelUrl:       label.labelUrl,
     } as IOrder & { user: { name: string; email: string } };
     void sendOrderShippedEmail(updatedOrder);

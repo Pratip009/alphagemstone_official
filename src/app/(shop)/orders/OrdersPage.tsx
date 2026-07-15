@@ -228,7 +228,7 @@ function ShipmentPanel({ order }: { order: Order }) {
                 <Printer size={12} /> Label
               </a>
             )}
-            {tn && (
+            {order.labelId && (
               <button
                 onClick={() => setTracking(t => !t)}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-lg transition-all active:scale-95"
@@ -275,12 +275,12 @@ function ShipmentPanel({ order }: { order: Order }) {
         )}
       </div>
 
-      {tracking && tn && (
+      {tracking && order.labelId && tn && (
         <div className="px-6 pb-6 pt-1">
           <OrderTracking
+            labelId={order.labelId}
             trackingNumber={tn}
             trackingUrl={order.trackingUrl ?? undefined}
-            carrierCode={carrier?.toLowerCase().replace(/\s+/g, '_') ?? undefined}
           />
         </div>
       )}

@@ -230,15 +230,14 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelayMs = 
 
 // ─── Track Package ────────────────────────────────────────────────────────────
 //
-// IMPORTANT: As of this writing, ShipStation's V2 API only exposes tracking via
-// GET /v2/labels/{label_id}/track — there is no confirmed carrier_code +
-// tracking_number endpoint in V2 yet (V1 had one at api.shipengine.com/v1/tracking).
-// This means callers now need the ShipStation label_id, not just a tracking number.
+// IMPORTANT: ShipStation's V2 API only exposes tracking via
+// GET /v2/labels/{label_id}/track — there is no carrier_code + tracking_number
+// endpoint in V2 (V1 had one at api.shipengine.com/v1/tracking).
 //
-// If your order flow only stores trackingNumber today, you'll need to also store
-// labelId at purchase time (see purchaseLabelFromRate below) and pass that here
-// instead. Check https://docs.shipstation.com/tracking for any newer endpoint
-// before relying on this.
+// This means callers MUST pass the ShipStation label_id (stored on the order
+// as `labelId` at purchase time — see purchaseLabelFromRate below), NOT the
+// customer-facing trackingNumber. Passing a trackingNumber here will fail,
+// since ShipStation has no record of it as a label_id.
 
 interface ShipStationTrackEvent {
   occurred_at?: string;
@@ -257,10 +256,43 @@ interface ShipStationTrackResponse {
   events?: ShipStationTrackEvent[];
 }
 
+// Minimal shape we need from GET /v2/labels/{label_id} to resolve a
+// human-readable carrier name for the tracking card header.
+interface ShipStationLabelLookup {
+  carrier_id?: string;
+  carrier_code?: string;
+}
+
+/**
+ * Best-effort carrier name lookup for a label. Tracking should never fail
+ * just because we couldn't resolve a friendly carrier name, so all errors
+ * here are swallowed and we fall back to an empty string.
+ */
+async function resolveCarrierNameForLabel(labelId: string): Promise<string> {
+  try {
+    const label = await shipstationFetch<ShipStationLabelLookup>(`/labels/${labelId}`);
+    if (!label.carrier_id) return label.carrier_code ?? '';
+
+    const data = await shipstationFetch<{ carriers: ShipStationCarrier[] }>('/carriers');
+    const match = (data.carriers ?? []).find((c) => c.carrier_id === label.carrier_id);
+    return match?.friendly_name ?? label.carrier_code ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export async function trackShipEnginePackage(labelId: string): Promise<TrackingInfo> {
-  const result = await withRetry(() =>
-    shipstationFetch<ShipStationTrackResponse>(`/labels/${labelId}/track`)
-  );
+  if (!labelId?.trim()) {
+    throw new Error(
+      'trackShipEnginePackage requires a ShipStation labelId, not a tracking number. ' +
+      'Check that the order has a labelId saved (set by purchaseLabelFromRate at label-purchase time).'
+    );
+  }
+
+  const [result, carrier] = await Promise.all([
+    withRetry(() => shipstationFetch<ShipStationTrackResponse>(`/labels/${labelId}/track`)),
+    resolveCarrierNameForLabel(labelId),
+  ]);
 
   const events: TrackingEvent[] = (result.events ?? []).map((e) => ({
     timestamp: e.occurred_at ? new Date(e.occurred_at).toLocaleString('en-US') : '',
@@ -269,7 +301,7 @@ export async function trackShipEnginePackage(labelId: string): Promise<TrackingI
   }));
 
   return {
-    carrier: '', // not returned by the track endpoint directly; pull from the label if needed
+    carrier,
     trackingNumber: result.tracking_number ?? '',
     status: result.status_description ?? result.status_code ?? 'Unknown',
     currentLocation: events[0]?.location ?? 'Unknown',

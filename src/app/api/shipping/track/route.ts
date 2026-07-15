@@ -1,11 +1,12 @@
 /**
  * POST /api/shipping/track
- * Tracks a package via ShipEngine.
+ * Tracks a package via ShipStation V2.
  *
- * Body: { "trackingNumber": "1Z999AA10123456784", "carrierCode": "ups" }
- *   carrierCode is optional — inferred from tracking number format when omitted.
- *
- * Common ShipEngine carrier codes: ups | stamps_com (USPS) | fedex | dhl_express
+ * Body: { "labelId": "se-1234567" }
+ *   ShipStation V2 only supports tracking lookups by label_id — there is no
+ *   carrier_code + tracking_number endpoint. Pass the order's stored
+ *   `labelId` (set when the shipping label was purchased), not its
+ *   customer-facing tracking number.
  */
 
 import { NextRequest } from 'next/server';
@@ -14,16 +15,13 @@ import { trackShipEnginePackage } from '@/services/shipengine.service';
 
 export async function POST(req: NextRequest) {
   try {
-    const { trackingNumber, carrierCode } = await req.json();
+    const { labelId } = await req.json();
 
-    if (!trackingNumber?.trim()) {
-      return apiError('trackingNumber is required', 400);
+    if (!labelId?.trim()) {
+      return apiError('labelId is required', 400);
     }
 
-    const tracking = await trackShipEnginePackage(
-      trackingNumber.trim(),
-      
-    );
+    const tracking = await trackShipEnginePackage(labelId.trim());
 
     return apiSuccess(tracking);
   } catch (err: any) {
