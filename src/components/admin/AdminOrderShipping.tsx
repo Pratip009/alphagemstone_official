@@ -66,6 +66,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
   const [error,          setError]          = useState<string | null>(null);
   const [success,        setSuccess]        = useState<string | null>(null);
   const [trackCooldown,  setTrackCooldown]  = useState(0); // seconds remaining
+  const [syncLoading,      setSyncLoading]      = useState(false);
 
   const [manualTracking,   setManualTracking]   = useState('');
   const [manualCarrier,    setManualCarrier]    = useState('');
@@ -76,7 +77,29 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
 
   // Auth is via the httpOnly cookie (credentials: 'include' below), not a header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+// ── Sync order status to "delivered" (carrier already confirmed it) ────────
+  async function handleSyncDelivered() {
+    setSyncLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res  = await fetch(`/api/admin/orders/${order._id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers,
+        body: JSON.stringify({ status: 'delivered' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? data.message ?? 'Failed to update status');
 
+      setSuccess('Order marked as delivered.');
+      onUpdate?.({ status: 'delivered' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setSyncLoading(false);
+    }
+  }
   // ── Purchase label ────────────────────────────────────────────────────────
   async function handlePurchaseLabel() {
     setLabelLoading(true);
@@ -409,6 +432,17 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
                   <CheckCircle size={10} /> Delivered {tracking.deliveredAt}
                 </span>
               )}
+               {tracking.deliveredAt && order.status !== 'delivered' && (
+              <button
+                onClick={handleSyncDelivered}
+                disabled={syncLoading}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[0.7rem] font-semibold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                style={{ background: '#15803d', color: '#fff' }}
+              >
+                <CheckCircle size={12} />
+                {syncLoading ? 'Updating…' : 'Mark order as Delivered now'}
+              </button>
+            )}
             </div>
 
             {tracking.currentLocation && (

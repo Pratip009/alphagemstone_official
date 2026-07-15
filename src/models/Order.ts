@@ -46,9 +46,11 @@ export interface IOrder extends Document {
   // ─── Post-purchase label info (set after label is bought) ─────────────────
   trackingNumber?: string | null;
   trackingUrl?: string | null;
-  labelId?: string | null;                  // ShipEngine label ID
-  labelUrl?: string | null;                 // printable PDF URL
+  labelId?: string | null;                 
+  labelUrl?: string | null;                
   shippedAt?: Date | null;
+  deliveredAt?: Date | null;                
+  deliveryNotifiedAt?: Date | null;
   // ─── Coupon ───────────────────────────────────────────────────────────────
   appliedCouponCode?: string | null;
   couponDiscount?: number;
@@ -122,6 +124,8 @@ const OrderSchema = new Schema<IOrder>(
     labelId:                   { type: String, default: null },
     labelUrl:                  { type: String, default: null },
     shippedAt:                 { type: Date, default: null },
+    deliveredAt:               { type: Date, default: null },
+    deliveryNotifiedAt:        { type: Date, default: null },
     // ─── Coupon ───────────────────────────────────────────────────────────────
     appliedCouponCode: { type: String, default: null },
     couponDiscount:    { type: Number, default: 0 },

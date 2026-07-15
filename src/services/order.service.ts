@@ -8,11 +8,19 @@ import { validateCoupon, redeemCoupon } from './coupon.service';
 import { purchaseLabelFromRate, trackShipEnginePackage } from './shipengine.service';
 import { buildTrackingUrl } from '@/models/ORDER_SHIPPING_FIELDS';
 import { Resend } from 'resend';
-import { orderConfirmationEmailHtml, orderShippedEmailHtml } from '@/lib/email-templates';
+import {
+  orderConfirmationEmailHtml,
+  orderShippedEmailHtml,
+  orderDeliveredEmailHtml,
+  adminNewOrderEmailHtml,
+} from '@/lib/email-templates';
 
 const resend    = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-
+const ADMIN_NOTIFICATION_EMAILS = (process.env.ADMIN_NOTIFICATION_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim())
+  .filter(Boolean);
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Estimates order weight in LB (0.5 LB per item, max 5 LB). */
@@ -182,7 +190,8 @@ export async function capturePayment(
   await clearCart(order.user.toString());
 
   void sendOrderConfirmationEmail(order);
-
+ 
+  void sendAdminNewOrderEmail(order);
   // Auto-purchase ShipEngine label if rate was stored at checkout
   const rateId = (order as any).shippingRateId as string | null;
   if (rateId) {
@@ -283,9 +292,14 @@ export async function updateOrderStatus(orderId: string, status: string) {
   ];
   if (!validStatuses.includes(status)) throw new Error('Invalid status');
 
+  const $set: Record<string, unknown> = { status };
+  // Manually marking an order delivered (e.g. from the admin dropdown) should
+  // also stamp deliveredAt, same as the automated webhook/cron path does.
+  if (status === 'delivered') $set.deliveredAt = new Date();
+
   const order = await Order.findByIdAndUpdate(
     orderId,
-    { $set: { status } },
+    { $set },
     { new: true }
   )
     .populate('user', 'name email')
@@ -294,10 +308,57 @@ export async function updateOrderStatus(orderId: string, status: string) {
   if (order && status === 'shipped') {
     void sendOrderShippedEmail(order);
   }
+  if (order && status === 'delivered') {
+    void sendOrderDeliveredEmail(order);
+  }
 
   return order;
 }
+export async function applyDeliveryStatus(
+  orderId: string,
+  deliveredAtFromCarrier: string | Date | null | undefined
+) {
+  if (!deliveredAtFromCarrier) return null;
 
+  const order = await Order.findById(orderId)
+    .populate('user', 'name email')
+    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+  if (!order) return null;
+
+  // Already marked delivered (and already emailed) — nothing to do.
+  if (order.status === 'delivered' && order.deliveryNotifiedAt) return null;
+  // Don't resurrect a cancelled/refunded order just because the carrier
+  // still reports movement.
+  if (order.status === 'cancelled' || order.status === 'refunded') return null;
+
+  const deliveredAt = new Date(deliveredAtFromCarrier);
+  const updated = await Order.findByIdAndUpdate(
+    orderId,
+    { $set: { status: 'delivered', deliveredAt } },
+    { new: true }
+  )
+    .populate('user', 'name email')
+    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+
+  if (updated && !order.deliveryNotifiedAt) {
+    void sendOrderDeliveredEmail(updated);
+  }
+
+  return updated;
+}
+export async function getOrdersAwaitingDeliverySync() {
+  return Order.find({
+    status: { $in: ['processing', 'shipped'] },
+    labelId: { $ne: null },
+  })
+    .select('_id labelId status')
+    .lean() as unknown as Array<{ _id: any; labelId: string; status: string }>;
+}
+
+/** Look up an order by its ShipStation labelId (used by the webhook route). */
+export async function getOrderByLabelId(labelId: string) {
+  return Order.findOne({ labelId }).select('_id').lean() as Promise<{ _id: any } | null>;
+}
 // ─── ShipEngine label purchase ────────────────────────────────────────────────
 
 /**
@@ -422,5 +483,65 @@ async function sendOrderShippedEmail(
     if (error) console.error('[orderShippedEmail] Resend error:', error);
   } catch (err) {
     console.error('[orderShippedEmail] Failed:', err);
+  }
+}
+async function sendOrderDeliveredEmail(
+  order: IOrder & { user: { name: string; email: string } }
+): Promise<void> {
+  try {
+    const { error } = await resend.emails.send({
+      from:    EMAIL_FROM,
+      to:      order.user.email,
+      subject: `Your Order Has Been Delivered — #${order._id.toString().slice(-8).toUpperCase()}`,
+      html:    orderDeliveredEmailHtml({
+        orderId:        order._id.toString(),
+        customerName:   order.user.name,
+        trackingNumber: order.trackingNumber ?? undefined,
+        deliveredAt:    order.deliveredAt
+          ? new Date(order.deliveredAt).toLocaleDateString('en-US', {
+              weekday: 'short', month: 'short', day: 'numeric',
+            })
+          : undefined,
+      }),
+    });
+
+    if (error) {
+      console.error('[orderDeliveredEmail] Resend error:', error);
+      return;
+    }
+
+    // Mark as notified so applyDeliveryStatus / updateOrderStatus don't
+    // re-send this if called again for the same order.
+    await Order.findByIdAndUpdate(order._id, { $set: { deliveryNotifiedAt: new Date() } });
+  } catch (err) {
+    console.error('[orderDeliveredEmail] Failed:', err);
+  }
+}
+
+async function sendAdminNewOrderEmail(order: IOrder): Promise<void> {
+  if (ADMIN_NOTIFICATION_EMAILS.length === 0) return; // not configured — skip silently
+  try {
+    const user = await User.findById(order.user)
+      .select('name email')
+      .lean() as { name: string; email: string } | null;
+    if (!user) return;
+
+    const { error } = await resend.emails.send({
+      from:    EMAIL_FROM,
+      to:      ADMIN_NOTIFICATION_EMAILS,
+      subject: `New Order — #${order._id.toString().slice(-8).toUpperCase()} ($${order.totalAmount.toFixed(2)})`,
+      html:    adminNewOrderEmailHtml({
+        orderId:       order._id.toString(),
+        customerName:  user.name,
+        customerEmail: user.email,
+        totalAmount:   order.totalAmount,
+        itemCount:     order.items.reduce((sum, i) => sum + i.quantity, 0),
+        paymentMethod: order.paymentMethod,
+      }),
+    });
+
+    if (error) console.error('[adminNewOrderEmail] Resend error:', error);
+  } catch (err) {
+    console.error('[adminNewOrderEmail] Failed:', err);
   }
 }
