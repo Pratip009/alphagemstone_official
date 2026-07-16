@@ -1,8 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Email Templates — Alpha Imports
-// Design: full-width, modern editorial, email-client safe
-// No web fonts, no CSS classes, no JS — inline styles only.
-// Max-width: 640px, full-bleed header/hero, generous whitespace.
+// Design: full-bleed editorial jeweler's catalogue, email-client safe
+// Signature: a repeating "facet rule" — a jagged, gem-cut divider that cycles
+// through the four house stones (gold / sapphire / emerald / ruby). It appears
+// under every hero and is the one thing that should make these instantly
+// recognisable as Alpha Imports mail, nothing else.
+// No web fonts, no CSS classes required for rendering, no JS — inline styles.
+// Max-width: 680px, full-bleed header/hero, generous whitespace.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BRAND_NAME = 'Alpha Imports';
@@ -10,27 +14,37 @@ const BRAND_TAGLINE = 'Fine Gemstones & Diamonds';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@alphagemstone.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://alphagemstone.com';
 const YEAR = new Date().getFullYear();
+const CONTENT_WIDTH = 680;
 
 // ─── Design tokens (inline-style constants) ───────────────────────────────────
 const T = {
-  bg:         '#F9F7F4',   // warm off-white page bg
-  card:       '#FFFFFF',
-  headerBg:   '#0C0A09',   // near-black
-  accentGold: '#C9A84C',   // warm gold — gemstone brand
-  accentDark: '#1A1410',
-  textPrimary:'#1A1410',
-  textMuted:  '#6B6560',
-  textLight:  '#9E9994',
-  border:     '#E8E3DC',   // warm gray border
-  divider:    '#F0EBE3',
-  successBg:  '#F0FAF4',
-  successBdr: '#22C55E',
-  warnBg:     '#FFFBEB',
-  warnBdr:    '#F59E0B',
-  fontStack:  'Georgia,"Times New Roman",Times,serif',
-  sansStack:  '-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif',
-  monoStack:  '"Courier New",Courier,monospace',
+  bg:          '#F8F6F1',   // warm off-white page bg
+  card:        '#FFFFFF',
+  headerBg:    '#0B0A08',   // near-black, slightly warm
+  accentGold:  '#C9A84C',   // house gold — primary brand accent
+  accentDark:  '#1A1410',
+  textPrimary: '#1A1410',
+  textMuted:   '#6B6560',
+  textLight:   '#9E9994',
+  border:      '#E8E3DC',   // warm gray border
+  divider:     '#F0EBE3',
+  successBg:   '#F0FAF4',
+  successBdr:  '#22C55E',
+  warnBg:      '#FFFBEB',
+  warnBdr:     '#F59E0B',
+  // the four house stones — used only in the facet rule + small accent dots,
+  // never as full backgrounds, so the palette stays quiet everywhere else.
+  gemGold:     '#C9A84C',
+  gemSapphire: '#1B3A6B',
+  gemEmerald:  '#1B4D3E',
+  gemRuby:     '#7A1F2B',
+  fontStack:   'Georgia,"Times New Roman",Times,serif',
+  sansStack:   '-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif',
+  monoStack:   '"Courier New",Courier,monospace',
 };
+
+const GEM_CYCLE = [T.gemGold, T.gemSapphire, T.gemEmerald, T.gemRuby];
+
 export interface OrderDeliveredEmailData {
   orderId: string;
   customerName: string;
@@ -45,33 +59,58 @@ export interface AdminNewOrderEmailData {
   itemCount: number;
   paymentMethod: string;
 }
+
+// ─── Signature element: the facet rule ────────────────────────────────────────
+// A thin gold rule followed by a row of small CSS-triangle "teeth" that cycle
+// through the four house gem colors — evoking the girdle of a cut stone.
+// Pure border-triangles + tables, so it degrades gracefully everywhere.
+function facetRule(teeth = 34): string {
+  const cells = Array.from({ length: teeth }).map((_, i) => {
+    const color = GEM_CYCLE[i % GEM_CYCLE.length];
+    return `<td style="padding:0;line-height:0;font-size:0;"><div style="width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:11px solid ${color};">&nbsp;</div></td>`;
+  }).join('');
+
+  return `
+  <tr><td style="background-color:${T.accentGold};height:2px;font-size:2px;line-height:2px;">&nbsp;</td></tr>
+  <tr>
+    <td style="background-color:${T.card};padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>
+    </td>
+  </tr>`;
+}
+
+// ─── Reusable: small gem-color dot (for feature lists / bullets) ─────────────
+function gemDot(color: string): string {
+  return `<span style="display:inline-block;width:8px;height:8px;background-color:${color};border-radius:1px;transform:rotate(45deg);"></span>`;
+}
+
 export function adminNewOrderEmailHtml(data: AdminNewOrderEmailData): string {
   const shortOrderId = data.orderId.slice(-8).toUpperCase();
 
   const row = (label: string, value: string) => `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textMuted};">${label}</td>
-      <td style="padding:10px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};font-weight:700;text-align:right;">${value}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textMuted};">${label}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};font-weight:700;text-align:right;">${value}</td>
     </tr>`;
 
   const body = `
   <tr>
-    <td style="background-color:${T.headerBg};padding:32px 48px 28px;">
-      <p style="margin:0 0 12px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">New order</p>
-      <h1 style="margin:0;font-family:${T.fontStack};font-size:26px;font-weight:400;color:#FFFFFF;">Order #${shortOrderId} — payment received</h1>
+    <td style="background-color:${T.headerBg};padding:36px 52px 30px;">
+      <p style="margin:0 0 12px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">New order</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:27px;font-weight:400;color:#FFFFFF;">Order #${shortOrderId} — payment received</h1>
     </td>
   </tr>
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <tr>
-    <td class="email-pad" style="padding:36px 48px;">
+    <td class="email-pad" style="padding:38px 52px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         ${row('Customer', `${data.customerName} (${data.customerEmail})`)}
         ${row('Items', String(data.itemCount))}
         ${row('Payment method', data.paymentMethod.toUpperCase())}
         ${row('Total', `$${data.totalAmount.toFixed(2)}`)}
       </table>
-      <div style="margin-top:28px;">
+      <div style="margin-top:30px;">
         ${ctaButton('Open in Admin', `${SITE_URL}/admin/orders`)}
       </div>
     </td>
@@ -79,6 +118,7 @@ export function adminNewOrderEmailHtml(data: AdminNewOrderEmailData): string {
 
   return emailWrapper(body, `New order #${shortOrderId} — $${data.totalAmount.toFixed(2)}`);
 }
+
 export function orderDeliveredEmailHtml(data: OrderDeliveredEmailData): string {
   const firstName = data.customerName.split(' ')[0] || data.customerName;
   const shortOrderId = data.orderId.slice(-8).toUpperCase();
@@ -86,26 +126,26 @@ export function orderDeliveredEmailHtml(data: OrderDeliveredEmailData): string {
   const body = `
   <!-- Hero -->
   <tr>
-    <td style="background-color:${T.headerBg};padding:40px 48px 36px;">
-      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">Delivered</p>
-      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;line-height:1.2;">It's arrived, ${firstName}.</h1>
-      <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.5);">Order <strong style="color:rgba(255,255,255,0.7);">#${shortOrderId}</strong> has been delivered.</p>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Delivered</p>
+      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:34px;font-weight:400;color:#FFFFFF;line-height:1.2;">It's arrived, ${firstName}.</h1>
+      <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.5);">Order <strong style="color:rgba(255,255,255,0.75);">#${shortOrderId}</strong> has been delivered.</p>
     </td>
   </tr>
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <tr>
-    <td class="email-pad" style="padding:44px 48px 40px;">
+    <td class="email-pad" style="padding:46px 52px 42px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
         <tr>
-          <td style="background-color:${T.successBg};border:1px solid ${T.successBdr};padding:24px 28px;">
-            <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:${T.textPrimary};line-height:1.6;">
+          <td style="background-color:${T.successBg};border:1px solid ${T.successBdr};padding:26px 30px;">
+            <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:${T.textPrimary};line-height:1.65;">
               Your package ${data.trackingNumber ? `(tracking <strong>${data.trackingNumber}</strong>) ` : ''}was marked delivered${data.deliveredAt ? ` on ${data.deliveredAt}` : ''}. We hope you love it.
             </p>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 28px;font-family:${T.sansStack};font-size:14px;color:${T.textMuted};line-height:1.6;">
+      <p style="margin:0 0 30px;font-family:${T.sansStack};font-size:14px;color:${T.textMuted};line-height:1.7;">
         If anything looks off or the package didn't actually arrive, just reply to this email or reach us at ${SUPPORT_EMAIL} and we'll sort it out right away.
       </p>
       ${ctaButton('View Order', `${SITE_URL}/orders`)}
@@ -114,6 +154,7 @@ export function orderDeliveredEmailHtml(data: OrderDeliveredEmailData): string {
 
   return emailWrapper(body, `Order #${shortOrderId} has been delivered`);
 }
+
 // ─── Shared wrapper ───────────────────────────────────────────────────────────
 function emailWrapper(content: string, preheader = ''): string {
   return `<!DOCTYPE html>
@@ -131,11 +172,11 @@ function emailWrapper(content: string, preheader = ''): string {
   </o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
   <style>
-    @media only screen and (max-width:640px){
+    @media only screen and (max-width:${CONTENT_WIDTH}px){
       .email-outer{width:100%!important;}
       .email-card{width:100%!important;border-radius:0!important;}
       .email-pad{padding:32px 24px!important;}
-      .email-hero-pad{padding:48px 24px!important;}
+      .email-hero-pad{padding:44px 24px!important;}
       .hide-mobile{display:none!important;}
     }
   </style>
@@ -144,18 +185,27 @@ function emailWrapper(content: string, preheader = ''): string {
   ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${T.bg};">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ''}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${T.bg};min-width:320px;">
     <tr>
-      <td align="center" style="padding:32px 16px 48px;">
-        <table role="presentation" class="email-outer" width="640" cellpadding="0" cellspacing="0" border="0"
-          style="width:640px;max-width:640px;">
+      <td align="center" style="padding:36px 16px 52px;">
+        <table role="presentation" class="email-outer" width="${CONTENT_WIDTH}" cellpadding="0" cellspacing="0" border="0"
+          style="width:${CONTENT_WIDTH}px;max-width:${CONTENT_WIDTH}px;">
 
           <!-- Logo bar -->
           <tr>
-            <td style="padding:0 0 20px;">
+            <td style="padding:0 4px 22px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td>
-                    <span style="font-family:${T.sansStack};font-size:11px;font-weight:700;color:${T.textMuted};letter-spacing:0.18em;text-transform:uppercase;">${BRAND_NAME}</span>
-                    <span style="font-family:${T.sansStack};font-size:10px;color:${T.textLight};letter-spacing:0.1em;text-transform:uppercase;margin-left:10px;">✦ ${BRAND_TAGLINE}</span>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding-right:9px;vertical-align:middle;">
+                          <div style="width:7px;height:7px;background-color:${T.accentGold};transform:rotate(45deg);">&nbsp;</div>
+                        </td>
+                        <td style="vertical-align:middle;">
+                          <span style="font-family:${T.sansStack};font-size:12px;font-weight:700;color:${T.textPrimary};letter-spacing:0.2em;text-transform:uppercase;">${BRAND_NAME}</span>
+                          <span style="font-family:${T.sansStack};font-size:10px;color:${T.textLight};letter-spacing:0.1em;text-transform:uppercase;margin-left:10px;">${BRAND_TAGLINE}</span>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -165,13 +215,13 @@ function emailWrapper(content: string, preheader = ''): string {
           <!-- Main card -->
           <tr>
             <td>
-              <table role="presentation" class="email-card" width="640" cellpadding="0" cellspacing="0" border="0"
-                style="width:640px;background-color:${T.card};border:1px solid ${T.border};border-radius:4px;overflow:hidden;">
+              <table role="presentation" class="email-card" width="${CONTENT_WIDTH}" cellpadding="0" cellspacing="0" border="0"
+                style="width:${CONTENT_WIDTH}px;background-color:${T.card};border:1px solid ${T.border};border-radius:3px;overflow:hidden;">
                 ${content}
 
                 <!-- Footer -->
                 <tr>
-                  <td style="padding:28px 48px;border-top:1px solid ${T.divider};">
+                  <td style="padding:30px 52px;border-top:1px solid ${T.divider};">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="font-family:${T.sansStack};font-size:11px;color:${T.textLight};line-height:1.8;text-align:center;">
@@ -205,7 +255,7 @@ function ctaButton(label: string, href: string): string {
     <tr>
       <td style="background-color:${T.accentGold};border-radius:2px;">
         <a href="${href}" target="_blank"
-          style="display:inline-block;padding:14px 36px;font-family:${T.sansStack};font-size:12px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">${label}</a>
+          style="display:inline-block;padding:15px 38px;font-family:${T.sansStack};font-size:12px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">${label}</a>
       </td>
     </tr>
   </table>`;
@@ -232,25 +282,24 @@ export function otpEmailHtml(otp: string, purpose: 'signup' | 'reset_password'):
   const body = `
   <!-- Dark header strip -->
   <tr>
-    <td style="background-color:${T.headerBg};padding:40px 48px 36px;">
-      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">${isSignup ? 'Account verification' : 'Password reset'}</p>
-      <h1 style="margin:0;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.2;">${heading}</h1>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">${isSignup ? 'Account verification' : 'Password reset'}</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:34px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.2;">${heading}</h1>
     </td>
   </tr>
-  <!-- Gold rule -->
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <!-- Body -->
   <tr>
-    <td class="email-pad" style="padding:44px 48px 40px;">
+    <td class="email-pad" style="padding:46px 52px 42px;">
       <p style="margin:0 0 36px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">${intro}</p>
 
       <!-- OTP box -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;width:100%;">
         <tr>
-          <td align="center" style="background-color:#FAFAF8;border:1px solid ${T.border};border-top:3px solid ${T.accentGold};padding:32px 24px;">
+          <td align="center" style="background-color:#FAFAF8;border:1px solid ${T.border};border-top:3px solid ${T.accentGold};padding:34px 24px;">
             ${sectionHeading('Your one-time code')}
-            <p style="margin:12px 0 8px;font-family:${T.monoStack};font-size:44px;font-weight:700;color:${T.textPrimary};letter-spacing:0.35em;line-height:1;">${otp}</p>
+            <p style="margin:14px 0 8px;font-family:${T.monoStack};font-size:44px;font-weight:700;color:${T.textPrimary};letter-spacing:0.35em;line-height:1;">${otp}</p>
             <p style="margin:0;font-family:${T.sansStack};font-size:12px;color:${T.textLight};">Expires in <strong style="color:${T.textMuted};">10 minutes</strong></p>
           </td>
         </tr>
@@ -259,7 +308,7 @@ export function otpEmailHtml(otp: string, purpose: 'signup' | 'reset_password'):
       <!-- Security note -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
         <tr>
-          <td style="background-color:${T.warnBg};border-left:3px solid ${T.warnBdr};padding:14px 16px;">
+          <td style="background-color:${T.warnBg};border-left:3px solid ${T.warnBdr};padding:15px 18px;">
             <p style="margin:0;font-family:${T.sansStack};font-size:12px;color:#78350F;line-height:1.6;">Never share this code. Alpha Imports will never ask for it by phone or email.</p>
           </td>
         </tr>
@@ -277,18 +326,18 @@ export function welcomeEmailHtml(name: string): string {
   const firstName = name.split(' ')[0] || name;
 
   const features = [
-    { icon: '◈', label: 'GIA-certified gemstones', desc: 'Browse thousands of certified diamonds, sapphires, rubies, and emeralds.' },
-    { icon: '◈', label: 'Expert consultation', desc: 'Get guidance from our gemologists on sourcing and valuation.' },
-    { icon: '◈', label: 'Secure checkout', desc: 'PayPal-protected payments with full order tracking.' },
+    { color: T.gemSapphire, label: 'GIA-certified gemstones', desc: 'Browse thousands of certified diamonds, sapphires, rubies, and emeralds.' },
+    { color: T.gemEmerald,  label: 'Expert consultation',      desc: 'Get guidance from our gemologists on sourcing and valuation.' },
+    { color: T.gemRuby,     label: 'Secure checkout',          desc: 'PayPal-protected payments with full order tracking.' },
   ];
 
   const featureRows = features.map(f => `
     <tr>
-      <td style="padding:16px 0;border-bottom:1px solid ${T.divider};">
+      <td style="padding:18px 0;border-bottom:1px solid ${T.divider};">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
-            <td style="width:28px;vertical-align:top;padding-top:1px;">
-              <span style="font-family:${T.sansStack};font-size:14px;color:${T.accentGold};">${f.icon}</span>
+            <td style="width:26px;vertical-align:top;padding-top:4px;">
+              ${gemDot(f.color)}
             </td>
             <td>
               <p style="margin:0 0 3px;font-family:${T.sansStack};font-size:13px;font-weight:700;color:${T.textPrimary};">${f.label}</p>
@@ -302,17 +351,17 @@ export function welcomeEmailHtml(name: string): string {
   const body = `
   <!-- Hero header -->
   <tr>
-    <td style="background-color:${T.headerBg};padding:52px 48px 44px;">
-      <p style="margin:0 0 20px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">Welcome</p>
-      <h1 style="margin:0 0 12px;font-family:${T.fontStack};font-size:36px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.15;">Welcome to<br /><em style="color:${T.accentGold};font-style:italic;">Alpha Imports</em></h1>
+    <td style="background-color:${T.headerBg};padding:56px 52px 48px;">
+      <p style="margin:0 0 20px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Welcome</p>
+      <h1 style="margin:0 0 12px;font-family:${T.fontStack};font-size:38px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.15;">Welcome to<br /><em style="color:${T.accentGold};font-style:italic;">Alpha Imports</em></h1>
       <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.55);line-height:1.6;">Fine gemstones, delivered worldwide.</p>
     </td>
   </tr>
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <!-- Greeting -->
   <tr>
-    <td class="email-pad" style="padding:44px 48px 0;">
+    <td class="email-pad" style="padding:46px 52px 0;">
       <p style="margin:0 0 16px;font-family:${T.fontStack};font-size:20px;color:${T.textPrimary};line-height:1.5;">Dear ${firstName},</p>
       <p style="margin:0 0 36px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
         Your account is now active. You have full access to the Alpha Imports platform — explore our curated collection of fine gemstones and diamonds sourced from around the world.
@@ -322,7 +371,7 @@ export function welcomeEmailHtml(name: string): string {
 
   <!-- Features -->
   <tr>
-    <td class="email-pad" style="padding:0 48px 40px;">
+    <td class="email-pad" style="padding:0 52px 42px;">
       ${sectionHeading('What you can do')}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
         ${featureRows}
@@ -332,7 +381,7 @@ export function welcomeEmailHtml(name: string): string {
 
   <!-- CTA -->
   <tr>
-    <td class="email-pad" style="padding:0 48px 44px;">
+    <td class="email-pad" style="padding:0 52px 46px;">
       ${ctaButton('Explore the Collection', `${SITE_URL}/products`)}
     </td>
   </tr>`;
@@ -348,15 +397,15 @@ export function passwordResetConfirmationEmailHtml(name: string): string {
 
   const body = `
   <tr>
-    <td style="background-color:${T.headerBg};padding:40px 48px 36px;">
-      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">Security notice</p>
-      <h1 style="margin:0;font-family:${T.fontStack};font-size:30px;font-weight:400;color:#FFFFFF;line-height:1.2;">Password updated</h1>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Security notice</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;line-height:1.2;">Password updated</h1>
     </td>
   </tr>
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <tr>
-    <td class="email-pad" style="padding:44px 48px 40px;">
+    <td class="email-pad" style="padding:46px 52px 42px;">
       <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:19px;color:${T.textPrimary};">Dear ${firstName},</p>
       <p style="margin:0 0 32px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
         Your Alpha Imports account password has been successfully updated. You can now sign in with your new credentials.
@@ -417,11 +466,11 @@ function formatCurrency(amount: number): string {
 function orderItemsRows(items: OrderEmailItem[]): string {
   return items.map(item => `
     <tr>
-      <td style="padding:14px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};line-height:1.5;vertical-align:top;">
+      <td style="padding:15px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};line-height:1.5;vertical-align:top;">
         <strong style="display:block;font-weight:600;">${item.name}</strong>
         <span style="color:${T.textMuted};font-size:12px;">Qty: ${item.quantity}</span>
       </td>
-      <td style="padding:14px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};text-align:right;vertical-align:top;white-space:nowrap;">
+      <td style="padding:15px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};text-align:right;vertical-align:top;white-space:nowrap;">
         ${formatCurrency(item.price * item.quantity)}
       </td>
     </tr>`).join('');
@@ -437,20 +486,20 @@ export function orderConfirmationEmailHtml(data: OrderEmailData): string {
   const body = `
   <!-- Hero -->
   <tr>
-    <td style="background-color:${T.headerBg};padding:40px 48px 36px;">
-      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">Order confirmed</p>
-      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;line-height:1.2;">Thank you, ${firstName}.</h1>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Order confirmed</p>
+      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:34px;font-weight:400;color:#FFFFFF;line-height:1.2;">Thank you, ${firstName}.</h1>
       <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.5);">We've received your order and it's being processed.</p>
     </td>
   </tr>
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <!-- Order ID -->
   <tr>
-    <td style="padding:36px 48px 0;" class="email-pad">
+    <td style="padding:38px 52px 0;" class="email-pad">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:16px 24px;">
+          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:17px 26px;">
             ${sectionHeading('Order reference')}
             <p style="margin:6px 0 0;font-family:${T.monoStack};font-size:18px;font-weight:700;color:${T.textPrimary};letter-spacing:0.08em;">#${shortOrderId}</p>
           </td>
@@ -461,7 +510,7 @@ export function orderConfirmationEmailHtml(data: OrderEmailData): string {
 
   <!-- Items -->
   <tr>
-    <td class="email-pad" style="padding:32px 48px 0;">
+    <td class="email-pad" style="padding:34px 52px 0;">
       ${sectionHeading('Items ordered')}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;border-top:2px solid ${T.textPrimary};">
         ${orderItemsRows(data.items)}
@@ -471,7 +520,7 @@ export function orderConfirmationEmailHtml(data: OrderEmailData): string {
 
   <!-- Totals -->
   <tr>
-    <td class="email-pad" style="padding:0 48px 32px;">
+    <td class="email-pad" style="padding:0 52px 34px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="padding:8px 0;font-family:${T.sansStack};font-size:13px;color:${T.textMuted};">Subtotal</td>
@@ -486,8 +535,8 @@ export function orderConfirmationEmailHtml(data: OrderEmailData): string {
           <td style="padding:8px 0;font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};text-align:right;">${formatCurrency(data.tax)}</td>
         </tr>
         <tr>
-          <td style="padding:14px 0 4px;font-family:${T.sansStack};font-size:15px;font-weight:700;color:${T.textPrimary};border-top:2px solid ${T.textPrimary};">Total</td>
-          <td style="padding:14px 0 4px;font-family:${T.sansStack};font-size:15px;font-weight:700;color:${T.textPrimary};text-align:right;border-top:2px solid ${T.textPrimary};">${formatCurrency(data.totalAmount)}</td>
+          <td style="padding:15px 0 4px;font-family:${T.sansStack};font-size:15px;font-weight:700;color:${T.textPrimary};border-top:2px solid ${T.textPrimary};">Total</td>
+          <td style="padding:15px 0 4px;font-family:${T.sansStack};font-size:15px;font-weight:700;color:${T.textPrimary};text-align:right;border-top:2px solid ${T.textPrimary};">${formatCurrency(data.totalAmount)}</td>
         </tr>
         <tr>
           <td style="padding:4px 0 0;font-family:${T.sansStack};font-size:12px;color:${T.textLight};">Payment via</td>
@@ -499,16 +548,16 @@ export function orderConfirmationEmailHtml(data: OrderEmailData): string {
 
   <!-- Shipping address -->
   <tr>
-    <td class="email-pad" style="padding:0 48px 44px;">
+    <td class="email-pad" style="padding:0 52px 46px;">
       ${sectionHeading('Shipping to')}
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;width:100%;">
         <tr>
-          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:18px 20px;font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};line-height:1.8;">
+          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:19px 22px;font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};line-height:1.8;">
             <strong>${addr.fullName}</strong><br />${addressLines}
           </td>
         </tr>
       </table>
-      <div style="margin-top:28px;">
+      <div style="margin-top:30px;">
         ${ctaButton('View Your Order', `${SITE_URL}/orders`)}
       </div>
     </td>
@@ -537,20 +586,20 @@ export function orderShippedEmailHtml(data: OrderShippedEmailData): string {
   const body = `
   <!-- Hero -->
   <tr>
-    <td style="background-color:${T.headerBg};padding:40px 48px 36px;">
-      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">Your order has shipped</p>
-      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;line-height:1.2;">It's on its way, ${firstName}.</h1>
-      <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.5);">Order <strong style="color:rgba(255,255,255,0.7);">#${shortOrderId}</strong> has left our warehouse.</p>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Your order has shipped</p>
+      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:34px;font-weight:400;color:#FFFFFF;line-height:1.2;">It's on its way, ${firstName}.</h1>
+      <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.5);">Order <strong style="color:rgba(255,255,255,0.75);">#${shortOrderId}</strong> has left our warehouse.</p>
     </td>
   </tr>
-  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+  ${facetRule()}
 
   <tr>
-    <td class="email-pad" style="padding:44px 48px 40px;">
+    <td class="email-pad" style="padding:46px 52px 42px;">
       <!-- Tracking card -->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
         <tr>
-          <td style="background-color:#FAFAF8;border:1px solid ${T.border};border-top:3px solid ${T.accentGold};padding:28px 28px;">
+          <td style="background-color:#FAFAF8;border:1px solid ${T.border};border-top:3px solid ${T.accentGold};padding:30px 30px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               ${data.shippingCarrier ? `<tr>
                 <td style="padding-bottom:20px;">
@@ -599,25 +648,25 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
     ? `<tr>
         <td style="padding:0;">
           <a href="${SITE_URL}/products" target="_blank" style="display:block;text-decoration:none;">
-            <img src="${data.image}" alt="${data.title}" width="640"
-              style="display:block;width:100%;max-width:640px;height:auto;border:0;" />
+            <img src="${data.image}" alt="${data.title}" width="${CONTENT_WIDTH}"
+              style="display:block;width:100%;max-width:${CONTENT_WIDTH}px;height:auto;border:0;" />
           </a>
         </td>
        </tr>
        <tr>
-         <td style="background-color:${T.headerBg};padding:36px 48px 32px;">
-           <p style="margin:0 0 10px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">${BRAND_NAME} · Newsletter</p>
-           <h1 style="margin:0;font-family:${T.fontStack};font-size:30px;font-weight:400;color:#FFFFFF;line-height:1.25;">${data.title}</h1>
+         <td style="background-color:${T.headerBg};padding:38px 52px 34px;">
+           <p style="margin:0 0 10px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">${BRAND_NAME} · Newsletter</p>
+           <h1 style="margin:0;font-family:${T.fontStack};font-size:29px;font-weight:400;color:#FFFFFF;line-height:1.25;">${data.title}</h1>
          </td>
        </tr>
-       <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>`
+       ${facetRule()}`
     : `<tr>
-        <td style="background-color:${T.headerBg};padding:52px 48px 44px;">
-          <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">${BRAND_NAME} · Newsletter</p>
-          <h1 style="margin:0;font-family:${T.fontStack};font-size:36px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.2;">${data.title}</h1>
+        <td style="background-color:${T.headerBg};padding:56px 52px 48px;">
+          <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">${BRAND_NAME} · Newsletter</p>
+          <h1 style="margin:0;font-family:${T.fontStack};font-size:38px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.2;">${data.title}</h1>
         </td>
        </tr>
-       <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>`;
+       ${facetRule()}`;
 
   // Inline-safe rich text transforms
   const messageContent = data.message
@@ -636,7 +685,7 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
 
   <!-- Content -->
   <tr>
-    <td class="email-pad" style="padding:44px 48px 36px;">
+    <td class="email-pad" style="padding:46px 52px 38px;">
       <div>${messageContent}</div>
 
       <!-- Divider -->
@@ -644,7 +693,7 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
         <tr>
           <td style="border-top:1px solid ${T.divider};"></td>
           <td style="width:40px;text-align:center;padding:0 12px;">
-            <span style="font-family:${T.sansStack};font-size:12px;color:${T.accentGold};">✦</span>
+            <div style="display:inline-block;width:7px;height:7px;background-color:${T.accentGold};transform:rotate(45deg);">&nbsp;</div>
           </td>
           <td style="border-top:1px solid ${T.divider};"></td>
         </tr>
@@ -653,7 +702,7 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
       <!-- CTA block -->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
         <tr>
-          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:28px 32px;">
+          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:30px 34px;">
             <p style="margin:0 0 6px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.textLight};letter-spacing:0.18em;text-transform:uppercase;">Explore now</p>
             <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:18px;color:${T.textPrimary};line-height:1.4;">Discover our latest collection of certified gemstones.</p>
             ${ctaButton('Shop the Collection', `${SITE_URL}/products`)}
@@ -673,7 +722,6 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
 
   return emailWrapper(body, data.subject);
 }
-// ─── Coupon Email ─────────────────────────────────────────────────────────────
 
 // ─── Coupon Email ─────────────────────────────────────────────────────────────
 
@@ -691,57 +739,59 @@ export function couponEmailHtml(data: CouponEmailData): string {
   });
 
   const discountPercent = data.discountPercent;
-  const minPurchase     = data.minPurchase;
-  const code            = data.code;
-  const siteUrl         = SITE_URL;
-  const supportEmail    = SUPPORT_EMAIL;
+  const minPurchase = data.minPurchase;
+  const code = data.code;
 
-  const body =
-    '<tr>' +
-    '<td style="background-color:' + T.headerBg + ';padding:32px 48px 28px;">' +
-    '<p style="margin:0;font-family:' + T.sansStack + ';font-size:10px;font-weight:700;color:' + T.accentGold + ';letter-spacing:0.22em;text-transform:uppercase;">Alpha Imports</p>' +
-    '<h1 style="margin:10px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#F9F7F4;line-height:1.25;">Your ' + discountPercent + '% Off Coupon</h1>' +
-    '</td>' +
-    '</tr>' +
-    '<tr>' +
-    '<td class="email-pad" style="padding:44px 48px 36px;background-color:' + T.card + ';">' +
-    '<p style="margin:0 0 24px;font-family:' + T.sansStack + ';font-size:14px;color:' + T.textMuted + ';line-height:1.7;">' +
-    "Thank you for joining the Alpha Imports community. Here's your exclusive discount code — use it on your next order." +
-    '</p>' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">' +
-    '<tr>' +
-    '<td style="background-color:#0F3460;border-radius:4px;padding:24px 32px;text-align:center;">' +
-    '<p style="margin:0 0 6px;font-family:' + T.sansStack + ';font-size:10px;font-weight:700;color:#8099B5;letter-spacing:0.2em;text-transform:uppercase;">Your Coupon Code</p>' +
-    '<p style="margin:0;font-family:' + T.monoStack + ';font-size:30px;font-weight:700;color:#C9A96E;letter-spacing:0.18em;">' + code + '</p>' +
-    '</td>' +
-    '</tr>' +
-    '</table>' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 32px;">' +
-    '<tr>' +
-    '<td style="background-color:' + T.warnBg + ';border-left:3px solid ' + T.warnBdr + ';padding:16px 20px;">' +
-    '<p style="margin:0 0 8px;font-family:' + T.sansStack + ';font-size:11px;font-weight:700;color:' + T.textPrimary + ';letter-spacing:0.1em;text-transform:uppercase;">Terms &amp; Conditions</p>' +
-    '<ul style="margin:0;padding-left:18px;font-family:' + T.sansStack + ';font-size:12px;color:' + T.textMuted + ';line-height:1.9;">' +
-    '<li>' + discountPercent + '% off your order subtotal</li>' +
-    '<li>Minimum purchase of $' + minPurchase + ' required (before shipping)</li>' +
-    '<li>Valid for one use only</li>' +
-    '<li>Expires on <strong>' + expiryStr + '</strong></li>' +
-    '</ul>' +
-    '</td>' +
-    '</tr>' +
-    '</table>' +
-    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 32px;">' +
-    '<tr>' +
-    '<td style="background-color:#0F3460;border-radius:2px;">' +
-    '<a href="' + siteUrl + '/products" style="display:inline-block;padding:14px 36px;font-family:' + T.sansStack + ';font-size:12px;font-weight:600;color:#FFFFFF;text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;">Shop Now</a>' +
-    '</td>' +
-    '</tr>' +
-    '</table>' +
-    '<p style="margin:0;font-family:' + T.sansStack + ';font-size:11px;color:' + T.textLight + ';text-align:center;line-height:1.8;">' +
-    'Questions? Reply to this email or contact us at ' +
-    '<a href="mailto:' + supportEmail + '" style="color:' + T.accentGold + ';text-decoration:none;">' + supportEmail + '</a>' +
-    '</p>' +
-    '</td>' +
-    '</tr>';
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">A gift, for you</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:33px;font-weight:400;color:#FFFFFF;line-height:1.25;">Your ${discountPercent}% Off Coupon</h1>
+    </td>
+  </tr>
+  ${facetRule()}
 
-  return emailWrapper(body, 'Your ' + discountPercent + '% off code: ' + code);
+  <tr>
+    <td class="email-pad" style="padding:46px 52px 42px;">
+      <p style="margin:0 0 30px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
+        Thank you for joining the Alpha Imports community. Here's your exclusive discount code — use it on your next order.
+      </p>
+
+      <!-- Coupon code -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+        <tr>
+          <td align="center" style="background-color:${T.headerBg};padding:30px 24px;">
+            <p style="margin:0 0 8px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Your coupon code</p>
+            <p style="margin:0;font-family:${T.monoStack};font-size:32px;font-weight:700;color:#FFFFFF;letter-spacing:0.2em;">${code}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Terms -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
+        <tr>
+          <td style="background-color:${T.warnBg};border-left:3px solid ${T.warnBdr};padding:18px 22px;">
+            <p style="margin:0 0 10px;font-family:${T.sansStack};font-size:11px;font-weight:700;color:${T.textPrimary};letter-spacing:0.12em;text-transform:uppercase;">Terms &amp; conditions</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-family:${T.sansStack};font-size:12px;color:${T.textMuted};line-height:1.9;">
+              <tr><td style="padding:2px 0;">— ${discountPercent}% off your order subtotal</td></tr>
+              <tr><td style="padding:2px 0;">— Minimum purchase of $${minPurchase} required (before shipping)</td></tr>
+              <tr><td style="padding:2px 0;">— Valid for one use only</td></tr>
+              <tr><td style="padding:2px 0;">— Expires on <strong style="color:${T.textPrimary};">${expiryStr}</strong></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align:center;">
+        ${ctaButton('Shop Now', `${SITE_URL}/products`)}
+      </div>
+
+      <p style="margin:32px 0 0;font-family:${T.sansStack};font-size:11px;color:${T.textLight};text-align:center;line-height:1.8;">
+        Questions? Reply to this email or contact us at
+        <a href="mailto:${SUPPORT_EMAIL}" style="color:${T.accentGold};text-decoration:none;">${SUPPORT_EMAIL}</a>
+      </p>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `Your ${discountPercent}% off code: ${code}`);
 }
