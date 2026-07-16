@@ -201,7 +201,7 @@ export default function JewelryModal({
                         Sending…
                       </>
                     ) : (
-                      "Unlock $10 Off"
+                      "Unlock 10% Off"
                     )}
                   </button>
                 </div>
@@ -250,7 +250,7 @@ export default function JewelryModal({
                 You're in
               </h3>
               <p className="text-[13px] font-light leading-relaxed text-[#4a6080]">
-                Check your inbox — your $10 off code is on its way.
+                Check your inbox — your 10% off code is on its way.
               </p>
               <p className="mt-2 text-[11px] text-[#8099b5]">
                 Valid for 30 days · Min. $200 purchase

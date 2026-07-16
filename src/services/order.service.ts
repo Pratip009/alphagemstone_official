@@ -113,7 +113,7 @@ export async function createOrderFromCart(
   await order.save();
 
   if (appliedCouponCode) {
-    await redeemCoupon(appliedCouponCode, order._id.toString());
+    await redeemCoupon(appliedCouponCode, order._id.toString(), subtotal);
   }
 
   return order;

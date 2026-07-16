@@ -675,11 +675,13 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
 }
 // ─── Coupon Email ─────────────────────────────────────────────────────────────
 
+// ─── Coupon Email ─────────────────────────────────────────────────────────────
+
 interface CouponEmailData {
   email: string;
   code: string;
   expiresAt: Date;
-  discount: number;
+  discountPercent: number;
   minPurchase: number;
 }
 
@@ -688,17 +690,17 @@ export function couponEmailHtml(data: CouponEmailData): string {
     month: 'long', day: 'numeric', year: 'numeric',
   });
 
-  const discountAmt  = data.discount;
-  const minPurchase  = data.minPurchase;
-  const code         = data.code;
-  const siteUrl      = SITE_URL;
-  const supportEmail = SUPPORT_EMAIL;
+  const discountPercent = data.discountPercent;
+  const minPurchase     = data.minPurchase;
+  const code            = data.code;
+  const siteUrl         = SITE_URL;
+  const supportEmail    = SUPPORT_EMAIL;
 
   const body =
     '<tr>' +
     '<td style="background-color:' + T.headerBg + ';padding:32px 48px 28px;">' +
     '<p style="margin:0;font-family:' + T.sansStack + ';font-size:10px;font-weight:700;color:' + T.accentGold + ';letter-spacing:0.22em;text-transform:uppercase;">Alpha Imports</p>' +
-    '<h1 style="margin:10px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#F9F7F4;line-height:1.25;">Your $' + discountAmt + ' Off Coupon</h1>' +
+    '<h1 style="margin:10px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#F9F7F4;line-height:1.25;">Your ' + discountPercent + '% Off Coupon</h1>' +
     '</td>' +
     '</tr>' +
     '<tr>' +
@@ -719,7 +721,7 @@ export function couponEmailHtml(data: CouponEmailData): string {
     '<td style="background-color:' + T.warnBg + ';border-left:3px solid ' + T.warnBdr + ';padding:16px 20px;">' +
     '<p style="margin:0 0 8px;font-family:' + T.sansStack + ';font-size:11px;font-weight:700;color:' + T.textPrimary + ';letter-spacing:0.1em;text-transform:uppercase;">Terms &amp; Conditions</p>' +
     '<ul style="margin:0;padding-left:18px;font-family:' + T.sansStack + ';font-size:12px;color:' + T.textMuted + ';line-height:1.9;">' +
-    '<li>$' + discountAmt + ' flat discount on qualifying orders</li>' +
+    '<li>' + discountPercent + '% off your order subtotal</li>' +
     '<li>Minimum purchase of $' + minPurchase + ' required (before shipping)</li>' +
     '<li>Valid for one use only</li>' +
     '<li>Expires on <strong>' + expiryStr + '</strong></li>' +
@@ -741,5 +743,5 @@ export function couponEmailHtml(data: CouponEmailData): string {
     '</td>' +
     '</tr>';
 
-  return emailWrapper(body, 'Your $' + discountAmt + ' off code: ' + code);
+  return emailWrapper(body, 'Your ' + discountPercent + '% off code: ' + code);
 }

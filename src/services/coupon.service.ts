@@ -5,9 +5,14 @@ import { couponEmailHtml } from '@/lib/email-templates';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
-const DISCOUNT_AMOUNT = 10;    // $10 flat
-const MIN_PURCHASE    = 200;   // $200 minimum subtotal
-const VALIDITY_DAYS   = 30;    // 1 month
+const DISCOUNT_PERCENT = 10;   // 10% off subtotal
+const MIN_PURCHASE     = 200;  // $200 minimum subtotal
+const VALIDITY_DAYS    = 30;   // 1 month
+
+/** Computes the dollar discount for a given subtotal at the given percentage, rounded to cents. */
+function calculateDiscountAmount(subtotal: number, percent: number): number {
+  return Math.round(subtotal * (percent / 100) * 100) / 100;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -33,13 +38,13 @@ async function sendCouponEmail(
   email: string,
   code: string,
   expiresAt: Date,
-  discount: number,
+  discountPercent: number,
 ) {
   const { error } = await resend.emails.send({
     from:    EMAIL_FROM,
     to:      email,
-    subject: `Your $${discount} Off Coupon — Alpha Imports`,
-    html:    couponEmailHtml({ email, code, expiresAt, discount, minPurchase: MIN_PURCHASE }),
+    subject: `Your ${discountPercent}% Off Coupon — Alpha Imports`,
+    html:    couponEmailHtml({ email, code, expiresAt, discountPercent, minPurchase: MIN_PURCHASE }),
   });
 
   if (error) {
@@ -62,7 +67,7 @@ export async function subscribeCoupon(email: string): Promise<ICoupon> {
   if (existing) {
     // Resend the existing code if still valid
     if (existing.expiresAt > new Date()) {
-      await sendCouponEmail(normalizedEmail, existing.code, existing.expiresAt, existing.discount);
+      await sendCouponEmail(normalizedEmail, existing.code, existing.expiresAt, existing.discountPercent);
       return existing;
     }
     // Expired — fall through to create a new one
@@ -72,15 +77,15 @@ export async function subscribeCoupon(email: string): Promise<ICoupon> {
   const expiresAt = new Date(Date.now() + VALIDITY_DAYS * 24 * 60 * 60 * 1000);
 
   const coupon = new Coupon({
-    email:       normalizedEmail,
+    email:           normalizedEmail,
     code,
-    discount:    DISCOUNT_AMOUNT,
-    minPurchase: MIN_PURCHASE,
+    discountPercent: DISCOUNT_PERCENT,
+    minPurchase:     MIN_PURCHASE,
     expiresAt,
   });
   await coupon.save();
 
-  await sendCouponEmail(normalizedEmail, code, expiresAt, DISCOUNT_AMOUNT);
+  await sendCouponEmail(normalizedEmail, code, expiresAt, DISCOUNT_PERCENT);
 
   return coupon;
 }
@@ -114,10 +119,12 @@ export async function validateCoupon(code: string, subtotal: number): Promise<Va
     };
   }
 
+  const discountAmount = calculateDiscountAmount(subtotal, coupon.discountPercent);
+
   return {
     valid:    true,
-    discount: coupon.discount,
-    message:  `$${coupon.discount} off applied!`,
+    discount: discountAmount,
+    message:  `${coupon.discountPercent}% off applied! (-$${discountAmount.toFixed(2)})`,
     couponId: coupon._id.toString(),
   };
 }
@@ -134,14 +141,14 @@ export async function resendCouponEmail(id: string): Promise<ICoupon> {
   if (coupon.isUsed) throw new Error('Cannot resend a coupon that has already been used');
   if (coupon.expiresAt < new Date()) throw new Error('Cannot resend an expired coupon');
 
-  await sendCouponEmail(coupon.email, coupon.code, coupon.expiresAt, coupon.discount);
+  await sendCouponEmail(coupon.email, coupon.code, coupon.expiresAt, coupon.discountPercent);
 
   return coupon;
 }
 
 // ─── Internal: redeem on order ────────────────────────────────────────────────
 
-export async function redeemCoupon(code: string, orderId: string): Promise<number> {
+export async function redeemCoupon(code: string, orderId: string, subtotal: number): Promise<number> {
   const coupon = await Coupon.findOne({ code: code.toUpperCase().trim() });
   if (!coupon || coupon.isUsed || coupon.expiresAt < new Date()) return 0;
 
@@ -150,7 +157,7 @@ export async function redeemCoupon(code: string, orderId: string): Promise<numbe
   coupon.usedByOrderId = orderId as unknown as any;
   await coupon.save();
 
-  return coupon.discount;
+  return calculateDiscountAmount(subtotal, coupon.discountPercent);
 }
 
 // ─── Admin: list coupons ──────────────────────────────────────────────────────

@@ -89,7 +89,7 @@ export default function ShippingRateSelector({
       <div className={`rounded-xl border border-gray-200 p-6 ${className}`}>
         <div className="flex items-center gap-3 text-gray-500">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-          <span className="text-sm">Fetching shipping rates…</span>
+          <span className="text-sm">Loading shipping rates…</span>
         </div>
         <div className="mt-4 space-y-2">
           {[1, 2, 3].map((i) => (
