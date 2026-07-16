@@ -1508,38 +1508,20 @@ export default function Navbar({
         <div className="nav-top-row">
           {/* Logo */}
           <Link
-            href="/"
-            onClick={() => setMenuOpen(false)}
-            className="nav-logo"
-          >
-            <div className="logo-gem">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 32 32"
-                fill="none"
-                style={{ position: "relative", zIndex: 1 }}
-              >
-                <polygon
-                  points="16,3 29,12 16,29 3,12"
-                  stroke="#ffffff"
-                  strokeWidth="1.6"
-                  fill="none"
-                />
-                <polygon
-                  points="16,3 29,12 16,15 3,12"
-                  stroke="#a5b4fc"
-                  strokeWidth="1.2"
-                  fill="none"
-                  opacity="0.7"
-                />
-              </svg>
-            </div>
-            <div>
-              <span className="logo-name">Alpha Imports</span>
-              <span className="logo-sub">Fine Gemstones</span>
-            </div>
-          </Link>
+  href="/"
+  onClick={() => setMenuOpen(false)}
+  className="nav-logo"
+>
+  <Image
+    src="/logo/applogo.png"
+    alt="Alpha Gemstones Logo"
+    width={150}
+    height={50}
+    priority
+  />
+
+  
+</Link>
 
           {/* Desktop Search */}
           <div
