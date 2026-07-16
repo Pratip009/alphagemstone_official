@@ -22,8 +22,8 @@ const T = {
   card:        '#FFFFFF',
   headerBg:    '#0B0A08',   // near-black, slightly warm
   accentGold:  '#C9A84C',   // house gold — primary brand accent
-  accentDark:  '#1A1410',
-  textPrimary: '#1A1410',
+  accentDark:  '#a9a9a9',
+  textPrimary: '#d2d2d2',
   textMuted:   '#6B6560',
   textLight:   '#9E9994',
   border:      '#E8E3DC',   // warm gray border
