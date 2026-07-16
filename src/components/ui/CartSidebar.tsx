@@ -23,6 +23,7 @@ interface CartData {
   totals?: {
     subtotal: number;
     total: number;
+    shippingCost?: number;
   };
 }
 
@@ -40,6 +41,29 @@ export default function CartSidebar({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  // Keep the panel/backdrop mounted for the duration of the close
+  // animation instead of yanking them out of the DOM instantly — this is
+  // what makes the close feel as polished as the open.
+  const [mounted, setMounted] = useState(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PANEL_TRANSITION_MS = 380;
+
+  useEffect(() => {
+    if (open) {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+      setMounted(true);
+    } else if (mounted) {
+      closeTimeoutRef.current = setTimeout(
+        () => setMounted(false),
+        PANEL_TRANSITION_MS,
+      );
+    }
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   // Fetch cart whenever sidebar opens
   useEffect(() => {
     if (!open) return;
@@ -55,22 +79,24 @@ export default function CartSidebar({
       .finally(() => setLoading(false));
   }, [open]);
 
-  // Lock body scroll when open
+  // Lock body scroll while the panel is visible (mounted covers the
+  // closing-animation window too, so scroll doesn't jump back early).
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    document.body.style.overflow = mounted ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [mounted]);
 
   // Close on Escape
   useEffect(() => {
+    if (!open) return;
     const handle = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [onClose]);
+  }, [open, onClose]);
 
   const updateQty = async (
     itemId: string,
@@ -151,20 +177,11 @@ export default function CartSidebar({
 };
 
   const items = cart?.items ?? [];
-  const total = cart?.totals?.total ?? 0;
   const subtotal = cart?.totals?.subtotal ?? 0;
 
   return (
     <>
       <style>{`
-        @keyframes slideInCart {
-          from { transform: translateX(100%); }
-          to   { transform: translateX(0); }
-        }
-        @keyframes fadeInOverlay {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
         @keyframes spinLoader {
           to { transform: rotate(360deg); }
         }
@@ -172,11 +189,9 @@ export default function CartSidebar({
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-        .cart-sidebar-panel {
-          animation: slideInCart 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        .cart-overlay {
-          animation: fadeInOverlay 0.25s ease forwards;
+        @keyframes cartItemIn {
+          from { opacity: 0; transform: translateX(14px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
         .cart-item-row {
           display: flex;
@@ -185,6 +200,7 @@ export default function CartSidebar({
           padding: 16px 0;
           border-bottom: 1px solid #f0eeff;
           transition: background 0.15s;
+          animation: cartItemIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) backwards;
         }
         .cart-item-row:last-child { border-bottom: none; }
         .qty-btn {
@@ -289,20 +305,25 @@ export default function CartSidebar({
         }
       `}</style>
 
-      {/* Backdrop */}
-      {open && (
+      {/* Backdrop — stays mounted through the close animation and fades
+          smoothly rather than vanishing the instant `open` flips false. */}
+      {mounted && (
         <div
           ref={overlayRef}
-          className="cart-overlay fixed inset-0 z-[998]"
+          className="fixed inset-0 z-[998]"
           style={{
             background: "rgba(15, 15, 30, 0.45)",
-            backdropFilter: "blur(2px)",
+            backdropFilter: open ? "blur(3px)" : "blur(0px)",
+            WebkitBackdropFilter: open ? "blur(3px)" : "blur(0px)",
+            opacity: open ? 1 : 0,
+            transition: `opacity ${PANEL_TRANSITION_MS}ms cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter ${PANEL_TRANSITION_MS}ms ease`,
           }}
           onClick={onClose}
         />
       )}
 
       {/* Panel */}
+      {mounted && (
       <div
         role="dialog"
         aria-modal="true"
@@ -311,9 +332,12 @@ export default function CartSidebar({
         style={{
           width: "min(420px, 100vw)",
           background: "#ffffff",
-          boxShadow: "-8px 0 48px rgba(79,70,229,0.14)",
+          boxShadow: open
+            ? "-12px 0 56px rgba(79,70,229,0.18)"
+            : "-4px 0 16px rgba(79,70,229,0.06)",
           transform: open ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
+          transition: `transform ${PANEL_TRANSITION_MS}ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow ${PANEL_TRANSITION_MS}ms ease`,
+          willChange: "transform",
           fontFamily: '"Elms Sans", sans-serif',
         }}
       >
@@ -549,6 +573,7 @@ export default function CartSidebar({
                     style={{
                       opacity: isUpdating ? 0.6 : 1,
                       transition: "opacity 0.2s",
+                      animationDelay: `${Math.min(index, 6) * 45}ms`,
                     }}
                   >
                     {/* Image */}
@@ -763,9 +788,14 @@ export default function CartSidebar({
               >
                 <span style={{ fontSize: 13, color: "#7c7c9a" }}>Shipping</span>
                 <span
-                  style={{ fontSize: 12, color: "#059669", fontWeight: 500 }}
+                  style={{
+                    fontSize: 12,
+                    fontStyle: "italic",
+                    color: "#9a9ab5",
+                    fontWeight: 500,
+                  }}
                 >
-                  Free ✓
+                  Calculated at checkout
                 </span>
               </div>
               <div
@@ -785,7 +815,7 @@ export default function CartSidebar({
                 <span
                   style={{ fontSize: 17, fontWeight: 800, color: "#0f3460" }}
                 >
-                  ${total.toFixed(2)}
+                  ${subtotal.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -799,6 +829,7 @@ export default function CartSidebar({
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

@@ -44,7 +44,7 @@ const T = {
 };
 
 const goldGradient = `linear-gradient(135deg, ${T.gold} 0%, ${T.goldDeep} 100%)`;
-const inkGradient = `linear-gradient(135deg, #34302A 0%, #1A1815 100%)`;
+const inkGradient = `linear-gradient(135deg, #001d90 0%, #001d90 100%)`;
 
 /* ─────────────────────────────────────────────
    Types
@@ -854,67 +854,50 @@ function GemFacetIcon({ size = 20 }: { size?: number }) {
 /* ─────────────────────────────────────────────
    FAB Tooltip — ink & gold
 ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   FAB Tooltip — compact pill above the button
+───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   FAB Tooltip — compact pill, left of the button
+───────────────────────────────────────────── */
 function FabTooltip() {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 16, scale: 0.92 }}
+      initial={{ opacity: 0, x: 10, scale: 0.92 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 12, scale: 0.92 }}
-      transition={{ delay: 2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="absolute right-[72px] top-1/2 -translate-y-1/2 pointer-events-none"
+      exit={{ opacity: 0, x: 8, scale: 0.92 }}
+      transition={{ delay: 2, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="hidden sm:block absolute right-full top-2/3 -translate-y-1/2 mr-3 pointer-events-none"
     >
-      <div className="relative flex flex-col items-end">
+      <div className="relative">
         <div
-          className="flex items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-2xl"
+          className="flex items-center gap-1.5 whitespace-nowrap pl-2.5 pr-3 py-1.5 rounded-full"
           style={{
             background: inkGradient,
-            border: "1px solid rgba(180,145,79,0.3)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05)",
+            border: "1px solid rgba(92,163,255,0.35)",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.22)",
           }}
         >
-          <div className="flex gap-[3px] items-center">
-            {[0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                className="w-[3px] h-[3px] rounded-full"
-                style={{ background: T.gold }}
-                animate={{ opacity: [0.3, 1, 0.3], scaleY: [0.6, 1.4, 0.6] }}
-                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
-              />
-            ))}
-          </div>
-
+          <motion.span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: "#5ca3ff" }}
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          />
           <span
-            className="text-[11px] font-semibold tracking-wide"
-            style={{
-              background: `linear-gradient(90deg, #F3E9D3, ${T.gold}, #C9A876)`,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontFamily: '"Elms Sans", sans-serif',
-            }}
+            className="text-[11px] font-medium"
+            style={{ color: "#EAF2FF", fontFamily: '"Elms Sans", sans-serif' }}
           >
             Ask Victoria
-          </span>
-
-          <span
-            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-widest"
-            style={{
-              background: "rgba(180,145,79,0.18)",
-              color: T.goldPale,
-              border: "1px solid rgba(180,145,79,0.3)",
-              letterSpacing: "0.12em",
-            }}
-          >
-            AI
           </span>
         </div>
 
         <div
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-0 h-0"
+          className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0"
           style={{
             borderTop: "5px solid transparent",
             borderBottom: "5px solid transparent",
-            borderLeft: "6px solid rgba(52,48,42,0.95)",
+            borderLeft: "5px solid #0b174a",
           }}
         />
       </div>
@@ -1139,50 +1122,52 @@ export default function GemConsultant() {
         <AnimatePresence>{!isOpen && <FabTooltip />}</AnimatePresence>
 
         <motion.button
-          onClick={() => setIsOpen((v) => !v)}
-          className="relative w-14 h-14 rounded-full flex items-center justify-center"
-          style={{
-            background: isOpen ? "linear-gradient(135deg, #2A271F 0%, #1A1815 100%)" : inkGradient,
-            boxShadow: isOpen
-              ? "0 4px 20px rgba(26,24,21,0.3), inset 0 1px 0 rgba(255,255,255,0.06)"
-              : "0 14px 40px rgba(26,24,21,0.32), 0 4px 14px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.1)",
-            border: "1px solid rgba(180,145,79,0.35)",
-          }}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.94 }}
-          aria-label="Open Gem Consultant"
-        >
-          {!isOpen && <FabHalo />}
+  onClick={() => setIsOpen((v) => !v)}
+  className="relative w-14 h-14 rounded-full flex items-center justify-center"
+  style={{
+    background: isOpen
+      ? "linear-gradient(135deg, #163b8a 0%, #0b174a 100%)"
+      : "linear-gradient(160deg, #5ca3ff 0%, #2661e0 42%, #1710a2 100%)",
+    boxShadow: isOpen
+      ? "0 4px 20px rgba(22, 68, 138, 0.35), inset 0 1px 0 rgba(255,255,255,0.12)"
+      : "0 14px 40px rgba(16, 72, 162, 0.38), 0 4px 14px rgba(0,0,0,0.18), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -6px 10px rgba(0,0,0,0.22)",
+    border: "1px solid rgba(255,255,255,0.25)",
+  }}
+  whileHover={{ scale: 1.06 }}
+  whileTap={{ scale: 0.94 }}
+  aria-label="Open Gem Consultant"
+>
+  {!isOpen && <FabHalo />}
 
-          <LiveBadgeDot borderColor={isOpen ? "#1A1815" : "#211E1B"} />
+  <LiveBadgeDot borderColor={isOpen ? "#0b3a4a" : "#1052a2"} />
 
-          <AnimatePresence mode="wait">
-            {isOpen ? (
-              <motion.span
-                key="close"
-                className="relative z-10"
-                style={{ color: T.goldPale }}
-                initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <X size={18} strokeWidth={1.5} />
-              </motion.span>
-            ) : (
-              <motion.span
-                key="gem"
-                className="relative z-10"
-                initial={{ rotate: 30, opacity: 0, scale: 0.6 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                exit={{ rotate: -30, opacity: 0, scale: 0.6 }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <GemFacetIcon size={22} />
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+  <AnimatePresence mode="wait">
+    {isOpen ? (
+      <motion.span
+        key="close"
+        className="relative z-10"
+        style={{ color: "#FFE8E8" }}
+        initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+        animate={{ rotate: 0, opacity: 1, scale: 1 }}
+        exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <X size={18} strokeWidth={1.5} />
+      </motion.span>
+    ) : (
+      <motion.span
+        key="gem"
+        className="relative z-10"
+        initial={{ rotate: 30, opacity: 0, scale: 0.6 }}
+        animate={{ rotate: 0, opacity: 1, scale: 1 }}
+        exit={{ rotate: -30, opacity: 0, scale: 0.6 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <GemFacetIcon size={22} />
+      </motion.span>
+    )}
+  </AnimatePresence>
+</motion.button>
       </div>
 
       {/* ── Chat Panel ── */}

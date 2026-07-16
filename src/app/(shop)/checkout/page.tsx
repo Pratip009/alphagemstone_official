@@ -331,6 +331,13 @@ export default function CheckoutPage() {
       .catch(() => router.push('/login'));
   }, []);
 
+  // Bring the top of the card into view whenever the step changes, so the
+  // person always starts a new step (address / rates / payment) from the top
+  // instead of landing wherever their scroll position happened to be.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
+
   useEffect(() => {
     const newErrors = validateForm(form, pinVerified);
     setErrors((prev) => {
@@ -526,6 +533,13 @@ export default function CheckoutPage() {
     currency: 'USD',
   };
 
+  // Whether the fixed bottom action bar should be shown for the current step.
+  // This keeps the primary call-to-action (choose shipping / continue to
+  // payment) permanently visible on screen, so people never have to scroll
+  // down to find it after picking a shipping rate.
+  const showActionBar = step === 'shipping' || step === 'rates';
+  const grandTotalForBar = Math.max(0, total + (selectedShipping?.rate ?? 0) - couponDiscount);
+
   return (
     // ── PayPalScriptProvider wraps the ENTIRE page so it is never
     // unmounted/remounted as the user moves between steps.
@@ -578,6 +592,7 @@ export default function CheckoutPage() {
           @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
           @keyframes spin { to { transform: rotate(360deg); } }
           @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+          @keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
           .co * { box-sizing: border-box; margin: 0; padding: 0; }
           .co input::placeholder { color: #cbd5e1 !important; }
           .co select { appearance: none; cursor: pointer; }
@@ -603,6 +618,30 @@ export default function CheckoutPage() {
           .co-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
           .co-coupon-row { display: flex; gap: 8px; }
 
+          /* ── Sticky bottom action bar ─────────────────────────────────────
+             Keeps the primary CTA (Choose Shipping Method / Continue to
+             Payment) permanently on screen so people never have to hunt for
+             it after scrolling through carrier options. */
+          .co-action-bar {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+            border-top: 1px solid #e2e8f0; box-shadow: 0 -8px 24px rgba(15,23,42,0.08);
+            animation: slideUp 0.25s ease both;
+          }
+          .co-action-bar-inner {
+            max-width: 1060px; margin: 0 auto; padding: 14px 20px;
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+          }
+          .co-action-bar-btn {
+            padding: 13px 26px; border: none; border-radius: 12px; cursor: pointer;
+            font-size: 14px; font-weight: 600; font-family: 'Google Sans Flex', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            white-space: nowrap; transition: all 0.2s;
+          }
+          .co-action-bar-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.3); }
+          /* space so fixed bar never covers page content */
+          .co-bar-spacer { height: 88px; }
+
           @media (max-width: 900px) {
             .co-main-grid { grid-template-columns: 1fr; gap: 28px; padding: 28px 16px 40px; }
           }
@@ -610,6 +649,9 @@ export default function CheckoutPage() {
             .co-header { padding: 0 14px; }
             .co-card-body { padding: 20px 16px 24px; }
             .co-step-connector { width: 20px; margin: 0 6px; }
+            .co-action-bar-inner { padding: 12px 14px; flex-wrap: wrap; }
+            .co-action-bar-btn { width: 100%; }
+            .co-bar-spacer { height: 108px; }
           }
           @media (max-width: 420px) {
             .co-two-col { grid-template-columns: 1fr; }
@@ -623,18 +665,7 @@ export default function CheckoutPage() {
 
         <div className="co" style={{ minHeight: '100vh', background: '#ffffff', fontFamily: "'Google Sans Flex', sans-serif" }}>
 
-          {/* Top nav */}
-          <header className="co-header" style={{ background: '#fff', borderBottom: '1px solid #f1f5f9', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Package />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: 16, color: '#1e293b', letterSpacing: '-0.01em' }}>Alpha Imports</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#64748b', fontSize: 12, whiteSpace: 'nowrap' }}>
-              <Lock /> <span className="co-secure-label">Secure Checkout</span>
-            </div>
-          </header>
+         
 
           {/* Main layout */}
           <div className="co-main-grid">
@@ -690,7 +721,7 @@ export default function CheckoutPage() {
 
                   {/* ── STEP 1: SHIPPING ADDRESS ── */}
                   {step === 'shipping' && (
-                    <form onSubmit={handleShippingSubmit} noValidate>
+                    <form id="shipping-form" onSubmit={handleShippingSubmit} noValidate>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
                         {/* Full Name */}
@@ -854,17 +885,6 @@ export default function CheckoutPage() {
                             <AlertCircle /> Please fix {Object.keys(errors).length} error{Object.keys(errors).length > 1 ? 's' : ''} before continuing
                           </div>
                         )}
-
-                        <button className="submit-btn" type="submit" disabled={loading || pinLoading} style={{
-                          width: '100%', padding: '14px 24px', marginTop: 4,
-                          background: loading || pinLoading ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                          color: loading || pinLoading ? '#94a3b8' : '#fff',
-                          border: 'none', borderRadius: 12, cursor: loading || pinLoading ? 'not-allowed' : 'pointer',
-                          fontSize: 14, fontWeight: 600, fontFamily: "'Google Sans Flex', sans-serif", letterSpacing: '0.01em',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                        }}>
-                          {loading ? <><Spinner /> Processing…</> : <>Choose Shipping Method <ArrowRight /></>}
-                        </button>
                       </div>
                     </form>
                   )}
@@ -896,17 +916,6 @@ export default function CheckoutPage() {
                           {apiError}
                         </div>
                       )}
-
-                      <button className="submit-btn" onClick={handleRateConfirm} disabled={!selectedShipping || loading} style={{
-                        width: '100%', padding: '14px 24px',
-                        background: !selectedShipping || loading ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        color: !selectedShipping || loading ? '#94a3b8' : '#fff',
-                        border: 'none', borderRadius: 12, cursor: !selectedShipping || loading ? 'not-allowed' : 'pointer',
-                        fontSize: 14, fontWeight: 600, fontFamily: "'Google Sans Flex', sans-serif", letterSpacing: '0.01em',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                      }}>
-                        {loading ? <><Spinner /> Creating order…</> : <>Continue to Payment <ArrowRight /></>}
-                      </button>
 
                       <button className="back-btn" onClick={() => setStep('shipping')} style={{ width: '100%', padding: '12px 24px', background: '#f8fafc', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'Google Sans Flex', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                         <ArrowLeft /> Back to Address
@@ -970,6 +979,9 @@ export default function CheckoutPage() {
 
                 </div>
               </div>
+
+              {/* Reserve space so the fixed action bar never overlaps content */}
+              {showActionBar && <div className="co-bar-spacer" aria-hidden="true" />}
 
               <div style={{ textAlign: 'center', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#94a3b8', fontSize: 12, flexWrap: 'wrap' }}>
                 <Lock /> 256-bit SSL encrypted · Your information is always secure
@@ -1068,6 +1080,54 @@ export default function CheckoutPage() {
 
           </div>
         </div>
+
+        {/* ── Sticky bottom action bar ──────────────────────────────────────
+            Always visible (independent of scroll position) during the
+            shipping and rates steps, so the primary CTA is never something
+            the person has to hunt for after selecting a carrier. */}
+        {showActionBar && (
+          <div className="co-action-bar">
+            <div className="co-action-bar-inner">
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>
+                  {step === 'rates' && selectedShipping ? `${selectedShipping.carrier} · ${selectedShipping.service}` : step === 'rates' ? 'Select a shipping method' : 'Order total'}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
+                  {step === 'rates' ? `$${grandTotalForBar.toFixed(2)}` : `$${total.toFixed(2)}`}
+                </div>
+              </div>
+
+              {step === 'shipping' ? (
+                <button
+                  type="submit"
+                  form="shipping-form"
+                  disabled={loading || pinLoading}
+                  className="co-action-bar-btn submit-btn"
+                  style={{
+                    background: loading || pinLoading ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    color: loading || pinLoading ? '#94a3b8' : '#fff',
+                    cursor: loading || pinLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loading ? <><Spinner /> Processing…</> : <>Choose Shipping Method <ArrowRight /></>}
+                </button>
+              ) : (
+                <button
+                  onClick={handleRateConfirm}
+                  disabled={!selectedShipping || loading}
+                  className="co-action-bar-btn submit-btn"
+                  style={{
+                    background: !selectedShipping || loading ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    color: !selectedShipping || loading ? '#94a3b8' : '#fff',
+                    cursor: !selectedShipping || loading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loading ? <><Spinner /> Creating order…</> : <>Continue to Payment <ArrowRight /></>}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </>
     </PayPalScriptProvider>
   );
