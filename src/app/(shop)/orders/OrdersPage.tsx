@@ -228,7 +228,7 @@ function ShipmentPanel({ order }: { order: Order }) {
                 <Printer size={12} /> Label
               </a>
             )}
-            {tn && (
+            {order.labelId && (
               <button
                 onClick={() => setTracking(t => !t)}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-lg transition-all active:scale-95"
@@ -275,12 +275,12 @@ function ShipmentPanel({ order }: { order: Order }) {
         )}
       </div>
 
-      {tracking && tn && (
+      {tracking && order.labelId && tn && (
         <div className="px-6 pb-6 pt-1">
           <OrderTracking
+            labelId={order.labelId}
             trackingNumber={tn}
             trackingUrl={order.trackingUrl ?? undefined}
-            carrierCode={carrier?.toLowerCase().replace(/\s+/g, '_') ?? undefined}
           />
         </div>
       )}
@@ -340,7 +340,7 @@ export default function OrdersPage() {
               </p>
               <h1
                 className="text-4xl md:text-5xl font-light tracking-tight"
-                style={{ fontFamily: 'Cormorant Garamond, serif', color: '#f5f1eb' }}
+                style={{ fontFamily: '"Elms Sans", sans-serif', color: '#f5f1eb' }}
               >
                 Orders
               </h1>
@@ -407,7 +407,7 @@ export default function OrdersPage() {
           >
             <Package size={28} style={{ color: '#b5a898' }} />
           </div>
-          <p className="text-xl font-light mb-1" style={{ fontFamily: 'Cormorant Garamond, serif', color: '#1a1814' }}>
+          <p className="text-xl font-light mb-1" style={{ fontFamily: '"Elms Sans", sans-serif', color: '#1a1814' }}>
             No orders yet
           </p>
           <p className="text-sm mb-8" style={{ color: '#9c9690' }}>
@@ -468,7 +468,7 @@ export default function OrdersPage() {
                     <div className="text-right flex-shrink-0">
                       <p
                         className="text-2xl font-light"
-                        style={{ fontFamily: 'Cormorant Garamond, serif', color: '#1a1814' }}
+                        style={{ fontFamily: '"Elms Sans", sans-serif', color: '#1a1814' }}
                       >
                         ${order.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </p>

@@ -6,7 +6,18 @@ import Category from '@/models/Category';
 import Subcategory from '@/models/Subcategory';
 import mongoose from 'mongoose';
 
+// This is a debug-only endpoint: it dumps the DB host/name, every
+// collection name, and raw unfiltered documents (bypassing Mongoose
+// schema filtering entirely). `withAdmin` only requires a valid admin
+// session — it does not scope what an admin is allowed to see. A single
+// leaked or weak admin credential would otherwise turn into a full
+// schema/data disclosure in production. Return 404 (not 403) so the
+// route's existence isn't even confirmable outside development.
 export const GET = withAdmin(async (req: NextRequest) => {
+  if (process.env.NODE_ENV === 'production') {
+    return errorResponse('Not found', 404);
+  }
+
   try {
     await connectDB();
 

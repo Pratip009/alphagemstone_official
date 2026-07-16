@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { signup } from '@/services/auth.service';
 import { errorResponse } from '@/lib/api-response';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const signupSchema = z.object({
@@ -12,6 +13,11 @@ const signupSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Signup is a bcrypt hash + DB write per request — cap it so a script
+    // can't mass-create accounts or burn CPU on hashing.
+    const ipLimit = await rateLimit(req, { id: 'signup-ip', limit: 5, windowSec: 600 });
+    if (!ipLimit.success) return rateLimitResponse(ipLimit);
+
     await connectDB();
     const body = await req.json();
 
@@ -23,8 +29,11 @@ export async function POST(req: NextRequest) {
     const { name, email, password } = parsed.data;
     const result = await signup(name, email, password);
 
+    // Only `user` goes in the JSON body. The token is set below as an
+    // httpOnly cookie — putting it in the body too would hand any XSS
+    // the same plaintext token that httpOnly is meant to keep out of JS.
     const response = NextResponse.json(
-      { success: true, data: result },
+      { success: true, data: { user: result.user } },
       { status: 201 }
     );
 

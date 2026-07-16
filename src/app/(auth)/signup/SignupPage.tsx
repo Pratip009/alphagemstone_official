@@ -21,7 +21,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const [redirecting, setRedirecting] = useState(false);
   useEffect(
     () => () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -71,15 +71,13 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      // verifyOtp calls the API and updates AuthContext state (user + token)
-      // in the same synchronous React batch before navigation — no refresh needed.
       await verifyOtp(form.email, otp);
+      setRedirecting(true); // ← add this
       const redirect = searchParams.get("redirect") || "/products";
       router.push(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
-    } finally {
-      setLoading(false);
+      setLoading(false); // ← only reset on error now
     }
   };
 
@@ -117,11 +115,12 @@ export default function SignupPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Barlow+Condensed:wght@200;300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
         :root {
           --navy:#1a1a2e;--deep:#0f3460;--violet:#7c3aed;--gold:#b8922a;
           --petal:#c4b5fd;--silver:#9f9fc0;--border:#e8e4f8;
-          --display:'Playfair Display',Georgia,serif;--label:'Barlow Condensed',sans-serif;
+          --display:'Gilda Display', serif;--label:'Gilda Display', serif;
         }
         *{box-sizing:border-box;margin:0;padding:0;}
         .auth-root{min-height:100vh;display:flex;font-family:var(--display);background:#faf9f7;overflow:hidden;}
@@ -206,6 +205,41 @@ export default function SignupPage() {
 
       <div className="auth-root">
         {/* LEFT PANEL */}
+        {redirecting && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 50,
+              background: "rgba(250,249,247,0.92)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "20px",
+            }}
+          >
+            <span
+              className="auth-spinner"
+              style={{
+                width: 40,
+                height: 40,
+                borderWidth: 2.5,
+                borderColor: "rgba(15,52,96,0.15)",
+                borderTopColor: "#0f3460",
+              }}
+            />
+            <div style={{ textAlign: "center" }}>
+              <p className="auth-heading" style={{ marginBottom: 4 }}>
+                Creating your account…
+              </p>
+              <p className="auth-subheading" style={{ margin: 0 }}>
+                Please wait
+              </p>
+            </div>
+          </div>
+        )}
         <div className="auth-left">
           <div className="auth-left-bg" />
           <div className="auth-left-grid" />

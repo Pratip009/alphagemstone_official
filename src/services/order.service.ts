@@ -5,13 +5,22 @@ import User from '@/models/User';
 import { clearCart, calculateCartTotals } from './cart.service';
 import { capturePayPalOrder, createPayPalOrder } from './paypal.service';
 import { validateCoupon, redeemCoupon } from './coupon.service';
-import { purchaseLabelFromRate } from './shipengine.service';
+import { purchaseLabelFromRate, trackShipEnginePackage } from './shipengine.service';
+import { buildTrackingUrl } from '@/models/ORDER_SHIPPING_FIELDS';
 import { Resend } from 'resend';
-import { orderConfirmationEmailHtml, orderShippedEmailHtml } from '@/lib/email-templates';
+import {
+  orderConfirmationEmailHtml,
+  orderShippedEmailHtml,
+  orderDeliveredEmailHtml,
+  adminNewOrderEmailHtml,
+} from '@/lib/email-templates';
 
 const resend    = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-
+const ADMIN_NOTIFICATION_EMAILS = (process.env.ADMIN_NOTIFICATION_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim())
+  .filter(Boolean);
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Estimates order weight in LB (0.5 LB per item, max 5 LB). */
@@ -104,7 +113,7 @@ export async function createOrderFromCart(
   await order.save();
 
   if (appliedCouponCode) {
-    await redeemCoupon(appliedCouponCode, order._id.toString());
+    await redeemCoupon(appliedCouponCode, order._id.toString(), subtotal);
   }
 
   return order;
@@ -112,9 +121,20 @@ export async function createOrderFromCart(
 
 // ─── PayPal ───────────────────────────────────────────────────────────────────
 
-export async function initiatePayPalPayment(orderId: string) {
+export async function initiatePayPalPayment(
+  orderId: string,
+  userId?: string,
+  { skipOwnerCheck = false }: { skipOwnerCheck?: boolean } = {}
+) {
   const order = await Order.findById(orderId) as IOrder | null;
   if (!order) throw new Error('Order not found');
+
+  // IDOR guard: only the order's owner (or an explicit admin/webhook caller
+  // that passes skipOwnerCheck) may initiate payment on this order.
+  if (!skipOwnerCheck) {
+    if (!userId) throw new Error('Unauthorized');
+    if (order.user.toString() !== userId) throw new Error('Order not found');
+  }
 
   const paypalOrder = await createPayPalOrder(order.totalAmount);
   order.paypalOrderId = paypalOrder.id;
@@ -133,12 +153,26 @@ export async function initiatePayPalPayment(orderId: string) {
  * ShipEngine label. Label failure is non-fatal — admin can buy it manually
  * via POST /api/admin/orders/:id/purchase-label.
  */
-export async function capturePayment(paypalOrderId: string) {
-  const captureData = await capturePayPalOrder(paypalOrderId);
-  if (captureData.status !== 'COMPLETED') throw new Error('Payment not completed');
-
+export async function capturePayment(
+  paypalOrderId: string,
+  userId?: string,
+  { skipOwnerCheck = false }: { skipOwnerCheck?: boolean } = {}
+) {
   const order = await Order.findOne({ paypalOrderId }) as IOrder | null;
   if (!order) throw new Error('Order not found');
+
+  // IDOR guard: only the order's owner (or an explicit admin/webhook caller
+  // that passes skipOwnerCheck) may capture payment on this order. Checked
+  // before calling PayPal so a guessed paypalOrderId can't trigger a real
+  // capture, stock decrement, cart clear, or confirmation email for someone
+  // else's order.
+  if (!skipOwnerCheck) {
+    if (!userId) throw new Error('Unauthorized');
+    if (order.user.toString() !== userId) throw new Error('Order not found');
+  }
+
+  const captureData = await capturePayPalOrder(paypalOrderId);
+  if (captureData.status !== 'COMPLETED') throw new Error('Payment not completed');
 
   // Decrement stock
   for (const item of order.items) {
@@ -156,7 +190,8 @@ export async function capturePayment(paypalOrderId: string) {
   await clearCart(order.user.toString());
 
   void sendOrderConfirmationEmail(order);
-
+ 
+  void sendAdminNewOrderEmail(order);
   // Auto-purchase ShipEngine label if rate was stored at checkout
   const rateId = (order as any).shippingRateId as string | null;
   if (rateId) {
@@ -202,6 +237,54 @@ export async function getAllOrders(page = 1, limit = 20, status?: string) {
   return { orders, total };
 }
 
+// ─── Tracking ─────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches live tracking info for an order.
+ * When userId is provided, only returns the order if it belongs to that user
+ * (so customers can't view other people's orders); admins pass no userId.
+ */
+export async function getOrderTracking(orderId: string, userId?: string) {
+  const query: Record<string, unknown> = { _id: orderId };
+  if (userId) query.user = userId;
+
+  const order = await Order.findOne(query).lean() as IOrder | null;
+  if (!order) throw new Error('Order not found');
+
+  // ShipStation V2 only supports tracking lookups by label_id (not by the
+  // customer-facing trackingNumber) — see trackShipEnginePackage's docblock.
+  const labelId = (order as any).labelId as string | undefined;
+  if (!labelId) {
+    if ((order as any).trackingNumber) {
+      // A tracking number exists (likely entered manually by an admin for a
+      // non-ShipStation shipment) but we have no label to look it up with.
+      throw new Error(
+        'Live tracking isn\'t available for this order — it was shipped without a ' +
+        'ShipStation label. Use the tracking number with the carrier directly.'
+      );
+    }
+    throw new Error('No tracking information available for this order yet');
+  }
+
+  const tracking = await trackShipEnginePackage(labelId);
+
+  return {
+    trackingNumber:     tracking.trackingNumber,
+    status:             tracking.status,
+    statusDescription:  tracking.status,
+    estimatedDelivery:  tracking.estimatedDelivery,
+    actualDelivery:     tracking.deliveredAt ?? null,
+    events:             tracking.events.map((e) => ({
+      timestamp:   e.timestamp,
+      eventType:   e.description,
+      description: e.description,
+      location:    e.location,
+    })),
+  };
+}
+
+// ─── Order status update ──────────────────────────────────────────────────────
+
 export async function updateOrderStatus(orderId: string, status: string) {
   const validStatuses = [
     'pending', 'paid', 'processing', 'shipped',
@@ -209,9 +292,14 @@ export async function updateOrderStatus(orderId: string, status: string) {
   ];
   if (!validStatuses.includes(status)) throw new Error('Invalid status');
 
+  const $set: Record<string, unknown> = { status };
+  // Manually marking an order delivered (e.g. from the admin dropdown) should
+  // also stamp deliveredAt, same as the automated webhook/cron path does.
+  if (status === 'delivered') $set.deliveredAt = new Date();
+
   const order = await Order.findByIdAndUpdate(
     orderId,
-    { $set: { status } },
+    { $set },
     { new: true }
   )
     .populate('user', 'name email')
@@ -220,10 +308,57 @@ export async function updateOrderStatus(orderId: string, status: string) {
   if (order && status === 'shipped') {
     void sendOrderShippedEmail(order);
   }
+  if (order && status === 'delivered') {
+    void sendOrderDeliveredEmail(order);
+  }
 
   return order;
 }
+export async function applyDeliveryStatus(
+  orderId: string,
+  deliveredAtFromCarrier: string | Date | null | undefined
+) {
+  if (!deliveredAtFromCarrier) return null;
 
+  const order = await Order.findById(orderId)
+    .populate('user', 'name email')
+    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+  if (!order) return null;
+
+  // Already marked delivered (and already emailed) — nothing to do.
+  if (order.status === 'delivered' && order.deliveryNotifiedAt) return null;
+  // Don't resurrect a cancelled/refunded order just because the carrier
+  // still reports movement.
+  if (order.status === 'cancelled' || order.status === 'refunded') return null;
+
+  const deliveredAt = new Date(deliveredAtFromCarrier);
+  const updated = await Order.findByIdAndUpdate(
+    orderId,
+    { $set: { status: 'delivered', deliveredAt } },
+    { new: true }
+  )
+    .populate('user', 'name email')
+    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+
+  if (updated && !order.deliveryNotifiedAt) {
+    void sendOrderDeliveredEmail(updated);
+  }
+
+  return updated;
+}
+export async function getOrdersAwaitingDeliverySync() {
+  return Order.find({
+    status: { $in: ['processing', 'shipped'] },
+    labelId: { $ne: null },
+  })
+    .select('_id labelId status')
+    .lean() as unknown as Array<{ _id: any; labelId: string; status: string }>;
+}
+
+/** Look up an order by its ShipStation labelId (used by the webhook route). */
+export async function getOrderByLabelId(labelId: string) {
+  return Order.findOne({ labelId }).select('_id').lean() as Promise<{ _id: any } | null>;
+}
 // ─── ShipEngine label purchase ────────────────────────────────────────────────
 
 /**
@@ -257,11 +392,17 @@ export async function purchaseAndSaveLabel(
   // When auto-purchased at payment capture, set 'processing' (label ready, not yet picked up).
   const newStatus = triggeredByAdmin ? 'shipped' : 'processing';
 
+  // Carrier name we already have on the order from checkout (e.g. "UPS", "FedEx").
+  // Falls back to the ShipStation carrier id if the friendly name isn't stored.
+  const carrierForUrl = (order as any).shippingCarrier ?? label.carrierId ?? null;
+  const trackingUrl = buildTrackingUrl(carrierForUrl, label.trackingNumber);
+
   await Order.findByIdAndUpdate(orderId, {
     $set: {
       labelId:        label.labelId,
       labelUrl:       label.labelUrl,
       trackingNumber: label.trackingNumber,
+      trackingUrl,
       shippedAt:      new Date(),
       status:         newStatus,
     },
@@ -273,6 +414,7 @@ export async function purchaseAndSaveLabel(
     const updatedOrder = {
       ...order,
       trackingNumber: label.trackingNumber,
+      trackingUrl,
       labelUrl:       label.labelUrl,
     } as IOrder & { user: { name: string; email: string } };
     void sendOrderShippedEmail(updatedOrder);
@@ -341,5 +483,65 @@ async function sendOrderShippedEmail(
     if (error) console.error('[orderShippedEmail] Resend error:', error);
   } catch (err) {
     console.error('[orderShippedEmail] Failed:', err);
+  }
+}
+async function sendOrderDeliveredEmail(
+  order: IOrder & { user: { name: string; email: string } }
+): Promise<void> {
+  try {
+    const { error } = await resend.emails.send({
+      from:    EMAIL_FROM,
+      to:      order.user.email,
+      subject: `Your Order Has Been Delivered — #${order._id.toString().slice(-8).toUpperCase()}`,
+      html:    orderDeliveredEmailHtml({
+        orderId:        order._id.toString(),
+        customerName:   order.user.name,
+        trackingNumber: order.trackingNumber ?? undefined,
+        deliveredAt:    order.deliveredAt
+          ? new Date(order.deliveredAt).toLocaleDateString('en-US', {
+              weekday: 'short', month: 'short', day: 'numeric',
+            })
+          : undefined,
+      }),
+    });
+
+    if (error) {
+      console.error('[orderDeliveredEmail] Resend error:', error);
+      return;
+    }
+
+    // Mark as notified so applyDeliveryStatus / updateOrderStatus don't
+    // re-send this if called again for the same order.
+    await Order.findByIdAndUpdate(order._id, { $set: { deliveryNotifiedAt: new Date() } });
+  } catch (err) {
+    console.error('[orderDeliveredEmail] Failed:', err);
+  }
+}
+
+async function sendAdminNewOrderEmail(order: IOrder): Promise<void> {
+  if (ADMIN_NOTIFICATION_EMAILS.length === 0) return; // not configured — skip silently
+  try {
+    const user = await User.findById(order.user)
+      .select('name email')
+      .lean() as { name: string; email: string } | null;
+    if (!user) return;
+
+    const { error } = await resend.emails.send({
+      from:    EMAIL_FROM,
+      to:      ADMIN_NOTIFICATION_EMAILS,
+      subject: `New Order — #${order._id.toString().slice(-8).toUpperCase()} ($${order.totalAmount.toFixed(2)})`,
+      html:    adminNewOrderEmailHtml({
+        orderId:       order._id.toString(),
+        customerName:  user.name,
+        customerEmail: user.email,
+        totalAmount:   order.totalAmount,
+        itemCount:     order.items.reduce((sum, i) => sum + i.quantity, 0),
+        paymentMethod: order.paymentMethod,
+      }),
+    });
+
+    if (error) console.error('[adminNewOrderEmail] Resend error:', error);
+  } catch (err) {
+    console.error('[adminNewOrderEmail] Failed:', err);
   }
 }

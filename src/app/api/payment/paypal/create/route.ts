@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { initiatePayPalPayment, capturePayment } from '@/services/order.service';
+import { initiatePayPalPayment } from '@/services/order.service';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
@@ -15,7 +15,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const { orderId } = await req.json();
     if (!orderId) return errorResponse('orderId is required', 400);
 
-    const result = await initiatePayPalPayment(orderId);
+    const result = await initiatePayPalPayment(orderId, req.user.userId);
     return successResponse(result);
   } catch (err) {
     return errorResponse(err instanceof Error ? err.message : 'PayPal init failed', 500);

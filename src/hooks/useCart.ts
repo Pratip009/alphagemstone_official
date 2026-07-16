@@ -19,13 +19,13 @@ export function useCart() {
   if (!user) { setCartCount(0); return; }
   try {
     const data = await apiFetch('/api/cart');
-    console.log('[useCart] raw response:', JSON.stringify(data)); // ← add this
+   
     const items = data?.data?.cart?.items ?? [];
     const count = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-    console.log('[useCart] items:', items.length, '| count:', count); // ← and this
+   
     setCartCount(count);
   } catch (err) {
-    console.error('[useCart] fetch error:', err); // ← and this
+    
     setCartCount(0);
   }
 };

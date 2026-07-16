@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Gem, Package } from 'lucide-react';
-
+import { cartEvents } from '@/hooks/useCart';
 interface CartItem {
   product: { _id: string; name: string; images: string[]; price: number; stock: number };
   quantity: number;
@@ -182,7 +182,7 @@ function CartCard({
 }
 
 // ─── Summary row ──────────────────────────────────────────────────────────────
-function SummaryRow({ label, value, bold, accent }: { label: string; value: string; bold?: boolean; accent?: boolean }) {
+function SummaryRow({ label, value, bold, accent, muted }: { label: string; value: string; bold?: boolean; accent?: boolean; muted?: boolean }) {
   return (
     <div className={`flex justify-between items-center ${bold ? 'pt-1' : ''}`}>
       <span
@@ -192,8 +192,8 @@ function SummaryRow({ label, value, bold, accent }: { label: string; value: stri
         {label}
       </span>
       <span
-        className="text-[0.82rem] font-bold"
-        style={{ color: accent ? '#c9a84c' : bold ? '#1a1714' : '#6b6560' }}
+        className={muted ? 'text-[0.72rem] italic' : 'text-[0.82rem] font-bold'}
+        style={{ color: accent ? '#c9a84c' : muted ? '#a09a90' : bold ? '#1a1714' : '#6b6560' }}
       >
         {value}
       </span>
@@ -241,6 +241,7 @@ export default function CartPage() {
         body: JSON.stringify({ productId, quantity }),
       });
       await fetchCart();
+      cartEvents.refresh();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update quantity');
     } finally {
@@ -347,14 +348,14 @@ export default function CartPage() {
               {/* Rows */}
               <div className="space-y-3 mb-5">
                 <SummaryRow label="Subtotal" value={`$${totals.subtotal.toLocaleString()}`} />
-                <SummaryRow label="Tax (8%)" value={`$${totals.tax.toFixed(2)}`} />
+                <SummaryRow label="Tax" value={`$${totals.tax.toFixed(2)}`} />
                 <SummaryRow
                   label="Shipping"
-                  value={totals.shippingCost === 0 ? 'Free' : `$${totals.shippingCost}`}
-                  accent={totals.shippingCost === 0}
+                  value="Calculated at checkout"
+                  muted
                 />
                 <div className="h-px" style={{ background: '#ede9e1' }} />
-                <SummaryRow label="Total" value={`$${totals.total.toLocaleString()}`} bold />
+                <SummaryRow label="Total" value={`$${(totals.subtotal + totals.tax).toLocaleString()}`} bold />
               </div>
 
               {/* CTA */}

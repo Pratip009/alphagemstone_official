@@ -11,45 +11,45 @@ import Link from "next/link";
 
 /* ── Inline design tokens ─────────────────────────────────────────────────── */
 const css = `
-  .ap-root { font-family: 'DM Sans', sans-serif; color: #0f172a; background: #f8f7f4; min-height: 100vh; padding: 2rem; }
+  .ap-root { font-family: "Elms Sans", sans-serif; color: #0f172a; background: #f8f7f4; min-height: 100vh; padding: 2rem; }
   .ap-root * { box-sizing: border-box; }
 
-  .ap-display { font-family: 'Playfair Display', serif; font-size: 1.75rem; color: #0f172a; letter-spacing: -0.02em; }
+  .ap-display { font-family: "Elms Sans", sans-serif; font-size: 1.75rem; color: #0f172a; letter-spacing: -0.02em; }
   .ap-breadcrumb { font-size: 0.8rem; color: #64748b; font-weight: 500; text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase; }
   .ap-breadcrumb:hover { color: #b45309; }
 
   .ap-card { background: #fff; border: 1px solid #e2e0da; border-radius: 12px; }
   .ap-card-inner { padding: 1.75rem; }
 
-  .ap-section-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #0f172a; margin: 0 0 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e2e0da; }
+  .ap-section-title { font-family: "Elms Sans", sans-serif; font-size: 1.1rem; color: #0f172a; margin: 0 0 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e2e0da; }
 
   .ap-label { display: block; font-size: 0.72rem; font-weight: 600; color: #475569; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.4rem; }
   .ap-label-hint { font-size: 0.7rem; color: #94a3b8; font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 0.4rem; }
 
-  .ap-input { width: 100%; height: 40px; padding: 0 0.875rem; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: #0f172a; background: #fafaf8; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
+  .ap-input { width: 100%; height: 40px; padding: 0 0.875rem; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.875rem; color: #0f172a; background: #fafaf8; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
   .ap-input:focus { border-color: #b45309; box-shadow: 0 0 0 3px rgba(180,83,9,0.1); background: #fff; }
   .ap-input::placeholder { color: #94a3b8; }
   .ap-textarea { height: auto; padding: 0.625rem 0.875rem; resize: none; line-height: 1.6; }
   select.ap-input { cursor: pointer; }
   .ap-input:disabled { background: #f1f0ec; color: #94a3b8; cursor: not-allowed; border-color: #e2e0da; }
 
-  .ap-btn-primary { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.25rem; height: 40px; background: #0f172a; color: #fff; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.825rem; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+  .ap-btn-primary { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.25rem; height: 40px; background: #0f172a; color: #fff; border: none; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.825rem; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; transition: background 0.15s, transform 0.1s; }
   .ap-btn-primary:hover { background: #1e293b; }
   .ap-btn-primary:active { transform: scale(0.98); }
   .ap-btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
   .ap-btn-primary.full { width: 100%; justify-content: center; height: 44px; font-size: 0.9rem; background: #b45309; }
   .ap-btn-primary.full:hover { background: #92400e; }
 
-  .ap-btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.1rem; height: 40px; background: transparent; color: #475569; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.825rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .ap-btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.1rem; height: 40px; background: transparent; color: #475569; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.825rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
   .ap-btn-ghost:hover { border-color: #b45309; color: #b45309; background: #fef3c7; }
 
-  .ap-btn-danger { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.1rem; height: 40px; background: transparent; color: #dc2626; border: 1.5px solid #fca5a5; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .ap-btn-danger { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.1rem; height: 40px; background: transparent; color: #dc2626; border: 1.5px solid #fca5a5; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
   .ap-btn-danger:hover { background: #fef2f2; border-color: #dc2626; }
   .ap-btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* Product type toggle */
   .ap-type-toggle { display: flex; background: #f1f0ec; border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 1.5rem; }
-  .ap-type-btn { flex: 1; height: 38px; border: none; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.18s; color: #64748b; background: transparent; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+  .ap-type-btn { flex: 1; height: 38px; border: none; border-radius: 7px; font-family: "Elms Sans", sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.18s; color: #64748b; background: transparent; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
   .ap-type-btn.active { background: #fff; color: #0f172a; box-shadow: 0 1px 4px rgba(15,23,42,0.12), 0 0 0 1px rgba(15,23,42,0.06); }
   .ap-type-btn:hover:not(.active) { color: #b45309; }
 
@@ -62,7 +62,7 @@ const css = `
   .ap-col-2 { grid-column: span 2; }
 
   .ap-pill-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0.4rem; padding: 0.75rem; background: #f8f7f4; border: 1.5px solid #d1cec7; border-radius: 8px; }
-  .ap-pill { padding: 4px 11px; border-radius: 20px; border: 1.5px solid #d1cec7; font-size: 0.75rem; font-weight: 500; color: #475569; background: #fff; cursor: pointer; transition: all 0.12s; font-family: 'DM Sans', sans-serif; }
+  .ap-pill { padding: 4px 11px; border-radius: 20px; border: 1.5px solid #d1cec7; font-size: 0.75rem; font-weight: 500; color: #475569; background: #fff; cursor: pointer; transition: all 0.12s; font-family: "Elms Sans", sans-serif; }
   .ap-pill:hover { border-color: #b45309; color: #b45309; }
   .ap-pill.active { background: #fef3c7; border-color: #d97706; color: #92400e; font-weight: 600; }
   .ap-pill-selected { font-size: 0.7rem; color: #b45309; font-weight: 600; margin-left: 0.5rem; }
@@ -94,28 +94,28 @@ const css = `
   .ap-badge.diamond { background: #fdf4ff; color: #7e22ce; }
 
   .ap-row-actions { display: flex; align-items: center; gap: 6px; }
-  .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
+  .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
   .ap-deactivate:hover { color: #d97706; background: #fef3c7; }
-  .ap-delete-row { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .ap-delete-row { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
   .ap-delete-row:hover { color: #dc2626; background: #fef2f2; }
 
   .ap-filter-summary { display: flex; align-items: center; justify-content: space-between; margin-top: 0.875rem; padding-top: 0.875rem; border-top: 1px solid #e2e0da; }
   .ap-filter-count { font-size: 0.8rem; color: #475569; }
   .ap-filter-count strong { color: #0f172a; }
-  .ap-clear-btn { font-size: 0.78rem; color: #b45309; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; padding: 0; }
+  .ap-clear-btn { font-size: 0.78rem; color: #b45309; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; font-weight: 600; padding: 0; }
   .ap-clear-btn:hover { color: #92400e; text-decoration: underline; }
 
   .ap-pagination { display: flex; align-items: center; justify-content: space-between; padding: 0.875rem 1rem; border-top: 1px solid #e2e0da; }
   .ap-page-info { font-size: 0.78rem; color: #64748b; }
   .ap-page-btns { display: flex; gap: 4px; }
-  .ap-page-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1.5px solid #d1cec7; border-radius: 6px; font-size: 0.78rem; font-weight: 500; color: #475569; background: #fff; cursor: pointer; transition: all 0.12s; font-family: 'DM Sans', sans-serif; }
+  .ap-page-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1.5px solid #d1cec7; border-radius: 6px; font-size: 0.78rem; font-weight: 500; color: #475569; background: #fff; cursor: pointer; transition: all 0.12s; font-family: "Elms Sans", sans-serif; }
   .ap-page-btn:hover:not(:disabled) { border-color: #b45309; color: #b45309; }
   .ap-page-btn.current { background: #0f172a; border-color: #0f172a; color: #fff; font-weight: 700; }
   .ap-page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   .ap-empty { text-align: center; padding: 4rem 1rem; }
   .ap-empty-icon { font-size: 2rem; margin-bottom: 0.75rem; }
-  .ap-empty-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #0f172a; margin-bottom: 0.4rem; }
+  .ap-empty-title { font-family: "Elms Sans", sans-serif; font-size: 1.1rem; color: #0f172a; margin-bottom: 0.4rem; }
   .ap-empty-sub { font-size: 0.85rem; color: #64748b; }
 
   .ap-success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #15803d; font-weight: 500; margin-bottom: 1rem; }
@@ -140,17 +140,17 @@ const css = `
   .ap-modal { background: #fff; border-radius: 14px; padding: 2rem; max-width: 420px; width: 100%; box-shadow: 0 24px 48px rgba(15,23,42,0.18), 0 4px 12px rgba(15,23,42,0.08); animation: ap-slide-up 0.18s ease; }
   @keyframes ap-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   .ap-modal-icon { width: 48px; height: 48px; border-radius: 50%; background: #fef2f2; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-bottom: 1.25rem; }
-  .ap-modal-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: #0f172a; margin: 0 0 0.5rem; }
+  .ap-modal-title { font-family: "Elms Sans", sans-serif; font-size: 1.15rem; color: #0f172a; margin: 0 0 0.5rem; }
   .ap-modal-body { font-size: 0.875rem; color: #475569; line-height: 1.6; margin: 0 0 1.5rem; }
   .ap-modal-body strong { color: #dc2626; }
   .ap-modal-input-wrap { margin-bottom: 1.25rem; }
   .ap-modal-input-label { display: block; font-size: 0.72rem; font-weight: 600; color: #475569; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.4rem; }
-  .ap-modal-confirm-input { width: 100%; height: 38px; padding: 0 0.75rem; border: 1.5px solid #d1cec7; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: #0f172a; background: #fafaf8; outline: none; transition: border-color 0.15s; }
+  .ap-modal-confirm-input { width: 100%; height: 38px; padding: 0 0.75rem; border: 1.5px solid #d1cec7; border-radius: 7px; font-family: "Elms Sans", sans-serif; font-size: 0.875rem; color: #0f172a; background: #fafaf8; outline: none; transition: border-color 0.15s; }
   .ap-modal-confirm-input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
   .ap-modal-actions { display: flex; gap: 0.625rem; }
-  .ap-modal-cancel { flex: 1; height: 40px; background: #f8f7f4; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.825rem; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.15s; }
+  .ap-modal-cancel { flex: 1; height: 40px; background: #f8f7f4; border: 1.5px solid #d1cec7; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.825rem; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.15s; }
   .ap-modal-cancel:hover { border-color: #94a3b8; background: #f1f0ec; }
-  .ap-modal-confirm-btn { flex: 1; height: 40px; background: #dc2626; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.825rem; font-weight: 600; color: #fff; cursor: pointer; transition: background 0.15s; }
+  .ap-modal-confirm-btn { flex: 1; height: 40px; background: #dc2626; border: none; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.825rem; font-weight: 600; color: #fff; cursor: pointer; transition: background 0.15s; }
   .ap-modal-confirm-btn:hover { background: #b91c1c; }
   .ap-modal-confirm-btn:disabled { background: #fca5a5; cursor: not-allowed; }
 

@@ -9,7 +9,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 export default function EditBlogPage() {
   const { id } = useParams<{ id: string }>();
-  const { token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
 
   const [data, setData]       = useState<BlogFormData | null>(null);
@@ -17,7 +17,7 @@ export default function EditBlogPage() {
   const [error, setError]     = useState('');
 
   useEffect(() => {
-    if (authLoading || !token) return;
+    if (authLoading || !user) return;
     authFetch(`/api/admin/blogs/${id}`)
       .then(r => r.json())
       .then(d => {
@@ -38,7 +38,7 @@ export default function EditBlogPage() {
       })
       .catch(() => setError('Failed to load blog'))
       .finally(() => setLoading(false));
-  }, [authLoading, token, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>

@@ -10,6 +10,10 @@ import {
 
 const DISPLAY_COLORS = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'fancy-yellow', 'fancy-pink', 'fancy-blue'];
 
+// dedupe helper — guards against duplicate values in the model's constant arrays
+// (e.g. "other" listed twice), which otherwise produce duplicate React keys.
+const dedupe = <T,>(arr: readonly T[]): T[] => Array.from(new Set(arr));
+
 interface FacetCount { _id: string; count: number }
 
 interface FilterSidebarProps {
@@ -137,7 +141,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
   return (
     <aside
       className="w-full space-y-0 bg-white"
-      style={{ fontFamily: "'Poppins', sans-serif" }}
+      style={{ fontFamily: '"Elms Sans", sans-serif' }}
     >
     
 
@@ -240,7 +244,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
       {mode === 'watch' && (
         <>
           <FilterGroup label="Gender">
-            {WATCH_GENDERS.map((g) => (
+            {dedupe(WATCH_GENDERS).map((g) => (
               <CheckItem
                 key={g} label={g}
                 count={countFor(facets?.watchGenders, g)}
@@ -251,7 +255,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Brand">
-            {WATCH_BRANDS.map((b) => (
+            {dedupe(WATCH_BRANDS).map((b) => (
               <CheckItem
                 key={b} label={b}
                 count={countFor(facets?.watchBrands, b)}
@@ -262,7 +266,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Movement">
-            {WATCH_MOVEMENTS.map((m) => (
+            {dedupe(WATCH_MOVEMENTS).map((m) => (
               <CheckItem
                 key={m} label={m}
                 count={countFor(facets?.watchMovements, m)}
@@ -273,7 +277,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Strap Type">
-            {WATCH_STRAP_TYPES.map((s) => (
+            {dedupe(WATCH_STRAP_TYPES).map((s) => (
               <CheckItem
                 key={s} label={s}
                 count={countFor(facets?.watchStrapTypes, s)}
@@ -284,7 +288,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Case Material">
-            {WATCH_CASE_MATERIALS.map((m) => (
+            {dedupe(WATCH_CASE_MATERIALS).map((m) => (
               <CheckItem
                 key={m} label={m}
                 count={countFor(facets?.watchCaseMaterials, m)}
@@ -295,7 +299,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Dial Color">
-            {WATCH_DIAL_COLORS.map((c) => (
+            {dedupe(WATCH_DIAL_COLORS).map((c) => (
               <CheckItem
                 key={c} label={c}
                 count={countFor(facets?.watchDialColors, c)}
@@ -306,7 +310,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Features">
-            {WATCH_FEATURES.map((f) => (
+            {dedupe(WATCH_FEATURES).map((f) => (
               <CheckItem
                 key={f} label={f}
                 count={countFor(facets?.watchFeatures, f)}
@@ -317,7 +321,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Style">
-            {WATCH_STYLES.map((s) => (
+            {dedupe(WATCH_STYLES).map((s) => (
               <CheckItem
                 key={s} label={s}
                 count={countFor(facets?.watchStyles, s)}
@@ -328,7 +332,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Case Size">
-            {WATCH_CASE_SIZES.map((sz) => (
+            {dedupe(WATCH_CASE_SIZES).map((sz) => (
               <CheckItem
                 key={sz} label={sz}
                 count={countFor(facets?.watchCaseSizes, sz)}
@@ -346,7 +350,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
       {mode === 'diamond' && (
         <>
           <FilterGroup label="Shape">
-            {SHAPES.map((shape) => (
+            {dedupe(SHAPES).map((shape) => (
               <CheckItem
                 key={shape}
                 label={shape.charAt(0).toUpperCase() + shape.slice(1)}
@@ -358,7 +362,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Color Grade">
-            {DISPLAY_COLORS.map((color) => (
+            {dedupe(DISPLAY_COLORS).map((color) => (
               <CheckItem
                 key={color} label={color}
                 count={facets?.colors?.find((f) => f._id === color)?.count}
@@ -369,7 +373,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
           </FilterGroup>
 
           <FilterGroup label="Clarity">
-            {CLARITIES.map((clarity) => (
+            {dedupe(CLARITIES).map((clarity) => (
               <CheckItem
                 key={clarity} label={clarity}
                 count={facets?.clarities?.find((f) => f._id === clarity)?.count}

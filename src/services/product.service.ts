@@ -51,9 +51,9 @@ export async function getProductById(id: string) {
 }
 
 export async function createProduct(data: Partial<IProduct>) {
-  console.log("CREATE PRODUCT DATA:", JSON.stringify(data, null, 2));
+  // console.log("CREATE PRODUCT DATA:", JSON.stringify(data, null, 2));
   const product = new Product(data);
-  console.log("MONGOOSE VALIDATION:", product.validateSync());
+  // console.log("MONGOOSE VALIDATION:", product.validateSync());
   await product.save();
   return product.toObject();
 }

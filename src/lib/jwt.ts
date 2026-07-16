@@ -23,7 +23,10 @@ export function verifyToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET!) as JWTPayload;
 }
 
-export function extractTokenFromHeader(authHeader: string | null): string | null {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-  return authHeader.slice(7);
+// NOTE: Auth is cookie-based only. The JWT lives exclusively in the
+// httpOnly `auth_token` cookie set by the login/signup/verify-signup routes —
+// it is never exposed to client-side JS (no localStorage, no Authorization
+// header). See src/middleware/auth.middleware.ts for how it's read back out.
+export function extractTokenFromCookie(req: { cookies: { get(name: string): { value: string } | undefined } }): string | null {
+  return req.cookies.get('auth_token')?.value ?? null;
 }

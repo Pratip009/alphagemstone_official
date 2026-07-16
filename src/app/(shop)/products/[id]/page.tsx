@@ -5,18 +5,34 @@ import Product from '@/models/Product';
 import AddToCartButton from '@/components/cart/AddToCartButton';
 import ProductGallery from '@/components/products/ProductGallery';
 import Link from 'next/link';
-
+import WishlistButton from '@/components/wishlist/WishlistButton';
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
   name: string;
   price: number;
+  productKind?: 'diamond' | 'gemstone' | 'watch' | 'jewelry';
+
+  // Diamond / gemstone
   shape?: string | string[];
+  shapeRaw?: string;
   size?: number;
   color?: string | string[];
+  colorRaw?: string;
   clarity?: string | string[];
+  clarityRaw?: string;
+  gradeRaw?: string;
+  gemstoneName?: string;
   certification?: string | string[];
+
+  // Everything else from the legacy catalog that doesn't map to a fixed
+  // enum (cut, luster, hardness, treatment, origin, metal, ring size,
+  // carat/size ranges, approx weight, dimensions, etc.)
+  legacyAttributes?: Record<string, string>;
+
+  // Watch
   watchBrand?: string;
+  watchModel?: string;
   watchMovement?: string;
   watchGender?: string;
   watchStyle?: string;
@@ -25,6 +41,7 @@ type ProductDoc = {
   watchDialColor?: string;
   watchCaseSize?: string;
   watchFeatures?: string[];
+
   images: string[];
   stock: number;
   description?: string;
@@ -45,6 +62,10 @@ type RelatedItem = {
   watchMovement?: string;
   watchGender?: string;
 };
+
+type ProductKind = 'watch' | 'diamond' | 'gemstone' | 'jewelry';
+
+type Spec = { label: string; value: string; highlight?: boolean };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function first(val?: string | string[]): string {
@@ -69,6 +90,124 @@ function isWatchDoc(p: ProductDoc): boolean {
   return !!(p.watchBrand || p.watchMovement || p.watchGender);
 }
 
+// Prefer the stored, explicit classification (productKind — set at import
+// time in fileParser.service.ts) over guessing from which fields happen to
+// be populated. Falls back to inference only for older records that predate
+// the productKind field.
+function getProductKind(p: ProductDoc): ProductKind {
+  if (p.productKind) return p.productKind;
+  if (isWatchDoc(p)) return 'watch';
+  const categoryName = (p.category?.name ?? '').toLowerCase();
+  if (categoryName.includes('diamond')) return 'diamond';
+  if (p.gemstoneName) return 'gemstone';
+  return 'jewelry';
+}
+
+// "metalMaterial" -> "Metal Material" — used only for legacyAttributes keys
+// that aren't already surfaced under a named label below, so nothing
+// captured at import time silently disappears from the page.
+function titleCase(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+// legacyAttributes keys that are internal bookkeeping, not customer-facing
+// specs, and should never render even as a leftover row.
+const SKIP_ATTR_KEYS = new Set(['legacyCategoryRaw', 'shippingWeight']);
+
+// ─── Spec table builder ────────────────────────────────────────────────────
+// Builds the "spec sheet" rows for a product, tailored per productKind.
+// Every row is only added when a value actually exists — no hardcoded "—"
+// placeholders for fields that were never captured on that product, and no
+// bleed-through of irrelevant fields (a gemstone won't show "Movement", a
+// watch won't show "Clarity").
+function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
+  const attrs = p.legacyAttributes ?? {};
+  const rows: Spec[] = [];
+  const usedAttrKeys = new Set<string>();
+
+  const push = (label: string, value: string | number | undefined | null, opts?: { highlight?: boolean }) => {
+    if (value === undefined || value === null || value === '') return;
+    rows.push({ label, value: String(value), highlight: opts?.highlight });
+  };
+  // Reads a legacyAttributes key and marks it "already shown" so it isn't
+  // duplicated in the leftover-attributes pass at the end.
+  const attr = (key: string): string | undefined => {
+    usedAttrKeys.add(key);
+    return attrs[key] || undefined;
+  };
+
+  if (kind === 'diamond') {
+    push('Item', 'Diamond');
+    push('Polish', attr('polish'));
+    push('Shape', p.shapeRaw || capitalize(p.shape));
+    push('Cut', attr('cut'));
+    push('Color', p.colorRaw || display(p.color));
+    push('Size', attr('dimensions'));
+    push('Depth', attr('depth'));
+    push('Treatment', attr('treatment'));
+    push('Clarity', p.clarityRaw || display(p.clarity));
+    const cert = certDisplay(p.certification);
+    if (cert !== '—') push('Certification', cert);
+    const diamondApproxWeightAttr = attr('approxWeight');
+    push('Approx Weight', diamondApproxWeightAttr ? `${diamondApproxWeightAttr} ct.` : (p.size ? `${p.size} ct.` : undefined));
+  } else if (kind === 'gemstone') {
+    push('Name', p.gemstoneName || p.name);
+    push('Shape', p.shapeRaw || capitalize(p.shape));
+    push('Cut', attr('cut'));
+    push('Color', p.colorRaw || display(p.color));
+    push('Origin', attr('origin'));
+    push('Size', attr('dimensions'));
+    push('Luster', attr('luster'));
+    push('Treatment', attr('treatment'));
+    push('Hardness', attr('hardness'));
+    push('Clarity', p.clarityRaw || display(p.clarity));
+    // attr() must be called unconditionally here — if it only runs on the
+    // right side of `||` (i.e. only when p.gradeRaw is empty), the 'grade'
+    // key never gets marked "used" on products that have both, and it
+    // resurfaces a second time in the leftover-attributes pass below,
+    // producing a duplicate "Grade" row (and a React duplicate-key error).
+    const gradeAttr = attr('grade');
+    push('Grade', p.gradeRaw || gradeAttr);
+    const approxWeightAttr = attr('approxWeight');
+    push('Approx Weight', approxWeightAttr ? `${approxWeightAttr} ct.` : (p.size ? `${p.size} ct.` : undefined));
+  } else if (kind === 'watch') {
+    push('Brand', p.watchBrand);
+    push('Model', p.watchModel);
+    push('Movement', p.watchMovement);
+    push('Gender', p.watchGender);
+    push('Style', p.watchStyle);
+    push('Strap', p.watchStrapType);
+    push('Case Material', p.watchCaseMaterial);
+    push('Dial Color', p.watchDialColor);
+    push('Case Size', p.watchCaseSize);
+    push('Features', p.watchFeatures?.join(', '));
+  } else {
+    // jewelry / silver / vouchers / anything without a dedicated kind
+    push('Metal', attr('metalMaterial'));
+    push('Metal Weight', attr('metalWeight'));
+    push('Ring Size', attr('ringSize'));
+    push('Size Range', attr('sizeRange'));
+    push('Carat Range', attr('caratRange'));
+    push('Shape', p.shapeRaw || capitalize(p.shape));
+    push('Color', p.colorRaw || display(p.color));
+  }
+
+  // Anything still sitting in legacyAttributes that wasn't already pulled
+  // out above — keeps the page honest instead of quietly dropping data
+  // that was captured at import time (e.g. a diamond row that happens to
+  // also carry an "origin" value, or a gemstone with a stray "ringSize").
+  for (const [key, value] of Object.entries(attrs)) {
+    if (usedAttrKeys.has(key) || SKIP_ATTR_KEYS.has(key) || !value) continue;
+    push(titleCase(key), value);
+  }
+
+  push('Availability', p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', { highlight: p.stock > 0 });
+
+  return rows;
+}
+
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 function WatchIcon() {
   return (
@@ -87,6 +226,32 @@ function DiamondIcon() {
       <path d="M2 7h14M9 16L5 7l4-5 4 5z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
     </svg>
   );
+}
+// Distinct icon for colored gemstones — emerald-cut silhouette rather than
+// the brilliant-cut diamond shape, so the two badges read differently at a glance.
+function GemstoneIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <rect x="4" y="3" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+      <path d="M4 7h10M4 11h10M8 3v12M10 3v12" stroke="currentColor" strokeWidth="0.9" />
+    </svg>
+  );
+}
+// Jewelry / silver / vouchers — simple ring silhouette.
+function JewelryIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <circle cx="9" cy="11" r="5" stroke="currentColor" strokeWidth="1.25" />
+      <path d="M9 6L6.5 2h5L9 6z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function kindIcon(kind: ProductKind) {
+  if (kind === 'watch') return <WatchIcon />;
+  if (kind === 'diamond') return <DiamondIcon />;
+  if (kind === 'gemstone') return <GemstoneIcon />;
+  return <JewelryIcon />;
 }
 
 // ─── Related products ─────────────────────────────────────────────────────────
@@ -193,43 +358,53 @@ export default async function ProductDetailPage({
 
   const rawObj = raw as unknown as ProductDoc;
   const p: ProductDoc = { ...rawObj, _id: String(rawObj._id) };
-  const watch = isWatchDoc(p);
+  const kind = getProductKind(p);
+  const watch = kind === 'watch';
+  const gemstone = kind === 'gemstone';
 
   const related = await getRelatedProducts(p, String(p._id), 4);
 
-  const specs = watch
-    ? [
-        { label: 'Brand',         value: p.watchBrand ?? '—' },
-        { label: 'Movement',      value: p.watchMovement ?? '—' },
-        { label: 'Gender',        value: p.watchGender ?? '—' },
-        { label: 'Style',         value: p.watchStyle ?? '—' },
-        { label: 'Strap',         value: p.watchStrapType ?? '—' },
-        { label: 'Case Material', value: p.watchCaseMaterial ?? '—' },
-        { label: 'Dial Color',    value: p.watchDialColor ?? '—' },
-        { label: 'Case Size',     value: p.watchCaseSize ?? '—' },
-        { label: 'Features',      value: p.watchFeatures?.join(', ') || '—' },
-        { label: 'Availability',  value: p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', highlight: p.stock > 0 },
-      ]
-    : [
-        { label: 'Shape',         value: capitalize(p.shape) },
-        { label: 'Carat Weight',  value: p.size ? `${p.size} ct` : '—' },
-        { label: 'Color Grade',   value: display(p.color) },
-        { label: 'Clarity',       value: display(p.clarity) },
-        { label: 'Certification', value: certDisplay(p.certification) },
-        { label: 'Availability',  value: p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', highlight: p.stock > 0 },
-      ];
+  // Gallery images — if fewer than 4 real photos exist, repeat the main
+  // photo to fill the strip instead of letting the gallery fall back to
+  // its own dummy placeholder images.
+  const galleryImages = (() => {
+    const imgs = (p.images ?? []).filter(Boolean);
+    if (imgs.length === 0) return imgs;
+    if (imgs.length >= 4) return imgs;
+    const padded = [...imgs];
+    while (padded.length < 4) padded.push(imgs[0]);
+    return padded;
+  })();
+
+  // Dynamic, per-kind spec sheet — see buildSpecs() above. Diamonds get
+  // diamond fields (polish/cut/color/clarity/depth/...), gemstones get
+  // gemstone fields (origin/luster/hardness/grade/...), watches get watch
+  // fields, and every row is omitted when the underlying value is empty.
+  const specs = buildSpecs(p, kind);
 
   const certBadge = certDisplay(p.certification);
   const showCertBadge = !watch && certBadge !== '—';
 
   const heroSubtitle = watch
     ? [p.watchGender, p.watchStyle, p.watchMovement].filter(Boolean).join(' · ')
-    : [display(p.color) ? `${display(p.color)} Color` : '', display(p.clarity) ? `${display(p.clarity)} Clarity` : '', p.size ? `${p.size} ct` : ''].filter(Boolean).join(' · ');
+    : [
+        (p.colorRaw || display(p.color)) ? `${p.colorRaw || display(p.color)} Color` : '',
+        (p.clarityRaw || display(p.clarity)) ? `${p.clarityRaw || display(p.clarity)} Clarity` : '',
+        p.size ? `${p.size} ct` : '',
+      ].filter(Boolean).join(' · ');
+
+  const typeLabel = watch
+    ? 'Luxury Watch'
+    : gemstone
+    ? (p.gemstoneName || p.category?.name || 'Fine Gemstone')
+    : kind === 'diamond'
+    ? 'Fine Diamond'
+    : (p.category?.name || 'Fine Jewelry');
 
   return (
     <>
       <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap"
         rel="stylesheet"
       />
 
@@ -245,7 +420,7 @@ export default async function ProductDetailPage({
           --bg-off: #faf8f5;
         }
         * { box-sizing: border-box; }
-        .pd-page { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+        .pd-page { font-family: 'Google Sans Flex', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
         .pd-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding: 20px 0 32px; flex-wrap: wrap; }
         .pd-breadcrumb a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
         .pd-breadcrumb a:hover { color: var(--gold); }
@@ -256,14 +431,16 @@ export default async function ProductDetailPage({
         .pd-type-label { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; padding: 4px 10px; border-radius: 2px; margin-bottom: 14px; }
         .pd-type-label.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
         .pd-type-label.diamond { background: #fdf4ff; color: #7e22ce; border: 0.5px solid rgba(126,34,206,0.2); }
+        .pd-type-label.gemstone { background: #ecfdf5; color: #047857; border: 0.5px solid rgba(4,120,87,0.2); }
+        .pd-type-label.jewelry { background: #fff7ed; color: #c2410c; border: 0.5px solid rgba(194,65,12,0.2); }
         .pd-category-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
         .pd-category-label::before { content: ''; display: inline-block; width: 28px; height: 0.5px; background: var(--gold); }
-        .pd-title { font-family: 'Playfair Display', serif; font-size: clamp(26px, 4vw, 40px); font-weight: 500; line-height: 1.15; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
-        .pd-subtitle { font-family: 'Playfair Display', serif; font-size: 13px; font-style: italic; color: var(--muted); margin-bottom: 32px; }
+        .pd-title { font-family: 'Google Sans Flex', sans-serif; font-size: clamp(26px, 4vw, 40px); font-weight: 500; line-height: 1.15; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
+        .pd-subtitle { font-family: 'Google Sans Flex', sans-serif; font-size: 13px; font-style: italic; color: var(--muted); margin-bottom: 32px; }
         .pd-price-block { display: flex; align-items: flex-start; gap: 0; padding: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 32px; position: relative; }
         .pd-price-block::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 60px; height: 1px; background: var(--gold); }
-        .pd-currency { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold); margin-top: 6px; margin-right: 2px; }
-        .pd-price-num { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 400; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
+        .pd-currency { font-family: 'Google Sans Flex', sans-serif; font-size: 18px; color: var(--gold); margin-top: 6px; margin-right: 2px; }
+        .pd-price-num { font-family: 'Google Sans Flex', sans-serif; font-size: 48px; font-weight: 400; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
         .pd-price-meta { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: auto; margin-bottom: 6px; margin-left: 12px; line-height: 1.6; }
         .pd-specs { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
         .pd-specs tr { border-bottom: 1px solid var(--border); }
@@ -276,9 +453,9 @@ export default async function ProductDetailPage({
         .pd-stock { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
         .pd-stock-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
         .pd-stock-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
-        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
+        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: "Elms Sans", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
         .pd-btn-primary:hover { background: #2a2a2a; }
-        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: "Elms Sans", sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .pd-btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
         .pd-mini-trust { display: flex; gap: 20px; padding-top: 20px; border-top: 1px solid var(--border); margin-top: 16px; flex-wrap: wrap; }
         .pd-mini-trust-item { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
@@ -292,7 +469,7 @@ export default async function ProductDetailPage({
         .pd-trust-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
         .pd-trust-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
         .pd-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .pd-section-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
+        .pd-section-title { font-family: "Elms Sans", sans-serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
         .pd-section-link { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; font-weight: 500; }
         .pd-section-link:hover { color: var(--gold); }
         .pd-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 80px; }
@@ -304,10 +481,10 @@ export default async function ProductDetailPage({
         .pd-related-card:hover .pd-related-img img { transform: scale(1.06); }
         .pd-related-img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0); transition: background 0.3s; }
         .pd-related-card:hover .pd-related-img-overlay { background: rgba(0,0,0,0.06); }
-        .pd-related-name { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
+        .pd-related-name { font-family: "Elms Sans", sans-serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
         .pd-related-card:hover .pd-related-name { color: var(--gold); }
         .pd-related-meta { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-        .pd-related-price { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--ink); }
+        .pd-related-price { font-family: "Elms Sans", sans-serif; font-size: 16px; color: var(--ink); }
         .pd-related-empty { grid-column: 1/-1; text-align: center; padding: 48px; color: var(--muted); font-size: 13px; letter-spacing: 0.06em; border: 1px dashed var(--border); }
         .pd-related-type-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; margin-bottom: 6px; }
         .pd-related-type-pip.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
@@ -317,8 +494,8 @@ export default async function ProductDetailPage({
         .pd-testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; }
         @media (max-width: 768px) { .pd-testimonial-grid { grid-template-columns: 1fr; } }
         .pd-testimonial-card { background: #fff; padding: 32px 28px; border: 1px solid var(--border); }
-        .pd-testimonial-quote { font-family: 'Playfair Display', serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
-        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: 'Playfair Display', serif; }
+        .pd-testimonial-quote { font-family: "Elms Sans", sans-serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
+        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: "Elms Sans", sans-serif; }
         .pd-testimonial-author { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); }
         .pd-testimonial-loc { font-size: 10px; color: var(--muted); margin-top: 2px; }
         .pd-stars { display: flex; gap: 2px; margin-bottom: 12px; color: var(--gold); font-size: 12px; }
@@ -327,7 +504,7 @@ export default async function ProductDetailPage({
         .pd-info-col-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; color: var(--ink); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         .pd-info-col-title::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
         .pd-info-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-        .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.02em; transition: color 0.2s; display: flex; align-items: center; gap: 8px; }
+        .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing： 0.02em; transition： color 0.2s; display： flex； align-items： center； gap：
         .pd-info-col ul li a::before { content: ''; display: inline-block; width: 12px; height: 0.5px; background: var(--border); transition: background 0.2s, width 0.2s; flex-shrink: 0; }
         .pd-info-col ul li a:hover { color: var(--ink); }
         .pd-info-col ul li a:hover::before { background: var(--gold); width: 18px; }
@@ -356,7 +533,7 @@ export default async function ProductDetailPage({
           {/* Hero */}
           <div className="pd-hero">
             <ProductGallery
-              images={p.images}
+              images={galleryImages}
               name={p.name}
               certBadge={showCertBadge ? certBadge : null}
               inStock={p.stock > 0}
@@ -365,9 +542,9 @@ export default async function ProductDetailPage({
 
             <div>
               {/* Type pill — SVG icons, no emoji */}
-              <div className={`pd-type-label ${watch ? 'watch' : 'diamond'}`}>
-                {watch ? <WatchIcon /> : <DiamondIcon />}
-                {watch ? 'Luxury Watch' : 'Fine Diamond'}
+              <div className={`pd-type-label ${kind}`}>
+                {kindIcon(kind)}
+                {typeLabel}
               </div>
 
               <p className="pd-category-label">
@@ -376,7 +553,7 @@ export default async function ProductDetailPage({
               </p>
 
               <h1 className="pd-title">{p.name}</h1>
-              <p className="pd-subtitle">{heroSubtitle}</p>
+              {heroSubtitle && <p className="pd-subtitle">{heroSubtitle}</p>}
 
               {/* Price */}
               <div className="pd-price-block">
@@ -385,11 +562,11 @@ export default async function ProductDetailPage({
                 <span className="pd-price-meta">USD<br />Free insured<br />shipping</span>
               </div>
 
-              {/* Specs */}
+              {/* Specs — dynamic per productKind, see buildSpecs() */}
               <table className="pd-specs">
                 <tbody>
-                  {specs.map(({ label, value, highlight }) => (
-                    <tr key={label}>
+                  {specs.map(({ label, value, highlight }, i) => (
+                    <tr key={`${label}-${i}`}>
                       <td>{label}</td>
                       <td className={highlight ? 'highlight' : ''}>{value}</td>
                     </tr>
@@ -409,12 +586,10 @@ export default async function ProductDetailPage({
 
               <AddToCartButton productId={String(p._id)} inStock={p.stock > 0} />
 
-              <button className="pd-btn-secondary" style={{ marginTop: 10 }}>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-                </svg>
-                Save to Wishlist
-              </button>
+
+              <div style={{ marginTop: 10 }}>
+                <WishlistButton productId={String(p._id)} />
+              </div>
 
               <div className="pd-mini-trust">
                 {[
@@ -471,7 +646,7 @@ export default async function ProductDetailPage({
                     {/* SVG icons instead of emoji */}
                     <div className={`pd-related-type-pip ${relIsWatch ? 'watch' : 'diamond'}`}>
                       {relIsWatch ? <WatchIcon /> : <DiamondIcon />}
-                      {relIsWatch ? 'Watch' : 'Diamond'}
+                      {relIsWatch ? 'Watch' : 'Gem'}
                     </div>
                     <div className="pd-related-meta">{relMeta}</div>
                     <div className="pd-related-name">{item.name}</div>

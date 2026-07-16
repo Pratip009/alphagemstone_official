@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/hooks/useCart";
 import SearchBar from "./SearchBar";
 import CartSidebar from "./CartSidebar";
-
+import { useWishlist } from "@/hooks/useWishlist";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface NavSubcategory {
@@ -74,8 +75,6 @@ function useNavCategories(initialCategories: NavCategory[]) {
   return { categories, loading };
 }
 
-const MAX_VISIBLE_SUBS = 7;
-
 // ── Diamond icon (matches carousel) ─────────────────────────────────────────
 function DiamondDot({
   color = "#7c3aed",
@@ -106,6 +105,68 @@ function DiamondDot({
   );
 }
 
+// ── Faceted gem graphic used in the mega-menu feature panel ────────────────
+function FacetPattern({ seed = 0 }: { seed?: number }) {
+  // Deterministic-ish facet lines derived from the category index so every
+  // dropdown gets a subtly different "cut" without any random flicker.
+  const offset = (seed % 5) * 14;
+  return (
+    <svg
+      className="mega-facet-svg"
+      viewBox="0 0 360 320"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
+      <polygon
+        points={`180,${10 + offset} 340,120 260,300 100,300 20,120`}
+        fill="none"
+        stroke="#c4b5fd"
+        strokeWidth="1"
+        opacity="0.55"
+      />
+      <polygon
+        points={`180,${10 + offset} 260,300 100,300`}
+        fill="none"
+        stroke="#7c3aed"
+        strokeWidth="1"
+        opacity="0.35"
+      />
+      <polygon
+        points={`180,${10 + offset} 340,120 180,${170 + offset}`}
+        fill="none"
+        stroke="#0f3460"
+        strokeWidth="1"
+        opacity="0.25"
+      />
+      <polygon
+        points={`180,${10 + offset} 20,120 180,${170 + offset}`}
+        fill="none"
+        stroke="#0f3460"
+        strokeWidth="1"
+        opacity="0.25"
+      />
+      <line
+        x1="180"
+        y1={170 + offset}
+        x2="260"
+        y2="300"
+        stroke="#c4b5fd"
+        strokeWidth="1"
+        opacity="0.4"
+      />
+      <line
+        x1="180"
+        y1={170 + offset}
+        x2="100"
+        y2="300"
+        stroke="#c4b5fd"
+        strokeWidth="1"
+        opacity="0.4"
+      />
+    </svg>
+  );
+}
+
 // ── Main Navbar ──────────────────────────────────────────────────────────────
 
 export default function Navbar({
@@ -115,6 +176,7 @@ export default function Navbar({
 }) {
   const { user, logout, isAdmin } = useAuth();
   const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const router = useRouter();
   const { categories, loading } = useNavCategories(initialCategories);
 
@@ -125,26 +187,38 @@ export default function Navbar({
     string | null
   >(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [expandedDropdowns, setExpandedDropdowns] = useState<Set<string>>(
-    new Set(),
-  );
   const [cartOpen, setCartOpen] = useState(false);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
-
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const HOVER_OPEN_DELAY = 500;
   useEffect(() => {
     const update = () => {
       if (navRef.current) {
-        const h = navRef.current.getBoundingClientRect().height;
-        document.documentElement.style.setProperty("--navbar-height", `${h}px`);
+        // Use the nav's actual distance from the top of the viewport
+        // (its bottom edge), not just its own height. When the
+        // announcement bar is visible, the nav sits below it, so
+        // height alone under-counts the offset and the dropdown ends
+        // up overlapping the nav links.
+        const bottom = navRef.current.getBoundingClientRect().bottom;
+        document.documentElement.style.setProperty(
+          "--navbar-height",
+          `${bottom}px`,
+        );
       }
     };
     update();
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    // Recompute on scroll too — the announcement bar scrolls away as
+    // the sticky nav settles at top:0, which changes this offset
+    // independently of resize events.
+    window.addEventListener("scroll", update, { passive: true });
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update);
+    };
   }, []);
 
   useEffect(() => {
@@ -177,28 +251,53 @@ export default function Navbar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const openCat = (slug: string) => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setOpenDropdown(slug);
+  // Close the mega-menu on escape for keyboard users
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenDropdown(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+  const updateNavbarHeight = () => {
+    if (navRef.current) {
+      const bottom = navRef.current.getBoundingClientRect().bottom;
+      document.documentElement.style.setProperty(
+        "--navbar-height",
+        `${bottom}px`,
+      );
+    }
   };
 
+  useEffect(() => {
+    updateNavbarHeight();
+    window.addEventListener("resize", updateNavbarHeight);
+    window.addEventListener("scroll", updateNavbarHeight, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateNavbarHeight);
+      window.removeEventListener("scroll", updateNavbarHeight);
+    };
+  }, []);
+  
+  const scheduleOpen = (slug: string) => {
+    cancelClose();
+    if (openTimer.current) clearTimeout(openTimer.current);
+    updateNavbarHeight();
+    openTimer.current = setTimeout(() => {
+      setOpenDropdown(slug);
+    }, HOVER_OPEN_DELAY);
+  };
+
+  const cancelOpen = () => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+  };
   const schedulClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setOpenDropdown(null), 150);
   };
 
   const cancelClose = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
-  };
-
-  const toggleExpand = (slug: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setExpandedDropdowns((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
-    });
   };
 
   const handleLogout = () => {
@@ -253,11 +352,42 @@ export default function Navbar({
       )}
     </button>
   );
-
+  const WishlistNavButton = ({ mobile = false }: { mobile?: boolean }) => (
+    <button
+      onClick={() => {
+        setMenuOpen(false);
+        router.push("/wishlist");
+      }}
+      aria-label="Open wishlist"
+      className={mobile ? "nav-mobile-icon-btn" : "nav-cart-btn"}
+    >
+      <svg
+        width={mobile ? 20 : 16}
+        height={mobile ? 20 : 16}
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        <path
+          d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {!mobile && <span className="nav-btn-label">Wishlist</span>}
+      {wishlistCount > 0 && (
+        <span className={mobile ? "cart-badge-mobile" : "cart-badge-desktop"}>
+          {wishlistCount > 99 ? "99+" : wishlistCount}
+        </span>
+      )}
+    </button>
+  );
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@200;300;400;500;600&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         :root {
           --navy:    #1a1a2e;
@@ -267,10 +397,10 @@ export default function Navbar({
           --mist:    #f5f3ff;
           --lilac:   #ede9fe;
           --petal:   #c4b5fd;
-          --silver:  #9f9fc0;
+          --silver:  #939191;
           --border:  #e8e4f8;
-          --display: 'Playfair Display', Georgia, serif;
-          --label:   'Barlow Condensed', sans-serif;
+          --display: "Elms Sans", sans-serif;
+          --label:   "Elms Sans", sans-serif;
         }
 
         /* ── Keyframes ── */
@@ -306,11 +436,20 @@ export default function Navbar({
           0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.3); }
           50%       { box-shadow: 0 0 0 6px rgba(124,58,237,0); }
         }
+        @keyframes megaFacetDrift {
+          0%   { transform: translate(0, 0) scale(1); }
+          50%  { transform: translate(-1.5%, 1%) scale(1.03); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes megaItemIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
 
         /* ── Announcement Bar ── */
         .announcement-bar {
           background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-          color: #e2e8f0;
+          color: #ffffff;
           overflow: hidden;
           position: relative;
           height: 36px;
@@ -336,7 +475,7 @@ export default function Navbar({
           font-weight: 400;
           letter-spacing: 0.1em;
           padding: 0 48px;
-          color: #cbd5e1;
+          color: #ffffff;
           display: flex;
           align-items: center;
           gap: 16px;
@@ -367,7 +506,7 @@ export default function Navbar({
           z-index: 2;
           flex-shrink: 0;
         }
-        .announcement-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .announcement-close:hover { color: #fff; background: rgb(255, 255, 255); }
 
         /* ── Main Nav ── */
         .main-nav {
@@ -380,7 +519,7 @@ export default function Navbar({
           font-family: var(--label);
         }
         .main-nav.scrolled {
-          background: rgba(255,255,255,0.97);
+          background: rgb(255, 255, 255);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           box-shadow: 0 4px 32px rgba(15,52,96,0.08), 0 1px 0 var(--border);
@@ -474,7 +613,7 @@ export default function Navbar({
         /* ── Nav links ── */
         .nav-link {
           font-family: var(--display);
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           letter-spacing: 0;
           color: var(--ink);
@@ -505,7 +644,11 @@ export default function Navbar({
           transition: color 0.15s, background 0.15s;
         }
         .nav-cart-btn:hover { color: var(--deep); background: var(--mist); }
-        .nav-btn-label { white-space: nowrap; }
+        .nav-btn-label { white-space: nowrap;font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--ink);
+    text-decoration: none; }
 
         /* ── Profile button ── */
         .nav-profile-btn {
@@ -517,7 +660,7 @@ export default function Navbar({
           cursor: pointer;
           padding: 6px 13px;
           font-family: var(--display);
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           letter-spacing: 0;
           color: var(--ink);
@@ -539,6 +682,23 @@ export default function Navbar({
           color: #fff;
           font-family: var(--display);
           flex-shrink: 0;
+          overflow: hidden;
+        }
+        .nav-avatar-lg {
+          width: 38px;
+          height: 38px;
+          font-size: 15px;
+        }
+        .nav-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+        }
+        .profile-dropdown-header-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
 
         .nav-chevron {
@@ -555,7 +715,7 @@ export default function Navbar({
           letter-spacing: 0.12em;
           text-transform: uppercase;
           color: #fff;
-          background: linear-gradient(135deg, var(--deep) 0%, var(--violet) 100%);
+          background: #000000;
           text-decoration: none;
           padding: 7px 18px;
           border-radius: 4px;
@@ -575,31 +735,32 @@ export default function Navbar({
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 0.1em;
-          text-transform: uppercase;
-          color: #b45309;
-          background: #fffbeb;
-          border: 1px solid #fde68a;
+          
+          color: #fff;
+          background: #da0000;
+          border: 1px solid #d67041;
           text-decoration: none;
           padding: 4px 10px;
           border-radius: 4px;
           margin-left: 4px;
           transition: background 0.15s;
         }
-        .nav-admin-badge:hover { background: #fef3c7; }
+        .nav-admin-badge:hover { background: #fff; color: #da0000; }
 
         /* ── Contact row ── */
         .nav-contact-row {
           display: flex;
           align-items: center;
           gap: 20px;
+
         }
         .nav-contact-link {
           display: flex;
           align-items: center;
           gap: 5px;
           font-family: var(--label);
-          font-size: 11px;
-          font-weight: 300;
+          font-size: 12px;
+          font-weight: 500;
           letter-spacing: 0.06em;
           color: var(--silver);
           text-decoration: none;
@@ -642,7 +803,7 @@ export default function Navbar({
           font-size: 9px;
           font-weight: 600;
           letter-spacing: 0.2em;
-          text-transform: uppercase;
+          
           color: var(--silver);
           margin-bottom: 4px;
         }
@@ -668,7 +829,7 @@ export default function Navbar({
           font-size: 12px;
           font-weight: 400;
           letter-spacing: 0.08em;
-          text-transform: uppercase;
+         
           color: var(--ink);
           text-decoration: none;
           transition: background 0.12s, color 0.12s, padding-left 0.15s;
@@ -694,7 +855,8 @@ export default function Navbar({
         /* ── Category Row ── */
         .cat-row {
           border-top: 1px solid var(--border);
-          background: linear-gradient(180deg, #fdfcff 0%, #f8f6ff 100%);
+          background: #ffffff;
+          position: relative;
         }
         .cat-row-inner {
           max-width: 1280px;
@@ -714,7 +876,7 @@ export default function Navbar({
           align-items: center;
           gap: 5px;
           font-family: var(--display);
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           letter-spacing: 0;
           color: var(--ink);
@@ -753,38 +915,44 @@ export default function Navbar({
           margin: 18px 16px;
         }
 
-        /* ── Dropdown panel ── */
+        /* ══════════════════════════════════════════════════════════════════
+           Mega menu — full-width, half-viewport category dropdown
+           ══════════════════════════════════════════════════════════════════ */
+        .mega-backdrop {
+          position: fixed;
+          top: var(--navbar-height, 108px);
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 20, 40, 0.22);
+          backdrop-filter: blur(2px);
+          -webkit-backdrop-filter: blur(2px);
+          z-index: 200;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.28s ease;
+        }
+        .mega-backdrop.visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
         .cat-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--deep);
-  border-radius: 0 0 14px 14px;
-  box-shadow: 0 24px 64px rgba(15,52,96,0.1), 0 4px 16px rgba(0,0,0,0.04);
-  z-index: 9999;
-  padding-bottom: 8px;
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s, width 0.25s ease;
-  max-width: calc(100vw - 32px);
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--lilac) transparent;
-}
-  .cat-dropdown::-webkit-scrollbar { width: 3px; }
-.cat-dropdown::-webkit-scrollbar-thumb { background: var(--lilac); border-radius: 2px; }
-.cat-dropdown.visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-.cat-dropdown.hidden {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-10px);
-}
+          position: fixed;
+          top: var(--navbar-height, 108px);
+          left: 0;
+          width: 100vw;
+          height: 58vh;
+          min-height: 400px;
+          background: #ffffff;
+          border-bottom: 1px solid var(--border);
+          box-shadow: 0 32px 72px rgba(15,52,96,0.14), 0 4px 16px rgba(0,0,0,0.05);
+          z-index: 250;
+          overflow: hidden;
+          transition: opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+                      transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+                      visibility 0.26s;
+        }
         .cat-dropdown.visible {
           opacity: 1;
           visibility: visible;
@@ -793,102 +961,163 @@ export default function Navbar({
         .cat-dropdown.hidden {
           opacity: 0;
           visibility: hidden;
-          transform: translateY(-10px);
+          transform: translateY(-14px);
         }
 
-        .cat-dropdown-header {
+        .mega-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          height: 100%;
+          display: grid;
+          grid-template-columns: 320px 1fr;
+        }
+
+        /* Left feature panel */
+        .mega-feature {
+          position: relative;
+          overflow: hidden;
+          padding: 44px 40px;
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 11px 20px;
+          flex-direction: column;
+          justify-content: center;
+          background: linear-gradient(160deg, var(--mist) 0%, #ffffff 78%);
+          border-right: 1px solid var(--border);
+        }
+        .mega-facet-svg {
+          position: absolute;
+          inset: -10% -10%;
+          width: 120%;
+          height: 120%;
+          animation: megaFacetDrift 14s ease-in-out infinite;
+        }
+        .mega-eyebrow {
+          position: relative;
           font-family: var(--label);
           font-size: 10px;
           font-weight: 600;
-          letter-spacing: 0.18em;
+          letter-spacing: 0.24em;
           text-transform: uppercase;
-          color: var(--deep);
-          text-decoration: none;
-          border-bottom: 1px solid var(--lilac);
-          margin-bottom: 4px;
-          background: var(--mist);
-          transition: background 0.12s;
-        }
-        .cat-dropdown-header:hover { background: var(--lilac); }
-
-        .sub-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 16px;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  color: var(--ink);
-  text-decoration: none;
-  transition: background 0.1s, color 0.1s, padding-left 0.15s;
-  white-space: nowrap;
-}
-       .sub-link:hover { background: var(--mist); color: var(--deep); padding-left: 22px; }
-
-.sub-link-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  
-}
-  .sub-link-img-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, var(--lilac), var(--mist));
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-        .sub-link-grid {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  color: var(--ink);
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border-radius: 6px;
-  transition: background 0.1s, color 0.1s;
-}
-        .sub-link-grid:hover { background: var(--mist); color: var(--deep); }
-
-        .see-more-btn {
-          display: flex;
+          color: var(--violet);
+          margin-bottom: 14px;
+          display: inline-flex;
           align-items: center;
-          gap: 6px;
-          width: 100%;
-          padding: 9px 20px;
+          gap: 8px;
+        }
+        .mega-title {
+          position: relative;
+          font-family: var(--display);
+          font-weight: 600;
+          font-size: clamp(28px, 2.6vw, 38px);
+          letter-spacing: -0.02em;
+          color: var(--navy);
+          line-height: 1.05;
+          margin: 0 0 12px;
+        }
+        .mega-count {
+          position: relative;
           font-family: var(--label);
-          font-size: 10px;
+          font-size: 12px;
+          font-weight: 300;
+          letter-spacing: 0.04em;
+          color: var(--silver);
+          margin: 0 0 28px;
+        }
+        .mega-cta {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          align-self: flex-start;
+          font-family: var(--label);
+          font-size: 11px;
           font-weight: 600;
           letter-spacing: 0.14em;
           text-transform: uppercase;
-          color: var(--deep);
-          background: transparent;
-          border: none;
-          border-top: 1px solid var(--lilac);
-          cursor: pointer;
-          margin-top: 4px;
-          transition: background 0.1s;
+          color: #fff;
+          background: #000000;
+          text-decoration: none;
+          padding: 12px 20px;
+          border-radius: 4px;
+          box-shadow: 0 3px 12px rgba(124,58,237,0.28);
+          transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s, gap 0.2s;
         }
-        .see-more-btn:hover { background: var(--mist); }
+        .mega-cta:hover {
+          opacity: 0.92;
+          gap: 12px;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(124,58,237,0.38);
+        }
+
+        /* Right subcategory grid */
+        .mega-subs-panel {
+          padding: 40px 44px;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: var(--lilac) transparent;
+        }
+        .mega-subs-panel::-webkit-scrollbar { width: 4px; }
+        .mega-subs-panel::-webkit-scrollbar-thumb { background: var(--lilac); border-radius: 2px; }
+
+        .mega-subs-grid {
+          columns: 3 220px;
+          column-gap: 36px;
+        }
+        @media (min-width: 1100px) {
+          .mega-subs-grid { columns: 4 220px; }
+        }
+
+        .mega-sub-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 9px 8px;
+          margin-bottom: 2px;
+          border-radius: 8px;
+          font-family: var(--label);
+          font-size: 13px;
+          font-weight: 400;
+          letter-spacing: 0.01em;
+          color: var(--ink);
+          text-decoration: none;
+          break-inside: avoid;
+          -webkit-column-break-inside: avoid;
+          transition: background 0.14s, color 0.14s, transform 0.14s;
+          animation: megaItemIn 0.3s ease both;
+        }
+        .mega-sub-item:hover {
+          background: var(--mist);
+          color: var(--deep);
+          transform: translateX(3px);
+        }
+        .mega-sub-item .sub-link-img,
+        .mega-sub-item .sub-link-img-placeholder {
+          width: 34px;
+          height: 34px;
+        }
+        .mega-sub-item span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .sub-link-img {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          object-fit: cover;
+          flex-shrink: 0;
+        }
+        .sub-link-img-placeholder {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          background: linear-gradient(135deg, var(--lilac), var(--mist));
+          border: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
 
         /* ── Mobile icon button ── */
         .nav-mobile-icon-btn {
@@ -1148,6 +1377,7 @@ export default function Navbar({
           font-weight: 400;
           color: #fff;
           flex-shrink: 0;
+          overflow: hidden;
         }
         .mobile-user-name {
           font-family: var(--display);
@@ -1340,13 +1570,29 @@ export default function Navbar({
 
               {user ? (
                 <>
+                  <WishlistNavButton />
+                  <CartIconButton />
+                  <a href="/orders" className="nav-link">
+                    Orders
+                  </a>
+
                   <div ref={profileRef} style={{ position: "relative" }}>
                     <button
                       className="nav-profile-btn"
                       onClick={() => setProfileOpen(!profileOpen)}
                     >
                       <div className="nav-avatar">
-                        {user.name?.charAt(0).toUpperCase()}
+                        {user.avatarUrl ? (
+                          <Image
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            width={26}
+                            height={26}
+                            className="nav-avatar-img"
+                          />
+                        ) : (
+                          user.name?.charAt(0).toUpperCase()
+                        )}
                       </div>
                       Account
                       <svg
@@ -1369,10 +1615,25 @@ export default function Navbar({
                     <div
                       className={`profile-dropdown${profileOpen ? " open" : " closed"}`}
                     >
-                      <div className="profile-dropdown-header">
-                        <p className="profile-dropdown-label">Signed in as</p>
-                        <p className="profile-dropdown-name">{user.name}</p>
-                        <p className="profile-dropdown-email">{user.email}</p>
+                      <div className="profile-dropdown-header profile-dropdown-header-row">
+                        <div className="nav-avatar nav-avatar-lg">
+                          {user.avatarUrl ? (
+                            <Image
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              width={38}
+                              height={38}
+                              className="nav-avatar-img"
+                            />
+                          ) : (
+                            user.name?.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <p className="profile-dropdown-label">Signed in as</p>
+                          <p className="profile-dropdown-name">{user.name}</p>
+                          <p className="profile-dropdown-email">{user.email}</p>
+                        </div>
                       </div>
                       <div style={{ padding: "6px 0" }}>
                         <a
@@ -1414,11 +1675,6 @@ export default function Navbar({
                       </div>
                     </div>
                   </div>
-
-                  <CartIconButton />
-                  <a href="/orders" className="nav-link">
-                    Orders
-                  </a>
                 </>
               ) : (
                 <>
@@ -1482,6 +1738,7 @@ export default function Navbar({
             className="mobile-only"
             style={{ alignItems: "center", gap: "10px" }}
           >
+            {user && <WishlistNavButton mobile />}
             {user && <CartIconButton mobile />}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -1523,30 +1780,24 @@ export default function Navbar({
 
             {!loading &&
               categories.map((cat) => {
-                const hasSubs = (cat.subcategories?.length ?? 0) > 0;
                 const isOpen = openDropdown === cat.slug;
-                const isExpanded = expandedDropdowns.has(cat.slug);
-                const visibleSubs = isExpanded
-                  ? cat.subcategories
-                  : cat.subcategories.slice(0, MAX_VISIBLE_SUBS);
-                const hasMore = cat.subcategories.length > MAX_VISIBLE_SUBS;
-
                 return (
                   <div
                     key={cat._id}
                     style={{ position: "relative" }}
-                    onMouseEnter={() => {
-                      cancelClose();
-                      openCat(cat.slug);
+                    onMouseEnter={() => scheduleOpen(cat.slug)}
+
+                    onMouseLeave={() => {
+                      cancelOpen();
+                      schedulClose();
                     }}
-                    onMouseLeave={schedulClose}
                   >
                     <Link
                       href={`/products?category=${cat.slug}`}
                       className={`cat-tab${isOpen ? " open" : ""}`}
                     >
                       {cat.name}
-                      {hasSubs && (
+                      {(cat.subcategories?.length ?? 0) > 0 && (
                         <svg
                           className="chevron"
                           width="9"
@@ -1564,143 +1815,108 @@ export default function Navbar({
                         </svg>
                       )}
                     </Link>
-
-                    {hasSubs && (
-                      <div
-                        className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
-                        style={{ width: isExpanded ? "880px" : "260px" }}
-                        onMouseEnter={cancelClose}
-                        onMouseLeave={schedulClose}
-                      >
-                        <Link
-                          href={`/products?category=${cat.slug}`}
-                          onClick={() => setOpenDropdown(null)}
-                          className="cat-dropdown-header"
-                        >
-                          All {cat.name}
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                          >
-                            <path
-                              d="M3 8h10M9 4l4 4-4 4"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </Link>
-
-                        {isExpanded ? (
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "repeat(4, 1fr)",
-                              gap: "2px 0",
-                              padding: "4px 8px",
-                            }}
-                          >
-                            {cat.subcategories.map((sub) => (
-                              <Link
-                                key={sub._id}
-                                href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
-                                onClick={() => setOpenDropdown(null)}
-                                className="sub-link-grid"
-                              >
-                                {sub.imageUrl ? (
-                                  <img
-                                    src={sub.imageUrl}
-                                    alt={sub.name}
-                                    className="sub-link-img"
-                                  />
-                                ) : (
-                                  <div className="sub-link-img-placeholder">
-                                    <DiamondDot color="#c4b5fd" size={4} />
-                                  </div>
-                                )}
-                                {sub.name}
-                              </Link>
-                            ))}
-                          </div>
-                        ) : (
-                          visibleSubs.map((sub) => (
-                            <Link
-                              key={sub._id}
-                              href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
-                              onClick={() => setOpenDropdown(null)}
-                              className="sub-link"
-                            >
-                              {sub.imageUrl ? (
-                                <img
-                                  src={sub.imageUrl}
-                                  alt={sub.name}
-                                  className="sub-link-img"
-                                />
-                              ) : (
-                                <div className="sub-link-img-placeholder">
-                                  <DiamondDot color="#c4b5fd" size={4} />
-                                </div>
-                              )}
-                              {sub.name}
-                            </Link>
-                          ))
-                        )}
-
-                        {hasMore && (
-                          <button
-                            className="see-more-btn"
-                            onClick={(e) => toggleExpand(cat.slug, e)}
-                          >
-                            {isExpanded ? (
-                              <>
-                                <svg
-                                  width="11"
-                                  height="11"
-                                  viewBox="0 0 16 16"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M4 10L8 6l4 4"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                                Show less
-                              </>
-                            ) : (
-                              <>
-                                <svg
-                                  width="11"
-                                  height="11"
-                                  viewBox="0 0 16 16"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M4 6l4 4 4-4"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                                {cat.subcategories.length - MAX_VISIBLE_SUBS}{" "}
-                                more…
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
           </div>
         </div>
+
+        {/* ── Mega Menu — full width / half viewport, one shared panel ──
+             The backdrop covers the whole page below the menu. It must NOT
+             cancel the close timer on hover — that was the bug: touching
+             the backdrop anywhere kept re-cancelling the close, so leaving
+             the dropdown never actually closed it. Now it schedules a
+             close (same as leaving the tab) and also closes on click. */}
+        <div
+          className={`mega-backdrop${openDropdown ? " visible" : ""}`}
+          onMouseEnter={schedulClose}
+          onClick={() => {
+            cancelOpen();
+            setOpenDropdown(null);
+          }}
+        />
+        {!loading &&
+          categories.map((cat, i) => {
+            if ((cat.subcategories?.length ?? 0) === 0) return null;
+            const isOpen = openDropdown === cat.slug;
+            return (
+              <div
+                key={cat._id}
+                className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
+                onMouseEnter={cancelClose}
+                onMouseLeave={() => {
+                  cancelOpen();
+                  schedulClose();
+                }}
+              >
+                <div className="mega-inner">
+                  <div className="mega-feature">
+                    <FacetPattern seed={i} />
+                    <span className="mega-eyebrow">
+                      <DiamondDot color="#7c3aed" size={6} />
+                      Collection
+                    </span>
+                    <h3 className="mega-title">{cat.name}</h3>
+                    <p className="mega-count">
+                      {cat.subcategories.length} curated{" "}
+                      {cat.subcategories.length === 1 ? "cut" : "cuts"} &amp;
+                      styles
+                    </p>
+                    <Link
+                      href={`/products?category=${cat.slug}`}
+                      onClick={() => setOpenDropdown(null)}
+                      className="mega-cta"
+                    >
+                      Shop all {cat.name}
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
+                        <path
+                          d="M3 8h10M9 4l4 4-4 4"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </Link>
+                  </div>
+
+                  <div className="mega-subs-panel">
+                    <div className="mega-subs-grid">
+                      {cat.subcategories.map((sub, si) => (
+                        <Link
+                          key={sub._id}
+                          href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
+                          onClick={() => setOpenDropdown(null)}
+                          className="mega-sub-item"
+                          style={{
+                            animationDelay: `${Math.min(si, 12) * 18}ms`,
+                          }}
+                        >
+                          {sub.imageUrl ? (
+                            <img
+                              src={sub.imageUrl}
+                              alt={sub.name}
+                              className="sub-link-img"
+                            />
+                          ) : (
+                            <div className="sub-link-img-placeholder">
+                              <DiamondDot color="#c4b5fd" size={4} />
+                            </div>
+                          )}
+                          <span>{sub.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
       </nav>
 
       {/* ── Mobile / Tablet Menu Overlay ── */}
@@ -1863,7 +2079,17 @@ export default function Navbar({
               </p>
               <div className="mobile-user-block">
                 <div className="mobile-user-avatar">
-                  {user.name?.charAt(0).toUpperCase()}
+                  {user.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      width={42}
+                      height={42}
+                      className="nav-avatar-img"
+                    />
+                  ) : (
+                    user.name?.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div>
                   <p className="mobile-user-name">{user.name}</p>

@@ -15,7 +15,7 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
     const { paypalOrderId } = await req.json();
     if (!paypalOrderId) return errorResponse('paypalOrderId is required', 400);
 
-    const order = await capturePayment(paypalOrderId);
+    const order = await capturePayment(paypalOrderId, req.user.userId);
     return successResponse({ order, message: 'Payment captured successfully' });
   } catch (err) {
     return errorResponse(err instanceof Error ? err.message : 'Payment capture failed', 500);

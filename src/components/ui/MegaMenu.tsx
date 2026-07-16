@@ -81,7 +81,8 @@ export default function MegaMenu() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         .mm * { box-sizing: border-box; }
 
@@ -99,7 +100,7 @@ export default function MegaMenu() {
         /* ── Desktop trigger ── */
         .mm-trigger {
           display: inline-flex; align-items: center; gap: 5px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 13px; font-weight: 500; letter-spacing: 0.01em;
           color: #0a0a0a; cursor: pointer;
           background: none; border: none; outline: none;
@@ -161,7 +162,7 @@ export default function MegaMenu() {
           display: flex; flex-direction: column;
         }
         .mm-rail-lbl {
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 9px; font-weight: 600; letter-spacing: 0.22em;
           text-transform: uppercase; color: #c0c0c0;
           padding: 0 1.25rem 0.75rem;
@@ -169,7 +170,7 @@ export default function MegaMenu() {
         .mm-rail-item {
           display: flex; align-items: center; gap: 8px;
           padding: 10px 1.25rem; cursor: pointer;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 12.5px; font-weight: 400; color: #888;
           border-left: 2px solid transparent;
           transition: all 0.14s ease;
@@ -198,17 +199,17 @@ export default function MegaMenu() {
           gap: 1.5rem;
         }
         .mm-cat-title {
-          font-family: 'DM Serif Display', serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 22px; color: #0a0a0a; line-height: 1; margin-bottom: 4px;
         }
         .mm-cat-desc {
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 11.5px; font-weight: 300; color: #aaa;
           line-height: 1.55; max-width: 420px;
         }
         .mm-browse-btn {
           display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
           color: #0a0a0a; text-decoration: none;
           border: 0.5px solid #ccc; padding: 7px 14px; border-radius: 8px;
@@ -262,13 +263,13 @@ export default function MegaMenu() {
 
         .mm-sub-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
         .mm-sub-name {
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 12px; font-weight: 500; color: #0a0a0a;
           line-height: 1.3; white-space: nowrap;
           overflow: hidden; text-overflow: ellipsis;
         }
         .mm-sub-hint {
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 10.5px; color: #bbb; font-weight: 300;
         }
 
@@ -283,14 +284,14 @@ export default function MegaMenu() {
         .mm-sub-item:nth-child(n+9){ animation-delay: 0.18s; }
 
         .mm-empty {
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 12px; font-style: italic; color: #ccc; padding: 4px 0;
         }
 
         /* ── Mobile trigger ── */
         .mm-mob-trigger {
           display: none; align-items: center; gap: 5px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 13px; font-weight: 500; color: #0a0a0a;
           cursor: pointer; background: none; border: none; outline: none;
           padding: 4px 0; transition: opacity 0.18s;
@@ -313,7 +314,7 @@ export default function MegaMenu() {
           position: sticky; top: 0; background: #ffffff; z-index: 10;
         }
         .mm-drawer-title {
-          font-family: 'DM Serif Display', serif; font-size: 18px; color: #0a0a0a;
+          font-family: "Elms Sans", sans-serif; font-size: 18px; color: #0a0a0a;
         }
         .mm-drawer-close {
           display: flex; align-items: center; justify-content: center;
@@ -330,7 +331,7 @@ export default function MegaMenu() {
         .mm-mob-cat-hd:hover { background: #fafafa; }
         .mm-mob-cat-left { display: flex; align-items: center; gap: 10px; }
         .mm-mob-cat-name {
-          font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #0a0a0a;
+          font-family: "Elms Sans", sans-serif; font-size: 14px; font-weight: 500; color: #0a0a0a;
         }
         .mm-mob-cat-ct {
           font-size: 10px; color: #bbb;
@@ -349,7 +350,7 @@ export default function MegaMenu() {
         .mm-mob-browse {
           display: flex; align-items: center; gap: 5px;
           padding: 11px 20px 11px 32px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
           text-decoration: none; color: #0a0a0a;
           border-bottom: 0.5px solid #f5f5f5; transition: background 0.14s;
@@ -369,14 +370,14 @@ export default function MegaMenu() {
         }
         .mm-mob-sub-thumb img { width: 100%; height: 100%; object-fit: cover; }
         .mm-mob-sub-name {
-          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; color: #555;
+          font-family: "Elms Sans", sans-serif; font-size: 13px; font-weight: 400; color: #555;
         }
 
         .mm-mob-footer {
           padding: 28px 20px; margin-top: auto; border-top: 0.5px solid #ebebeb;
         }
         .mm-mob-footer p {
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 12px; font-weight: 300; font-style: italic; color: #bbb;
         }
 

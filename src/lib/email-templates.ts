@@ -31,7 +31,89 @@ const T = {
   sansStack:  '-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif',
   monoStack:  '"Courier New",Courier,monospace',
 };
+export interface OrderDeliveredEmailData {
+  orderId: string;
+  customerName: string;
+  trackingNumber?: string;
+  deliveredAt?: string;
+}
+export interface AdminNewOrderEmailData {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  totalAmount: number;
+  itemCount: number;
+  paymentMethod: string;
+}
+export function adminNewOrderEmailHtml(data: AdminNewOrderEmailData): string {
+  const shortOrderId = data.orderId.slice(-8).toUpperCase();
 
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textMuted};">${label}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};font-weight:700;text-align:right;">${value}</td>
+    </tr>`;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:32px 48px 28px;">
+      <p style="margin:0 0 12px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">New order</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:26px;font-weight:400;color:#FFFFFF;">Order #${shortOrderId} — payment received</h1>
+    </td>
+  </tr>
+  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+
+  <tr>
+    <td class="email-pad" style="padding:36px 48px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${row('Customer', `${data.customerName} (${data.customerEmail})`)}
+        ${row('Items', String(data.itemCount))}
+        ${row('Payment method', data.paymentMethod.toUpperCase())}
+        ${row('Total', `$${data.totalAmount.toFixed(2)}`)}
+      </table>
+      <div style="margin-top:28px;">
+        ${ctaButton('Open in Admin', `${SITE_URL}/admin/orders`)}
+      </div>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `New order #${shortOrderId} — $${data.totalAmount.toFixed(2)}`);
+}
+export function orderDeliveredEmailHtml(data: OrderDeliveredEmailData): string {
+  const firstName = data.customerName.split(' ')[0] || data.customerName;
+  const shortOrderId = data.orderId.slice(-8).toUpperCase();
+
+  const body = `
+  <!-- Hero -->
+  <tr>
+    <td style="background-color:${T.headerBg};padding:40px 48px 36px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;">Delivered</p>
+      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;line-height:1.2;">It's arrived, ${firstName}.</h1>
+      <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.5);">Order <strong style="color:rgba(255,255,255,0.7);">#${shortOrderId}</strong> has been delivered.</p>
+    </td>
+  </tr>
+  <tr><td style="background-color:${T.accentGold};height:3px;font-size:3px;line-height:3px;">&nbsp;</td></tr>
+
+  <tr>
+    <td class="email-pad" style="padding:44px 48px 40px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
+        <tr>
+          <td style="background-color:${T.successBg};border:1px solid ${T.successBdr};padding:24px 28px;">
+            <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:${T.textPrimary};line-height:1.6;">
+              Your package ${data.trackingNumber ? `(tracking <strong>${data.trackingNumber}</strong>) ` : ''}was marked delivered${data.deliveredAt ? ` on ${data.deliveredAt}` : ''}. We hope you love it.
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 28px;font-family:${T.sansStack};font-size:14px;color:${T.textMuted};line-height:1.6;">
+        If anything looks off or the package didn't actually arrive, just reply to this email or reach us at ${SUPPORT_EMAIL} and we'll sort it out right away.
+      </p>
+      ${ctaButton('View Order', `${SITE_URL}/orders`)}
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `Order #${shortOrderId} has been delivered`);
+}
 // ─── Shared wrapper ───────────────────────────────────────────────────────────
 function emailWrapper(content: string, preheader = ''): string {
   return `<!DOCTYPE html>
@@ -593,11 +675,13 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
 }
 // ─── Coupon Email ─────────────────────────────────────────────────────────────
 
+// ─── Coupon Email ─────────────────────────────────────────────────────────────
+
 interface CouponEmailData {
   email: string;
   code: string;
   expiresAt: Date;
-  discount: number;
+  discountPercent: number;
   minPurchase: number;
 }
 
@@ -606,17 +690,17 @@ export function couponEmailHtml(data: CouponEmailData): string {
     month: 'long', day: 'numeric', year: 'numeric',
   });
 
-  const discountAmt  = data.discount;
-  const minPurchase  = data.minPurchase;
-  const code         = data.code;
-  const siteUrl      = SITE_URL;
-  const supportEmail = SUPPORT_EMAIL;
+  const discountPercent = data.discountPercent;
+  const minPurchase     = data.minPurchase;
+  const code            = data.code;
+  const siteUrl         = SITE_URL;
+  const supportEmail    = SUPPORT_EMAIL;
 
   const body =
     '<tr>' +
     '<td style="background-color:' + T.headerBg + ';padding:32px 48px 28px;">' +
     '<p style="margin:0;font-family:' + T.sansStack + ';font-size:10px;font-weight:700;color:' + T.accentGold + ';letter-spacing:0.22em;text-transform:uppercase;">Alpha Imports</p>' +
-    '<h1 style="margin:10px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#F9F7F4;line-height:1.25;">Your $' + discountAmt + ' Off Coupon</h1>' +
+    '<h1 style="margin:10px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#F9F7F4;line-height:1.25;">Your ' + discountPercent + '% Off Coupon</h1>' +
     '</td>' +
     '</tr>' +
     '<tr>' +
@@ -637,7 +721,7 @@ export function couponEmailHtml(data: CouponEmailData): string {
     '<td style="background-color:' + T.warnBg + ';border-left:3px solid ' + T.warnBdr + ';padding:16px 20px;">' +
     '<p style="margin:0 0 8px;font-family:' + T.sansStack + ';font-size:11px;font-weight:700;color:' + T.textPrimary + ';letter-spacing:0.1em;text-transform:uppercase;">Terms &amp; Conditions</p>' +
     '<ul style="margin:0;padding-left:18px;font-family:' + T.sansStack + ';font-size:12px;color:' + T.textMuted + ';line-height:1.9;">' +
-    '<li>$' + discountAmt + ' flat discount on qualifying orders</li>' +
+    '<li>' + discountPercent + '% off your order subtotal</li>' +
     '<li>Minimum purchase of $' + minPurchase + ' required (before shipping)</li>' +
     '<li>Valid for one use only</li>' +
     '<li>Expires on <strong>' + expiryStr + '</strong></li>' +
@@ -659,5 +743,5 @@ export function couponEmailHtml(data: CouponEmailData): string {
     '</td>' +
     '</tr>';
 
-  return emailWrapper(body, 'Your $' + discountAmt + ' off code: ' + code);
+  return emailWrapper(body, 'Your ' + discountPercent + '% off code: ' + code);
 }

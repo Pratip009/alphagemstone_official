@@ -28,97 +28,32 @@ interface HeroCarouselProps {
 const AUTO_ROTATE_MS = 6000;
 
 // ── Cloudinary URL optimiser ─────────────────────────────────────────────────
-// Only injects quality + format — NO width resize — so the original resolution
-// is preserved. f_auto picks the best format (WebP/AVIF) for the browser.
 function optimiseCloudinaryUrl(src: string): string {
   if (!src) return src;
   if (!src.includes("res.cloudinary.com")) return src;
-  // Avoid double-injecting if a transform is already present
   if (src.includes("/upload/q_")) return src;
   return src.replace("/upload/", "/upload/q_100,f_auto/");
-}
-
-// ── Typewriter hook ───────────────────────────────────────────────────────────
-function useTypewriter(text: string): string {
-  const [displayed, setDisplayed] = useState("");
-
-  useEffect(() => {
-    setDisplayed("");
-    if (!text) return;
-
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    // 520ms pause after slide transition before typing begins
-    const delayId = setTimeout(() => {
-      let i = 0;
-      intervalId = setInterval(() => {
-        i++;
-        setDisplayed(text.slice(0, i));
-        if (i >= text.length && intervalId) clearInterval(intervalId);
-      }, 62); // ~62ms per character
-    }, 520);
-
-    return () => {
-      clearTimeout(delayId);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [text]);
-
-  return displayed;
-}
-
-// ── Diamond-shaped sparkle ────────────────────────────────────────────────────
-function DiamondIcon({ accent, size = 10 }: { accent: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden="true">
-      <rect
-        x="6" y="0.5"
-        width="7.5" height="7.5"
-        transform="rotate(45 6 6)"
-        fill={accent}
-        fillOpacity="0.85"
-      />
-    </svg>
-  );
-}
-
-// ── Scanline texture overlay ──────────────────────────────────────────────────
-function Scanlines() {
-  return (
-    <div
-      className="absolute inset-0 pointer-events-none z-10"
-      style={{
-        backgroundImage:
-          "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)",
-        mixBlendMode: "multiply",
-      }}
-    />
-  );
 }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 function CarouselSkeleton() {
   return (
-    <section
-      className="relative w-full select-none"
-      style={{ background: "#04080c" }}
-    >
+    <section className="relative w-full select-none" style={{ background: "#FBFBF9" }}>
       <div
-        className="relative w-full overflow-hidden animate-pulse"
-        style={{ height: "var(--carousel-h)", minHeight: 280 }}
+        className="relative w-full overflow-hidden animate-pulse flex flex-col sm:flex-row"
+        style={{ height: "var(--stage-h)", minHeight: 320 }}
       >
-        <div className="absolute inset-0 bg-[#0d1620]" />
-        <div className="absolute inset-0 flex items-center" style={{ paddingLeft: "clamp(24px,7vw,140px)" }}>
+        <div className="w-full sm:w-[44%] h-full flex items-center" style={{ background: "#F1EFE8", paddingLeft: "clamp(24px,5vw,72px)" }}>
           <div className="flex flex-col gap-3">
-            <div className="h-3 w-24 rounded bg-white/10" />
-            <div className="h-10 w-56 rounded bg-white/10" />
-            <div className="h-10 w-48 rounded bg-white/10" />
-            <div className="h-1 w-14 rounded bg-white/10" />
-            <div className="h-8 w-32 rounded bg-white/10" />
+            <div className="h-3 w-24 rounded-sm bg-black/10" />
+            <div className="h-10 w-56 rounded-sm bg-black/10" />
+            <div className="h-10 w-48 rounded-sm bg-black/10" />
+            <div className="h-1 w-14 rounded-sm bg-black/10" />
+            <div className="h-8 w-32 rounded-sm bg-black/10" />
           </div>
         </div>
+        <div className="w-full sm:w-[56%] h-full bg-[#E7E4DB]" />
       </div>
-      <div className="h-px w-full bg-white/5" />
     </section>
   );
 }
@@ -128,76 +63,15 @@ function CarouselEmpty() {
   return (
     <section
       className="relative w-full flex items-center justify-center select-none"
-      style={{ background: "#04080c", height: "var(--carousel-h)", minHeight: 280 }}
+      style={{ background: "#FBFBF9", height: "var(--stage-h)", minHeight: 320 }}
     >
       <div className="flex flex-col items-center gap-3 text-center px-6">
-        <ImageOff size={36} strokeWidth={1} className="text-white/20" />
-        <p className="text-white/30 text-sm tracking-widest uppercase font-light">
-          No slides available
+        <ImageOff size={32} strokeWidth={1} className="text-[#14171C]/25" />
+        <p className="hc-mono" style={{ fontWeight: 500, fontSize: 12, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(20,23,28,0.4)" }}>
+          Nothing here yet
         </p>
       </div>
     </section>
-  );
-}
-
-const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
-
-const stagger = (i: number) => ({
-  hidden: { opacity: 0, x: -18, filter: "blur(4px)" },
-  visible: {
-    opacity: 1,
-    x: 0,
-    filter: "blur(0px)",
-    transition: { delay: 0.08 + i * 0.12, duration: 0.7, ease: EASE },
-  },
-});
-
-// ── Typewriter title component ────────────────────────────────────────────────
-function TypewriterTitle({
-  text,
-  accentGlow,
-  slideKey,
-}: {
-  text: string;
-  accentGlow: string;
-  slideKey: number;
-}) {
-  // Re-mount on slide change so animation restarts
-  const displayed = useTypewriter(text);
-
-  return (
-    <motion.h2
-      key={`${slideKey}-title`}
-      variants={stagger(1)}
-      initial="hidden"
-      animate="visible"
-      className="hero-display text-white"
-      style={{
-        // ← Smaller than before: was clamp(28px, 5.8vw, 92px)
-        fontSize: "clamp(22px, 4.2vw, 68px)",
-        fontWeight: 300,
-        lineHeight: 0.95,
-        letterSpacing: "-0.01em",
-        textShadow: `0 0 80px ${accentGlow}40, 0 4px 40px rgba(0,0,0,0.6)`,
-        margin: 0,
-      }}
-    >
-      {displayed}
-      {/* Blinking cursor while typing */}
-      {displayed.length < text.length && (
-        <span
-          style={{
-            display: "inline-block",
-            width: "2px",
-            height: "0.85em",
-            background: "rgba(255,255,255,0.6)",
-            marginLeft: "2px",
-            verticalAlign: "middle",
-            animation: "tw-blink 0.6s step-end infinite",
-          }}
-        />
-      )}
-    </motion.h2>
   );
 }
 
@@ -211,6 +85,8 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   const [isMobile, setIsMobile] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 639px)");
@@ -242,21 +118,14 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
           setLoading(false);
         }
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [initialSlides]);
 
-  const go = useCallback(
-    (index: number) => setCurrent((index + slides.length) % slides.length),
-    [slides.length]
-  );
-  const next = useCallback(
-    () => setCurrent((c) => (c + 1) % slides.length),
-    [slides.length]
-  );
-  const prev = useCallback(
-    () => setCurrent((c) => (c - 1 + slides.length) % slides.length),
-    [slides.length]
-  );
+  const go = useCallback((index: number) => setCurrent((index + slides.length) % slides.length), [slides.length]);
+  const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
+  const prev = useCallback(() => setCurrent((c) => (c - 1 + slides.length) % slides.length), [slides.length]);
 
   useEffect(() => {
     if (isPaused || slides.length <= 1) return;
@@ -285,6 +154,34 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
     img.src = url;
   }, [current, slides]);
 
+  // Gentle parallax drift on the product image — a soft, controlled pan,
+  // not a gimmick. Skipped on touch devices.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || isMobile) return;
+    const isFine = window.matchMedia("(pointer: fine)").matches;
+    if (!isFine) return;
+
+    const handleMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width - 0.5;
+      const ny = (e.clientY - rect.top) / rect.height - 0.5;
+      if (imageRef.current) {
+        imageRef.current.style.transform = `scale(1.05) translate(${-nx * 10}px, ${-ny * 8}px)`;
+      }
+    };
+    const handleLeave = () => {
+      if (imageRef.current) imageRef.current.style.transform = "scale(1.03) translate(0,0)";
+    };
+
+    el.addEventListener("mousemove", handleMove);
+    el.addEventListener("mouseleave", handleLeave);
+    return () => {
+      el.removeEventListener("mousemove", handleMove);
+      el.removeEventListener("mouseleave", handleLeave);
+    };
+  }, [isMobile, current]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.changedTouches[0].clientX;
     touchStartY.current = e.changedTouches[0].clientY;
@@ -299,254 +196,189 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   if (error || slides.length === 0) return <CarouselEmpty />;
 
   const b = slides[current];
-  const accent = b.accent || "#b8c9d4";
-  const accentGlow = b.accentGlow || "#5a8fa8";
+  const signal = b.accent || "#2F5DFF";
+  const sand = b.accentGlow || "#F1EFE8";
 
-  // Full quality — no width downscaling, just format optimisation
   const desktopSrc = optimiseCloudinaryUrl(b.desktopImage);
-  const mobileSrc  = b.mobileImage
-    ? optimiseCloudinaryUrl(b.mobileImage)
-    : desktopSrc;
+  const mobileSrc = b.mobileImage ? optimiseCloudinaryUrl(b.mobileImage) : desktopSrc;
   const bgImage = isMobile ? mobileSrc : desktopSrc;
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300;1,400&family=Barlow+Condensed:wght@200;300;400&display=swap');
-        .hero-display { font-family: 'Playfair Display', Georgia, serif; }
-        .hero-label   { font-family: 'Barlow Condensed', sans-serif; font-weight: 300; }
-        :root { --carousel-h: 42svh; }
-        @media (min-width: 640px) { :root { --carousel-h: 70vh; } }
-        @keyframes tw-blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+        .hc-display, .hc-body, .hc-mono { font-family: "Elms Sans", sans-serif; }
+        :root { --stage-h: 62svh; }
+        @media (min-width: 640px) { :root { --stage-h: 78vh; } }
+        @keyframes hc-rise {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes hc-tag-in {
+          from { opacity: 0; transform: rotate(-9deg) translateY(14px) scale(0.94); }
+          to   { opacity: 1; transform: rotate(-6deg) translateY(0) scale(1); }
+        }
+        @keyframes hc-swing {
+          0%, 100% { transform: rotate(-6deg); }
+          50%      { transform: rotate(-3deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hc-swing, [style*="hc-rise"], [style*="hc-tag-in"] { animation: none !important; }
         }
       `}</style>
 
-      <section
-        className="relative w-full select-none"
-        style={{ background: "#04080c" }}
-        aria-label="Promotional banners"
-        aria-roledescription="carousel"
-      >
-        {/* ── Stage ── */}
+      <section className="relative w-full select-none" aria-label="Featured products" aria-roledescription="carousel" style={{ background: "#ffffff" }}>
         <div
-          className="relative w-full overflow-hidden"
-          style={{ height: "var(--carousel-h)", minHeight: 280 }}
+          ref={stageRef}
+          className="relative w-full overflow-hidden flex flex-col sm:flex-row"
+          style={{ height: "var(--stage-h)", minHeight: 320 }}
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <AnimatePresence mode="sync">
+          <AnimatePresence mode="wait">
             <motion.div
               key={current}
-              initial={{ opacity: 0, scale: 1.04 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 1.2, ease: "easeInOut" }}
-              className="absolute inset-0 w-full h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.45, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full flex flex-col sm:flex-row"
               aria-roledescription="slide"
-              aria-label={`Slide ${current + 1} of ${slides.length}`}
+              aria-label={`Product ${current + 1} of ${slides.length}`}
             >
-              {/* Background photo — original quality, no width downscale */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={bgImage}
-                srcSet={
-                  b.mobileImage
-                    ? `${mobileSrc} 768w, ${desktopSrc} 3840w`
-                    : `${desktopSrc} 3840w`
-                }
-                sizes="100vw"
-                alt=""
-                aria-hidden="true"
-                loading={current === 0 ? "eager" : "lazy"}
-                decoding="async"
-                fetchPriority={current === 0 ? "high" : "auto"}
-                onError={(e) => {
-                  if (isMobile && b.mobileImage && bgImage !== desktopSrc) {
-                    (e.currentTarget as HTMLImageElement).src = desktopSrc;
-                  }
-                }}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center 40%",
-                  display: "block",
-                }}
-                draggable={false}
-              />
-
-              <Scanlines />
-
-              {/* Dark gradient overlay */}
-              <div
-                className="absolute inset-0 z-10"
-                style={{
-                  background:
-                    "linear-gradient(to right, rgba(4,8,12,0.72) 0%, rgba(4,8,12,0.35) 55%, rgba(4,8,12,0.05) 100%)",
-                }}
-              />
-
-              {/* ── Text block ── */}
-              <div className="absolute inset-0 flex items-center z-20">
+              {/* ── Text column — bright paper ground ── */}
+              <div className="relative w-full sm:w-[44%] h-auto sm:h-full flex items-center order-2 sm:order-1" style={{ background: "#FBFBF9" }}>
                 <div
                   className="flex flex-col"
                   style={{
-                    paddingLeft: "clamp(24px, 7vw, 140px)",
-                    paddingRight: "clamp(20px, 4vw, 60px)",
-                    maxWidth: "clamp(260px, 60vw, 600px)",
+                    paddingLeft: "clamp(24px, 5vw, 72px)",
+                    paddingRight: "clamp(20px, 3vw, 48px)",
+                    paddingTop: "clamp(28px, 3vh, 40px)",
+                    paddingBottom: "clamp(28px, 3vh, 40px)",
+                    maxWidth: 460,
                   }}
                 >
-                  {/* Eyebrow */}
                   {b.subtitle && (
-                    <motion.div
-                      key={`${current}-eyebrow`}
-                      variants={stagger(0)}
-                      initial="hidden"
-                      animate="visible"
-                      className="flex items-center gap-3 mb-3 sm:mb-5"
-                    >
-                      <DiamondIcon accent={accent} size={7} />
+                    <div className="flex items-center gap-3 mb-4" style={{ opacity: 0, animation: "hc-rise 0.7s cubic-bezier(.16,1,.3,1) 0.05s forwards" }}>
                       <span
-                        className="hero-label"
+                        className="hc-mono"
                         style={{
-                          fontSize: "clamp(8px, 0.9vw, 10px)",
-                          letterSpacing: "0.38em",
+                          fontWeight: 500,
+                          fontSize: 11,
+                          letterSpacing: "0.24em",
                           textTransform: "uppercase",
-                          color: accent,
-                          opacity: 0.9,
+                          color: signal,
+                          padding: "3px 9px",
+                          border: `1px solid ${signal}40`,
+                          background: `${signal}0d`,
                         }}
                       >
                         {b.subtitle}
                       </span>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: 1,
-                          maxWidth: 48,
-                          background: `linear-gradient(to right, ${accent}66, transparent)`,
-                        }}
-                      />
-                    </motion.div>
+                    </div>
                   )}
 
-                  {/* ── Typewriter headline ── */}
-                  <TypewriterTitle
-                    text={b.title}
-                    accentGlow={accentGlow}
-                    slideKey={current}
-                  />
+                  <h2
+                    className="hc-display"
+                    style={{
+                      color: "#14171C",
+                      fontWeight: 600,
+                      fontSize: "clamp(32px, 3.6vw, 58px)",
+                      lineHeight: 1.05,
+                      letterSpacing: "-0.02em",
+                      margin: 0,
+                      opacity: 0,
+                      animation: "hc-rise 0.8s cubic-bezier(.16,1,.3,1) 0.15s forwards",
+                    }}
+                  >
+                    {b.title}
+                  </h2>
 
-                  {/* Description */}
                   {b.description && (
-                    <motion.p
-                      key={`${current}-desc`}
-                      variants={stagger(2)}
-                      initial="hidden"
-                      animate="visible"
-                      className="hero-label text-white/60"
+                    <p
+                      className="hc-body"
                       style={{
-                        fontSize: "clamp(11px, 1.1vw, 14px)",
-                        lineHeight: 1.6,
-                        marginTop: "clamp(10px, 1.5vh, 18px)",
-                        marginBottom: "clamp(12px, 2vh, 24px)",
+                        fontWeight: 400,
+                        fontSize: "clamp(14px, 1.05vw, 16.5px)",
+                        lineHeight: 1.7,
+                        color: "rgba(20,23,28,0.62)",
+                        marginTop: "clamp(14px, 2vh, 22px)",
+                        marginBottom: "clamp(18px, 2.5vh, 30px)",
                         maxWidth: 380,
-                        fontWeight: 300,
+                        opacity: 0,
+                        animation: "hc-rise 0.8s cubic-bezier(.16,1,.3,1) 0.28s forwards",
                       }}
                     >
                       {b.description}
-                    </motion.p>
+                    </p>
                   )}
 
-                  {/* Divider */}
                   {!b.description && (
-                    <motion.div
-                      key={`${current}-rule`}
-                      variants={stagger(2)}
-                      initial="hidden"
-                      animate="visible"
+                    <div
                       style={{
-                        width: 56,
-                        height: 1,
-                        background: `linear-gradient(to right, ${accent}cc, transparent)`,
-                        marginTop: "clamp(10px, 1.5vh, 18px)",
-                        marginBottom: "clamp(12px, 2.5vh, 28px)",
+                        width: 40,
+                        height: 2,
+                        background: signal,
+                        marginTop: "clamp(14px, 2vh, 22px)",
+                        marginBottom: "clamp(18px, 2.5vh, 30px)",
+                        opacity: 0,
+                        animation: "hc-rise 0.8s cubic-bezier(.16,1,.3,1) 0.28s forwards",
                       }}
                     />
                   )}
 
-                  {/* CTA button */}
                   {b.buttonText && b.buttonLink && (
-                    <motion.div
-                      key={`${current}-cta`}
-                      variants={stagger(3)}
-                      initial="hidden"
-                      animate="visible"
-                      className="flex items-center gap-5 flex-wrap"
-                    >
+                    <div style={{ opacity: 0, animation: "hc-rise 0.8s cubic-bezier(.16,1,.3,1) 0.4s forwards" }}>
                       <a
                         href={b.buttonLink}
                         target={b.openInNewTab ? "_blank" : undefined}
                         rel={b.openInNewTab ? "noopener noreferrer" : undefined}
-                        className="hero-label group inline-flex items-center gap-2"
+                        className="hc-body group inline-flex items-center gap-2"
                         style={{
-                          fontSize: "clamp(8px, 0.95vw, 10px)",
-                          letterSpacing: "0.1em",
-                          
-                          color: "rgba(255,255,255,0.7)",
+                          fontWeight: 600,
+                          fontSize: "clamp(13px, 0.95vw, 14px)",
+                          color: "#FBFBF9",
                           textDecoration: "none",
-                          border: `1px solid ${accent}66`,
-                          padding: "6px 18px",
-                          background: `${accentGlow}10`,
-                          transition: "all 0.3s",
+                          padding: "12px 22px",
+                          background: signal,
+                          transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                          boxShadow: `0 6px 20px ${signal}40`,
                         }}
                         onMouseEnter={(e) => {
-                          const el = e.currentTarget as HTMLAnchorElement;
-                          el.style.color = accent;
-                          el.style.borderColor = `${accent}99`;
-                          el.style.background = `${accentGlow}22`;
+                          (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
                         }}
                         onMouseLeave={(e) => {
-                          const el = e.currentTarget as HTMLAnchorElement;
-                          el.style.color = "rgba(255,255,255,0.7)";
-                          el.style.borderColor = `${accent}66`;
-                          el.style.background = `${accentGlow}10`;
+                          (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
                         }}
                       >
                         {b.buttonText}
-                        <ChevronRight
-                          size={10}
-                          strokeWidth={1.5}
-                          className="transition-transform duration-300 group-hover:translate-x-1"
-                        />
+                        <ChevronRight size={14} strokeWidth={2} className="transition-transform duration-300 group-hover:translate-x-1" />
                       </a>
-                    </motion.div>
+                    </div>
                   )}
                 </div>
               </div>
+
+              {/* ── Product image ── */}
+              <div className="relative w-full sm:w-[56%] h-[46vh] sm:h-full order-1 sm:order-2 overflow-hidden" style={{ background: sand }}>
+                <div
+                  ref={imageRef}
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: `url(${bgImage})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    transform: "scale(1.03)",
+                    transition: "transform 0.6s cubic-bezier(.16,1,.3,1)",
+                  }}
+                />
+
+                
+              </div>
             </motion.div>
           </AnimatePresence>
-
-          {/* ── Slide counter top-right ── */}
-          {slides.length > 1 && (
-            <div
-              className="absolute top-5 right-5 z-30 hero-label"
-              aria-live="polite"
-              aria-atomic="true"
-              style={{
-                fontSize: 9,
-                letterSpacing: "0.28em",
-                color: "rgba(255,255,255,0.28)",
-              }}
-            >
-              {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
-            </div>
-          )}
 
           {/* ── Arrows ── */}
           {slides.length > 1 &&
@@ -554,56 +386,50 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
               <button
                 key={dir}
                 onClick={dir === "prev" ? prev : next}
-                aria-label={dir === "prev" ? "Previous slide" : "Next slide"}
-                className="hidden sm:flex absolute top-1/2 -translate-y-1/2 z-30 items-center justify-center focus:outline-none"
+                aria-label={dir === "prev" ? "Previous product" : "Next product"}
+                className="hidden sm:flex absolute top-1/2 -translate-y-1/2 z-30 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5DFF]"
                 style={{
                   [dir === "prev" ? "left" : "right"]: "clamp(12px, 2.5vw, 32px)",
-                  width: "clamp(34px, 3vw, 46px)",
-                  height: "clamp(34px, 3vw, 46px)",
-                  background: "rgba(4,8,12,0.55)",
-                  backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.5)",
-                  borderRadius: 0,
+                  width: "clamp(38px, 3vw, 46px)",
+                  height: "clamp(38px, 3vw, 46px)",
+                  background: "rgba(251,251,249,0.9)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(20,23,28,0.1)",
+                  boxShadow: "0 4px 16px rgba(20,23,28,0.1)",
+                  color: "#14171C",
                   transition: "all 0.25s",
                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLButtonElement;
-                  el.style.background = `${accentGlow}22`;
-                  el.style.borderColor = `${accent}55`;
-                  el.style.color = accent;
+                  el.style.background = "#14171C";
+                  el.style.color = "#FBFBF9";
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLButtonElement;
-                  el.style.background = "rgba(4,8,12,0.55)";
-                  el.style.borderColor = "rgba(255,255,255,0.08)";
-                  el.style.color = "rgba(255,255,255,0.5)";
+                  el.style.background = "rgba(251,251,249,0.9)";
+                  el.style.color = "#14171C";
                 }}
               >
-                {dir === "prev" ? (
-                  <ChevronLeft size={14} strokeWidth={1.5} />
-                ) : (
-                  <ChevronRight size={14} strokeWidth={1.5} />
-                )}
+                {dir === "prev" ? <ChevronLeft size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
               </button>
             ))}
 
-          {/* ── Vertical tick nav — desktop right edge ── */}
+          {/* ── Vertical tick nav ── */}
           {slides.length > 1 && (
             <div className="absolute right-5 bottom-16 z-30 hidden sm:flex flex-col items-center gap-[10px]">
               {slides.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => go(i)}
-                  aria-label={`Go to slide ${i + 1}`}
+                  aria-label={`View product ${i + 1}`}
                   style={{
-                    width: 1,
-                    height: i === current ? 32 : 10,
-                    background: i === current ? accent : "rgba(255,255,255,0.2)",
+                    width: 2,
+                    height: i === current ? 30 : 10,
+                    background: i === current ? "#14171C" : "rgba(20,23,28,0.22)",
                     border: "none",
                     padding: 0,
                     cursor: "pointer",
-                    transition: "all 0.45s ease",
+                    transition: "all 0.4s ease",
                   }}
                 />
               ))}
@@ -613,10 +439,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
 
         {/* ── Progress bar ── */}
         {slides.length > 1 && (
-          <div
-            className="relative w-full overflow-hidden"
-            style={{ height: 1, background: "rgba(255,255,255,0.04)" }}
-          >
+          <div className="relative w-full overflow-hidden" style={{ height: 2, background: "rgba(20,23,28,0.08)" }}>
             {!isPaused && (
               <motion.div
                 key={`progress-${current}`}
@@ -624,36 +447,31 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
                 animate={{ scaleX: 1 }}
                 transition={{ duration: AUTO_ROTATE_MS / 1000, ease: "linear" }}
                 className="absolute inset-0 origin-left"
-                style={{ background: accent }}
+                style={{ background: signal }}
               />
             )}
           </div>
         )}
 
-        {/* ── Dot nav — mobile only ── */}
+        {/* ── Dot nav — mobile ── */}
         {slides.length > 1 && (
-          <div
-            className="flex sm:hidden items-center justify-center gap-[10px] py-3"
-            style={{ background: "#04080c" }}
-            role="tablist"
-            aria-label="Slide navigation"
-          >
+          <div className="flex sm:hidden items-center justify-center gap-[10px] py-3" style={{ background: "#FBFBF9" }} role="tablist" aria-label="Product navigation">
             {slides.map((_, i) => (
               <button
                 key={i}
                 role="tab"
                 aria-selected={i === current}
-                aria-label={`Go to slide ${i + 1}`}
+                aria-label={`View product ${i + 1}`}
                 onClick={() => go(i)}
                 className="focus:outline-none"
                 style={{
-                  height: 1,
-                  width: i === current ? 28 : 8,
-                  background: i === current ? accent : "rgba(255,255,255,0.15)",
+                  height: 2,
+                  width: i === current ? 26 : 8,
+                  background: i === current ? "#14171C" : "rgba(20,23,28,0.2)",
                   border: "none",
                   padding: 0,
                   cursor: "pointer",
-                  transition: "all 0.45s ease",
+                  transition: "all 0.4s ease",
                 }}
               />
             ))}

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { uploadBuffer } from "@/lib/cloudinary";
 import { withAdmin } from "@/middleware/auth.middleware";
 import { errorResponse } from "@/lib/api-response";
+import { assertValidImageBuffer } from "@/lib/file-signature";
 
 export const POST = withAdmin(async (req: NextRequest) => {
   try {
@@ -13,17 +14,32 @@ export const POST = withAdmin(async (req: NextRequest) => {
     }
 
     for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        return errorResponse(`"${file.name}" is not an image`, 400);
-      }
       if (file.size > 10 * 1024 * 1024) {
         return errorResponse(`"${file.name}" exceeds the 10 MB limit`, 400);
       }
     }
 
+    // Read all buffers up front and verify each file's *actual* content
+    // (magic bytes), not the client-supplied `file.type` — that field is
+    // just metadata the caller can set to anything, e.g. relabeling an
+    // .html or .svg-with-script payload as "image/png".
+    const buffers = await Promise.all(
+      files.map(async (file) => ({
+        file,
+        buffer: Buffer.from(await file.arrayBuffer()),
+      }))
+    );
+
+    for (const { file, buffer } of buffers) {
+      try {
+        assertValidImageBuffer(buffer);
+      } catch {
+        return errorResponse(`"${file.name}" is not a valid image file`, 400);
+      }
+    }
+
     const urls = await Promise.all(
-      files.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
+      buffers.map(async ({ file, buffer }) => {
         const { secure_url } = await uploadBuffer(buffer, file.name, "products");
         return secure_url;
       })

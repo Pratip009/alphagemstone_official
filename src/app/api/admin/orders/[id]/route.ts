@@ -2,6 +2,7 @@ import { connectDB } from '@/lib/db';
 import Order, { IOrder } from '@/models/Order';
 import { withAdmin, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { buildTrackingUrl } from '@/models/ORDER_SHIPPING_FIELDS';
 import { Resend } from 'resend';
 import { orderShippedEmailHtml } from '@/lib/email-templates';
 
@@ -24,7 +25,16 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
     if (status) $set.status = status;
     if (trackingNumber !== undefined) $set.trackingNumber = trackingNumber;
     if (shippingCarrier !== undefined) $set.shippingCarrier = shippingCarrier;
-    if (trackingUrl !== undefined) $set.trackingUrl = trackingUrl;
+
+    if (trackingUrl !== undefined) {
+      // Admin explicitly provided a URL — respect it as-is.
+      $set.trackingUrl = trackingUrl;
+    } else if (trackingNumber) {
+      // No explicit URL, but a tracking number was (re)set — try to build one
+      // from the carrier so the customer still gets a "track on carrier site"
+      // link even for manually-entered (non-ShipStation) shipments.
+      $set.trackingUrl = buildTrackingUrl(shippingCarrier ?? null, trackingNumber);
+    }
 
     if (Object.keys($set).length === 0) {
       return errorResponse('No fields to update', 400);
@@ -40,7 +50,7 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
 
     // Send shipped notification email when admin marks order as shipped
     if (status === 'shipped') {
-      const tracking = trackingNumber ?? order.trackingNumber ?? order.fedex?.trackingNumber;
+const tracking = trackingNumber ?? order.trackingNumber;
       if (tracking) {
         void resend.emails.send({
           from: EMAIL_FROM,
@@ -52,7 +62,7 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
             trackingNumber: tracking,
             trackingUrl: (trackingUrl ?? order.trackingUrl) || undefined,
             shippingCarrier: (shippingCarrier ?? order.shippingCarrier) || undefined,
-            estimatedDelivery: order.shippingEstimatedDelivery ?? order.fedex?.estimatedDelivery,
+            estimatedDelivery: order.shippingEstimatedDelivery ?? undefined,
           }),
         });
       }

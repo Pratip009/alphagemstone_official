@@ -400,7 +400,7 @@ export default function SearchBar({
   return (
     <>
       <style>{`
-        .sb-wrap { position: relative; font-family: 'Poppins', sans-serif; }
+        .sb-wrap { position: relative; font-family: "Elms Sans", sans-serif; }
         .sb-input-row {
           display: flex; align-items: center; gap: 8px;
           background: #faf9ff; border: 1.5px solid #e2e0f0;
@@ -415,7 +415,7 @@ export default function SearchBar({
         }
         .sb-input {
           flex: 1; border: none; background: transparent;
-          font-family: 'Poppins', sans-serif; font-size: 13px;
+          font-family: "Elms Sans", sans-serif; font-size: 13px;
           color: #1a1a2e; outline: none;
         }
         .sb-input::placeholder { color: #b0aecb; }
@@ -429,7 +429,7 @@ export default function SearchBar({
         .sb-kbd {
           font-size: 10px; color: #b0aecb; background: #f0eeff;
           border-radius: 4px; padding: 2px 5px; flex-shrink: 0;
-          font-family: 'Poppins', sans-serif; font-weight: 500;
+          font-family: "Elms Sans", sans-serif; font-weight: 500;
         }
         .sb-drawer {
           position: fixed; left: 2vw; right: 2vw;
@@ -459,7 +459,7 @@ export default function SearchBar({
           display: flex; align-items: center; gap: 6px;
           padding: 10px 14px 5px; font-size: 10px; font-weight: 700;
           letter-spacing: 0.1em; text-transform: uppercase; color: #9f9fc0;
-          font-family: 'Poppins', sans-serif; position: sticky; top: 0;
+          font-family: "Elms Sans", sans-serif; position: sticky; top: 0;
           background: #fff; z-index: 2; border-bottom: 1px solid #f8f6ff;
         }
         .sb-sec-label:not(:first-child) { border-top: 1px solid #f0eeff; }
@@ -483,10 +483,10 @@ export default function SearchBar({
         .sb-text { flex:1; min-width:0; }
         .sb-name {
           font-size: 13px; font-weight: 500; color: #1a1a2e;
-          font-family: 'Poppins', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .sb-meta { font-size: 11px; color: #9f9fc0; font-family: 'Poppins', sans-serif; margin-top:1px; }
+        .sb-meta { font-size: 11px; color: #9f9fc0; font-family: "Elms Sans", sans-serif; margin-top:1px; }
         .sb-badge {
           font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
           text-transform: uppercase; padding: 2px 6px; border-radius: 4px;
@@ -500,7 +500,7 @@ export default function SearchBar({
         .sb-chip {
           display: inline-flex; align-items: center; gap: 4px;
           padding: 4px 10px; border-radius: 20px; font-size: 12px;
-          font-weight: 500; font-family: 'Poppins', sans-serif;
+          font-weight: 500; font-family: "Elms Sans", sans-serif;
           cursor: pointer; border: 1px solid transparent;
           transition: filter .15s, transform .1s; white-space: nowrap;
         }
@@ -509,16 +509,16 @@ export default function SearchBar({
           display: flex; align-items: center; justify-content: space-between;
           padding: 9px 14px; border-top: 1px solid #f0eeff; background: #faf9ff;
         }
-        .sb-hint { font-size: 11px; color: #b0aecb; font-family: 'Poppins', sans-serif; }
+        .sb-hint { font-size: 11px; color: #b0aecb; font-family: "Elms Sans", sans-serif; }
         .sb-all {
           display: flex; align-items: center; gap: 5px;
           font-size: 12px; font-weight: 600; color: #0f3460;
-          font-family: 'Poppins', sans-serif; cursor: pointer;
+          font-family: "Elms Sans", sans-serif; cursor: pointer;
           background: transparent; border: none; padding: 4px 8px;
           border-radius: 6px; transition: background .12s;
         }
         .sb-all:hover { background: #ede9fe; }
-        .sb-empty { padding: 28px 20px; text-align: center; font-size: 13px; color: #9f9fc0; font-family: 'Poppins', sans-serif; }
+        .sb-empty { padding: 28px 20px; text-align: center; font-size: 13px; color: #9f9fc0; font-family: "Elms Sans", sans-serif; }
         .sb-empty strong { color: #1a1a2e; display: block; margin-bottom: 4px; font-size: 14px; }
         .sb-dots { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 24px; }
         .sb-dots span { width:6px; height:6px; border-radius:50%; background:#c4b5fd; animation: sdot 1.2s ease infinite; }
@@ -686,7 +686,7 @@ export default function SearchBar({
                             <div style={{
                               padding: "6px 14px 2px", fontSize: 10, fontWeight: 700,
                               letterSpacing: "0.08em", textTransform: "uppercase",
-                              color: "#b0aecb", fontFamily: "'Poppins', sans-serif",
+                              color: "#b0aecb", fontFamily: '"Elms Sans", sans-serif',
                             }}>
                               {KIND_LABELS[k]}
                               {/* Show a subtle watch indicator for watch-exclusive filters */}

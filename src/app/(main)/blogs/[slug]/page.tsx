@@ -391,7 +391,7 @@ function CommentItem({
 
 export default function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const authFetch = useAuthFetch();
 
   const [blog, setBlog]         = useState<Blog | null>(null);
@@ -435,7 +435,7 @@ export default function BlogDetailPage() {
   }, [blog]);
 
   const handleLike = async () => {
-    if (!token) { alert('Please sign in to like this article'); return; }
+    if (!user) { alert('Please sign in to like this article'); return; }
     const optimistic = !liked;
     setLiked(optimistic);
     setLikesCount(c => optimistic ? c + 1 : c - 1);
@@ -453,7 +453,7 @@ export default function BlogDetailPage() {
   };
 
   const handleComment = async () => {
-    if (!token) { alert('Please sign in to comment'); return; }
+    if (!user) { alert('Please sign in to comment'); return; }
     if (!commentText.trim()) return;
     setCommentLoading(true);
     await authFetch(`/api/blogs/${slug}/comments`, {
@@ -621,7 +621,7 @@ export default function BlogDetailPage() {
                 {blog.comments.length} Comment{blog.comments.length !== 1 ? 's' : ''}
               </h2>
 
-              {token ? (
+              {user ? (
                 <div className="mb-6 flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#c9a84c]/15 border border-[#c9a84c]/20 flex items-center justify-center shrink-0 text-[0.7rem] font-bold text-[#c9a84c]">
                     {user?.name?.charAt(0).toUpperCase()}
@@ -695,10 +695,10 @@ export default function BlogDetailPage() {
           color: #3c3830;
           font-size: 0.95rem;
           line-height: 1.85;
-          font-family: 'Josefin Sans', sans-serif;
+           font-family: "Elms Sans", sans-serif;
         }
         .prose-blog h2 {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 1.7rem;
           font-weight: 600;
           color: #1a1714;
@@ -707,7 +707,7 @@ export default function BlogDetailPage() {
           border-bottom: 1px solid #ede9e1;
         }
         .prose-blog h3 {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 1.3rem;
           font-weight: 600;
           color: #1a1714;
@@ -726,7 +726,7 @@ export default function BlogDetailPage() {
           margin: 1.5rem 0;
           background: #faf9f7;
           border-radius: 0 8px 8px 0;
-          font-family: 'Cormorant Garamond', serif;
+           font-family: "Elms Sans", sans-serif;
           font-size: 1.05rem;
           color: #5c5852;
           font-style: italic;
@@ -741,7 +741,7 @@ export default function BlogDetailPage() {
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
           font-size: 0.85em;
-          font-family: monospace;
+          font-family: "Elms Sans", sans-serif;
           color: #c9a84c;
         }
         .prose-blog pre {

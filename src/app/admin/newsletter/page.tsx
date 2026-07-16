@@ -261,7 +261,7 @@ function CampaignForm({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminNewsletterPage() {
-  const { token, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
 
   const [activeTab, setActiveTab] = useState<Tab>('campaigns');
@@ -293,7 +293,7 @@ export default function AdminNewsletterPage() {
   // ── Data Fetching ────────────────────────────────────────────────────────
 
   const fetchStats = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     setLoadingStats(true);
     try {
       const res = await authFetch('/api/admin/newsletter/stats');
@@ -302,10 +302,10 @@ export default function AdminNewsletterPage() {
     } finally {
       setLoadingStats(false);
     }
-  }, [token, authFetch]);
+  }, [user, authFetch]);
 
   const fetchCampaigns = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     setCampLoading(true);
     try {
       const res = await authFetch(`/api/admin/newsletter/campaigns?page=${campPage}&limit=10`);
@@ -317,10 +317,10 @@ export default function AdminNewsletterPage() {
     } finally {
       setCampLoading(false);
     }
-  }, [token, authFetch, campPage]);
+  }, [user, authFetch, campPage]);
 
   const fetchSubscribers = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     setSubLoading(true);
     try {
       const params = new URLSearchParams({
@@ -338,7 +338,7 @@ export default function AdminNewsletterPage() {
     } finally {
       setSubLoading(false);
     }
-  }, [token, authFetch, subPage, subSearch, subStatus]);
+  }, [user, authFetch, subPage, subSearch, subStatus]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);

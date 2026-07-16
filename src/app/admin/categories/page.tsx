@@ -264,7 +264,7 @@ function EditCategoryModal({ category, onClose, onSave, loading }: EditCategoryM
                 </label>
                 <div
                   className="rounded-xl border border-[#e2ddd5] bg-gradient-to-br from-[#1a2a5e] to-[#0e1a40] px-5 py-4"
-                  style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                  style={{ fontFamily: '"Elms Sans", sans-serif' }}
                 >
                   <p className="text-[0.62rem] tracking-[0.22em] uppercase text-[#c8a96e] font-sans mb-1.5">
                     As seen on category page

@@ -3,6 +3,7 @@ import dbConnect from "@/lib/db";
 import ChatSession, { IMemory } from "@/models/ChatSession";
 import { dispatchTool } from "@/services/gemAI.service";
 import { VICTORIA_SYSTEM_PROMPT, GEM_TOOLS } from "@/lib/gemAI.config";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 /* ─────────────────────────────────────────────
    Types
@@ -100,6 +101,38 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "sessionId and message are required" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // This endpoint is unauthenticated and calls a paid LLM with tool-calling
+  // on every message — cap it before we ever touch the model.
+  // 1) Per IP: stops a single script/bot from hammering the endpoint.
+  const ipLimit = await rateLimit(req, { id: "chat-ip", limit: 20, windowSec: 60 });
+  if (!ipLimit.success) {
+    return new Response(JSON.stringify({ error: "Too many requests. Please slow down." }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(Math.max(0, ipLimit.reset - Math.floor(Date.now() / 1000))),
+      },
+    });
+  }
+  // 2) Per session: stops one session from being looped/spammed even from
+  // rotating IPs, and keeps a single legitimate user's cost bounded.
+  const sessionLimit = await rateLimit(req, {
+    id: "chat-session",
+    limit: 30,
+    windowSec: 3600,
+    extraKey: String(sessionId),
+    scope: "key",
+  });
+  if (!sessionLimit.success) {
+    return new Response(JSON.stringify({ error: "Too many messages in this session. Please try again later." }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(Math.max(0, sessionLimit.reset - Math.floor(Date.now() / 1000))),
+      },
     });
   }
 

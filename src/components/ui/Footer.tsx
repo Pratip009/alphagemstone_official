@@ -143,7 +143,7 @@ export default function Footer() {
     }
   };
   return (
-    <footer className="relative mt-24 overflow-hidden" style={{ background: '#faf8f4' }}>
+    <footer className="relative mt-24 overflow-hidden" style={{ background: '#ffffff' }}>
 
       {/* Top accent line */}
       <div

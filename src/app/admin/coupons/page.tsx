@@ -13,7 +13,7 @@ interface CouponDoc {
   _id: string;
   email: string;
   code: string;
-  discount: number;
+  discountPercent: number;
   minPurchase: number;
   expiresAt: string;
   isUsed: boolean;
@@ -245,7 +245,7 @@ export default function AdminCouponsPage() {
                       </td>
 
                       <td className="px-5 py-4 text-[#1a1714]">
-                        <span className="font-semibold">${c.discount} off</span>
+                        <span className="font-semibold">{c.discountPercent}% off</span>
                         <span className="block text-[11px] text-[#9e9994]">Min. ${c.minPurchase}</span>
                       </td>
 

@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,19 +21,19 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      const redirect = searchParams.get("redirect") || "/products";
+      setRedirecting(true); // ← add this
+      const redirect = searchParams.get("redirect") || "/";
       router.push(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
+      setLoading(false); // ← move out of finally, only reset on error
     }
   };
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Barlow+Condensed:wght@200;300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
         :root {
           --navy:   #1a1a2e;
@@ -47,8 +48,8 @@ export default function LoginPage() {
           --petal:  #c4b5fd;
           --silver: #9f9fc0;
           --border: #e8e4f8;
-          --display: 'Playfair Display', Georgia, serif;
-          --label:   'Barlow Condensed', sans-serif;
+          --display: "Gilda Display", serif;
+          --label:   "Gilda Display", serif;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -581,6 +582,41 @@ export default function LoginPage() {
       `}</style>
 
       <div className="auth-root">
+        {redirecting && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 50,
+              background: "rgba(250,249,247,0.92)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "20px",
+            }}
+          >
+            <span
+              className="auth-spinner"
+              style={{
+                width: 40,
+                height: 40,
+                borderWidth: 2.5,
+                borderColor: "rgba(15,52,96,0.15)",
+                borderTopColor: "#0f3460",
+              }}
+            />
+            <div style={{ textAlign: "center" }}>
+              <p className="auth-heading" style={{ marginBottom: 4 }}>
+                Signing you in…
+              </p>
+              <p className="auth-subheading" style={{ margin: 0 }}>
+                Please wait
+              </p>
+            </div>
+          </div>
+        )}
         {/* ══════════════════════════════
             LEFT PANEL
         ══════════════════════════════ */}
@@ -904,7 +940,7 @@ export default function LoginPage() {
                 <Link
                   href="/forgot-password"
                   style={{
-                    fontFamily: "'Barlow Condensed',sans-serif",
+                    fontFamily: '"Elms Sans", sans-serif',
                     fontSize: 11,
                     fontWeight: 500,
                     letterSpacing: "0.1em",

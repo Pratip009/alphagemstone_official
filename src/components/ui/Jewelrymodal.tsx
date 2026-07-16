@@ -142,10 +142,10 @@ export default function JewelryModal({
 
               <h2
                 className="mb-2 text-[38px] font-light leading-tight text-[#0f3460]"
-                style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}
+                style={{ fontFamily: '"Elms Sans", sans-serif' }}
               >
                 Enjoy{" "}
-                <em className="italic text-[#c9a96e]">$10 off</em>
+                <em className="italic text-[#c9a96e]">10% off</em>
                 <br />
                 your first piece
               </h2>
@@ -201,7 +201,7 @@ export default function JewelryModal({
                         Sending…
                       </>
                     ) : (
-                      "Unlock $10 Off"
+                      "Unlock 10% Off"
                     )}
                   </button>
                 </div>
@@ -245,12 +245,12 @@ export default function JewelryModal({
               </div>
               <h3
                 className="mb-2 text-[28px] font-light text-[#0f3460]"
-                style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}
+                style={{ fontFamily: '"Elms Sans", sans-serif' }}
               >
                 You're in
               </h3>
               <p className="text-[13px] font-light leading-relaxed text-[#4a6080]">
-                Check your inbox — your $10 off code is on its way.
+                Check your inbox — your 10% off code is on its way.
               </p>
               <p className="mt-2 text-[11px] text-[#8099b5]">
                 Valid for 30 days · Min. $200 purchase

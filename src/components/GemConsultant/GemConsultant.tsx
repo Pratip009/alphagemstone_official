@@ -25,6 +25,28 @@ import {
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
+   Design tokens — "Atelier" theme
+   Ivory paper, graphite ink, antique-gold accent.
+   One jewel color per certification, kept muted.
+───────────────────────────────────────────── */
+const T = {
+  ivory: "#FBF9F5",
+  paper: "#FFFFFF",
+  graphite: "#211E1B",
+  stone: "#7A7268",
+  stoneLight: "#A79E92",
+  hairline: "#E9E2D5",
+  hairlineSoft: "#F1ECE3",
+  gold: "#B4914F",
+  goldDeep: "#8A6A32",
+  goldPale: "#F3E9D3",
+  blush: "#F6EEE6",
+};
+
+const goldGradient = `linear-gradient(135deg, ${T.gold} 0%, ${T.goldDeep} 100%)`;
+const inkGradient = `linear-gradient(135deg, #001d90 0%, #001d90 100%)`;
+
+/* ─────────────────────────────────────────────
    Types
 ───────────────────────────────────────────── */
 interface ProductCard {
@@ -119,28 +141,32 @@ function parseSSELine(line: string): Record<string, unknown> | null {
 }
 
 /* ─────────────────────────────────────────────
-   Markdown renderer — blue theme
+   Markdown renderer — ivory & gold theme
 ───────────────────────────────────────────── */
 const markdownComponents: Components = {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   img: () => null,
   strong: ({ children }) => (
-    <strong className="font-semibold text-blue-700">{children}</strong>
+    <strong className="font-semibold" style={{ color: T.goldDeep }}>
+      {children}
+    </strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-slate-500" style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
+    <em className="italic" style={{ color: T.stone, fontFamily: '"Elms Sans", sans-serif' }}>
       {children}
     </em>
   ),
   p: ({ children }) => (
-    <p className="mb-2 last:mb-0 leading-relaxed text-slate-700">{children}</p>
+    <p className="mb-2 last:mb-0 leading-relaxed" style={{ color: T.graphite }}>
+      {children}
+    </p>
   ),
   ul: ({ children }) => <ul className="space-y-1.5 my-2 ml-1">{children}</ul>,
   li: ({ children }) => (
-    <li className="flex items-start gap-2 text-slate-700">
+    <li className="flex items-start gap-2" style={{ color: T.graphite }}>
       <span
-        className="mt-[5px] w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+        className="mt-[7px] w-1 h-1 rounded-full flex-shrink-0"
+        style={{ background: T.gold }}
       />
       <span className="flex-1">{children}</span>
     </li>
@@ -149,51 +175,70 @@ const markdownComponents: Components = {
     <ol className="space-y-1.5 my-2 ml-1 list-decimal list-inside">{children}</ol>
   ),
   h1: ({ children }) => (
-    <h1 className="text-sm font-bold text-blue-700 mb-2 uppercase tracking-wide">{children}</h1>
+    <h1
+      className="text-sm font-bold mb-2 uppercase tracking-wide"
+      style={{ color: T.goldDeep }}
+    >
+      {children}
+    </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-xs font-bold text-blue-600 mb-1.5 uppercase tracking-wider">{children}</h2>
+    <h2 className="text-xs font-bold mb-1.5 uppercase tracking-wider" style={{ color: T.gold }}>
+      {children}
+    </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-xs font-semibold text-slate-700 mb-1">{children}</h3>
+    <h3 className="text-xs font-semibold mb-1" style={{ color: T.graphite }}>
+      {children}
+    </h3>
   ),
   code: ({ children }) => (
-    <code className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-md font-mono">
+    <code
+      className="text-[11px] px-1.5 py-0.5 rounded-md font-mono border"
+      style={{ background: T.goldPale, color: T.goldDeep, borderColor: T.hairline }}
+    >
       {children}
     </code>
   ),
   blockquote: ({ children }) => (
     <blockquote
-      className="border-l-2 border-blue-300 pl-3 my-2 italic text-slate-500 text-[13px]"
-      style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+      className="border-l-2 pl-3 my-2 italic text-[13px]"
+      style={{ borderColor: T.gold, color: T.stone, fontFamily: '"Elms Sans", sans-serif' }}
     >
       {children}
     </blockquote>
   ),
   table: ({ children }) => (
-    <div className="my-2 rounded-xl overflow-hidden border border-slate-200">
+    <div className="my-2 rounded-xl overflow-hidden border" style={{ borderColor: T.hairline }}>
       <table className="w-full text-xs">{children}</table>
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-gradient-to-r from-slate-50 to-blue-50/30">{children}</thead>
+    <thead style={{ background: T.hairlineSoft }}>{children}</thead>
   ),
   th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-200">
+    <th
+      className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-[10px] border-b"
+      style={{ color: T.stoneLight, borderColor: T.hairline }}
+    >
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-3 py-2 border-b border-slate-100 text-slate-700">{children}</td>
+    <td className="px-3 py-2 border-b" style={{ borderColor: T.hairlineSoft, color: T.graphite }}>
+      {children}
+    </td>
   ),
   a: ({ children }) => (
-    <span className="text-blue-600 underline underline-offset-2 cursor-default">{children}</span>
+    <span className="underline underline-offset-2 cursor-default" style={{ color: T.goldDeep }}>
+      {children}
+    </span>
   ),
   hr: () => (
     <div className="my-3 flex items-center gap-2">
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
-      <span className="text-blue-300 text-[10px]">◆</span>
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
+      <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${T.hairline}, transparent)` }} />
+      <span className="text-[10px]" style={{ color: T.gold }}>◆</span>
+      <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${T.hairline}, transparent)` }} />
     </div>
   ),
 };
@@ -205,7 +250,10 @@ function ProductImage({ src, alt }: { src: string; alt: string }) {
   const [error, setError] = useState(false);
   if (!src || error) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/40">
+      <div
+        className="w-full h-full flex items-center justify-center"
+        style={{ background: `linear-gradient(135deg, ${T.ivory}, ${T.blush})` }}
+      >
         <span className="text-4xl opacity-20">💎</span>
       </div>
     );
@@ -226,8 +274,11 @@ function CategoryImage({ src, alt }: { src?: string; alt: string }) {
   const [error, setError] = useState(false);
   if (!src || error) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100">
-        <Layers size={22} className="text-blue-300" />
+      <div
+        className="w-full h-full flex items-center justify-center"
+        style={{ background: `linear-gradient(135deg, ${T.blush}, ${T.hairlineSoft})` }}
+      >
+        <Layers size={22} style={{ color: T.gold }} />
       </div>
     );
   }
@@ -244,7 +295,7 @@ function CategoryImage({ src, alt }: { src?: string; alt: string }) {
 }
 
 /* ─────────────────────────────────────────────
-   Thinking dots — blue
+   Thinking dots — gold
 ───────────────────────────────────────────── */
 function ThinkingDots() {
   return (
@@ -252,8 +303,8 @@ function ThinkingDots() {
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
-          className="w-2 h-2 rounded-full"
-          style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: T.gold }}
           animate={{ opacity: [0.3, 1, 0.3], y: [0, -4, 0] }}
           transition={{ duration: 1, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
         />
@@ -278,24 +329,24 @@ function CategoryTile({
     <div
       className="flex-shrink-0 w-[148px] rounded-2xl overflow-hidden bg-white group cursor-pointer transition-all duration-200"
       style={{
-        border: "1px solid rgba(59,130,246,0.15)",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+        border: `1px solid ${T.hairline}`,
+        boxShadow: "0 2px 14px rgba(33,30,27,0.05)",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(59,130,246,0.5)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(29,78,216,0.14)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = T.gold;
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 26px rgba(138,106,50,0.16)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(59,130,246,0.15)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = T.hairline;
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 14px rgba(33,30,27,0.05)";
       }}
     >
-      <div className="relative h-28 overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="relative h-28 overflow-hidden" style={{ background: T.ivory }}>
         <CategoryImage src={category.image} alt={category.name} />
         {category.productCount !== undefined && (
           <div
             className="absolute top-2 left-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10"
-            style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+            style={{ background: inkGradient }}
           >
             {category.productCount} items
           </div>
@@ -304,27 +355,29 @@ function CategoryTile({
 
       <div className="p-2.5 space-y-2">
         <p
-          className="text-slate-800 text-[11px] font-semibold leading-snug line-clamp-2"
-          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+          className="text-[11px] font-semibold leading-snug line-clamp-2"
+          style={{ color: T.graphite, fontFamily: '"Elms Sans", sans-serif' }}
         >
           {category.name}
         </p>
         {category.description && (
-          <p className="text-[9px] text-slate-400 line-clamp-2 leading-relaxed">
+          <p className="text-[9px] line-clamp-2 leading-relaxed" style={{ color: T.stoneLight }}>
             {category.description}
           </p>
         )}
         <div className="flex gap-1 pt-0.5">
           <button
             onClick={() => onNavigate(category)}
-            className="flex-1 flex items-center justify-center gap-0.5 text-[9px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/70 rounded-lg py-1 transition-colors"
+            className="flex-1 flex items-center justify-center gap-0.5 text-[9px] font-semibold rounded-lg py-1 transition-colors"
+            style={{ color: T.goldDeep, background: T.goldPale, border: `1px solid ${T.hairline}` }}
           >
             <ExternalLink size={8} />
             Browse
           </button>
           <button
             onClick={() => onAsk(category.name)}
-            className="flex-1 flex items-center justify-center gap-0.5 text-[9px] font-semibold text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200/70 rounded-lg py-1 transition-colors"
+            className="flex-1 flex items-center justify-center gap-0.5 text-[9px] font-semibold rounded-lg py-1 transition-colors"
+            style={{ color: T.stone, background: T.hairlineSoft, border: `1px solid ${T.hairline}` }}
           >
             <ArrowRight size={8} />
             Explore
@@ -349,13 +402,15 @@ function ScrollCarousel({ children, count }: { children: React.ReactNode; count:
         <>
           <button
             onClick={() => scroll("left")}
-            className="absolute left-0 top-[calc(50%-16px)] z-10 w-6 h-6 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-full flex items-center justify-center shadow hover:border-blue-300 hover:text-blue-600 transition-colors"
+            className="absolute left-0 top-[calc(50%-16px)] z-10 w-6 h-6 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow transition-colors"
+            style={{ border: `1px solid ${T.hairline}`, color: T.stone }}
           >
             <ChevronLeft size={11} />
           </button>
           <button
             onClick={() => scroll("right")}
-            className="absolute right-0 top-[calc(50%-16px)] z-10 w-6 h-6 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-full flex items-center justify-center shadow hover:border-blue-300 hover:text-blue-600 transition-colors"
+            className="absolute right-0 top-[calc(50%-16px)] z-10 w-6 h-6 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow transition-colors"
+            style={{ border: `1px solid ${T.hairline}`, color: T.stone }}
           >
             <ChevronRight size={11} />
           </button>
@@ -387,46 +442,50 @@ function GemCard({
   onNavigate: (id: string) => void;
 }) {
   const img = product.images?.[0];
-  const certColors: Record<string, string> = {
-    GIA: "bg-blue-50 text-blue-700 border-blue-200",
-    AGS: "bg-violet-50 text-violet-700 border-violet-200",
-    IGI: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    GCAL: "bg-rose-50 text-rose-700 border-rose-200",
-    EGL: "bg-sky-50 text-sky-700 border-sky-200",
-    HRD: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  // Muted jewel tones for certification chips — desaturated, editorial.
+  const certColors: Record<string, { bg: string; fg: string; bd: string }> = {
+    GIA: { bg: "#F3E9D3", fg: T.goldDeep, bd: T.hairline },
+    AGS: { bg: "#EFE8F1", fg: "#6B4E77", bd: "#E1D3E5" },
+    IGI: { bg: "#E7EFE7", fg: "#4C6B4E", bd: "#D6E4D6" },
+    GCAL: { bg: "#F3E4E1", fg: "#93534A", bd: "#E8D3CE" },
+    EGL: { bg: "#E4EDEF", fg: "#4C6E76", bd: "#D3E2E5" },
+    HRD: { bg: "#E9E7F1", fg: "#5A5488", bd: "#DAD6E9" },
   };
-  const certClass = certColors[product.certification] ?? "bg-gray-50 text-gray-500 border-gray-200";
+  const cert = certColors[product.certification] ?? { bg: "#F1EFEC", fg: T.stone, bd: T.hairline };
 
   return (
     <div
       onClick={() => onNavigate(product._id)}
       className="flex-shrink-0 w-[168px] rounded-2xl overflow-hidden bg-white group cursor-pointer transition-all duration-200"
       style={{
-        border: "1px solid rgba(59,130,246,0.15)",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+        border: `1px solid ${T.hairline}`,
+        boxShadow: "0 2px 14px rgba(33,30,27,0.05)",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(59,130,246,0.5)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(29,78,216,0.14)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = T.gold;
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 26px rgba(138,106,50,0.16)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(59,130,246,0.15)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = T.hairline;
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 14px rgba(33,30,27,0.05)";
       }}
       title={`View ${product.name}`}
     >
-      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="relative h-36 overflow-hidden" style={{ background: T.ivory }}>
         <ProductImage src={img} alt={product.name} />
         {product.score !== undefined && (
           <div
             className="absolute top-2 right-2 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10"
-            style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+            style={{ background: goldGradient }}
           >
             {product.score}%
           </div>
         )}
-        <div className="absolute inset-0 bg-blue-900/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-10">
-          <div className="flex items-center gap-1 text-white text-[10px] font-semibold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/30">
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-10"
+          style={{ background: "rgba(26,24,21,0.38)" }}
+        >
+          <div className="flex items-center gap-1 text-white text-[10px] font-semibold bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/25">
             <ExternalLink size={9} />
             View
           </div>
@@ -434,20 +493,29 @@ function GemCard({
       </div>
 
       <div className="p-2.5 space-y-1.5">
-        <p className="text-slate-800 text-[11px] font-semibold leading-snug line-clamp-2">
+        <p className="text-[11px] font-semibold leading-snug line-clamp-2" style={{ color: T.graphite }}>
           {product.name}
         </p>
         <div className="flex flex-wrap gap-1">
-          <span className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200/70 px-1.5 py-0.5 rounded-full font-semibold">
+          <span
+            className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+            style={{ background: T.goldPale, color: T.goldDeep, border: `1px solid ${T.hairline}` }}
+          >
             {product.size}ct
           </span>
           {product.shape && (
-            <span className="text-[9px] bg-slate-50 text-slate-500 border border-slate-200/70 px-1.5 py-0.5 rounded-full capitalize">
+            <span
+              className="text-[9px] px-1.5 py-0.5 rounded-full capitalize"
+              style={{ background: T.hairlineSoft, color: T.stone, border: `1px solid ${T.hairline}` }}
+            >
               {product.shape}
             </span>
           )}
           {product.color && product.clarity && (
-            <span className="text-[9px] bg-slate-50 text-slate-500 border border-slate-200/70 px-1.5 py-0.5 rounded-full">
+            <span
+              className="text-[9px] px-1.5 py-0.5 rounded-full"
+              style={{ background: T.hairlineSoft, color: T.stone, border: `1px solid ${T.hairline}` }}
+            >
               {product.color}/{product.clarity}
             </span>
           )}
@@ -455,16 +523,15 @@ function GemCard({
         <div className="flex items-center justify-between pt-0.5">
           <span
             className="text-sm font-bold tracking-tight"
-            style={{
-              background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
+            style={{ color: T.graphite, fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
             ${product.price.toLocaleString()}
           </span>
           {product.certification && product.certification !== "none" && (
-            <span className={`flex items-center gap-0.5 text-[9px] border px-1.5 py-0.5 rounded-full font-semibold ${certClass}`}>
+            <span
+              className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+              style={{ background: cert.bg, color: cert.fg, border: `1px solid ${cert.bd}` }}
+            >
               <Award size={8} />
               {product.certification}
             </span>
@@ -480,31 +547,61 @@ function GemCard({
 ───────────────────────────────────────────── */
 function ComparisonView({ data }: { data: ComparisonData }) {
   return (
-    <div className="mt-3 rounded-2xl overflow-hidden border border-blue-100 text-xs bg-white">
+    <div
+      className="mt-3 rounded-2xl overflow-hidden text-xs bg-white"
+      style={{ border: `1px solid ${T.hairline}` }}
+    >
       <div
-        className="grid grid-cols-3 text-[9px] uppercase tracking-wider font-bold text-slate-400 border-b border-slate-100"
-        style={{ background: "linear-gradient(135deg, #fafafa, #eff6ff)" }}
+        className="grid grid-cols-3 text-[9px] uppercase tracking-wider font-bold border-b"
+        style={{ background: T.blush, borderColor: T.hairline, color: T.stoneLight }}
       >
-        <div className="p-2.5 border-r border-slate-100" />
-        <div className="p-2.5 border-r border-slate-100 text-center text-blue-700 truncate">{data.productA.name}</div>
-        <div className="p-2.5 text-center text-blue-700 truncate">{data.productB.name}</div>
+        <div className="p-2.5 border-r" style={{ borderColor: T.hairline }} />
+        <div
+          className="p-2.5 border-r text-center truncate"
+          style={{ borderColor: T.hairline, color: T.goldDeep }}
+        >
+          {data.productA.name}
+        </div>
+        <div className="p-2.5 text-center truncate" style={{ color: T.goldDeep }}>
+          {data.productB.name}
+        </div>
       </div>
       {data.table.map((row, i) => (
-        <div key={i} className="grid grid-cols-3 border-t border-slate-100 hover:bg-blue-50/20 transition-colors">
-          <div className="p-2 text-slate-400 border-r border-slate-100 text-[10px] font-medium">{row.attribute}</div>
-          <div className={`p-2 text-center border-r border-slate-100 font-semibold ${row.winner === "A" ? "text-blue-700" : "text-slate-400"}`}>
+        <div
+          key={i}
+          className="grid grid-cols-3 border-t transition-colors"
+          style={{ borderColor: T.hairlineSoft }}
+        >
+          <div
+            className="p-2 border-r text-[10px] font-medium"
+            style={{ borderColor: T.hairlineSoft, color: T.stoneLight }}
+          >
+            {row.attribute}
+          </div>
+          <div
+            className="p-2 text-center border-r font-semibold"
+            style={{
+              borderColor: T.hairlineSoft,
+              color: row.winner === "A" ? T.goldDeep : T.stoneLight,
+            }}
+          >
             {String(row.valueA)}
           </div>
-          <div className={`p-2 text-center font-semibold ${row.winner === "B" ? "text-blue-700" : "text-slate-400"}`}>
+          <div
+            className="p-2 text-center font-semibold"
+            style={{ color: row.winner === "B" ? T.goldDeep : T.stoneLight }}
+          >
             {String(row.valueB)}
           </div>
         </div>
       ))}
       <div
-        className="p-3 border-t border-blue-100 text-[11px] leading-relaxed text-blue-800/70 italic"
+        className="p-3 border-t text-[11px] leading-relaxed italic"
         style={{
-          background: "linear-gradient(135deg, #f0f7ff, #eff6ff)",
-          fontFamily: "'DM Serif Display', Georgia, serif",
+          background: T.blush,
+          borderColor: T.hairline,
+          color: T.stone,
+          fontFamily: '"Elms Sans", sans-serif',
         }}
       >
         {data.reasoning}
@@ -531,7 +628,10 @@ function MessageBubble({
     return (
       <div className="flex items-start gap-2.5">
         <AvatarIcon />
-        <div className="rounded-2xl rounded-tl-sm px-4 py-3 border border-slate-200 bg-white">
+        <div
+          className="rounded-2xl rounded-tl-sm px-4 py-3 bg-white"
+          style={{ border: `1px solid ${T.hairline}` }}
+        >
           <ThinkingDots />
         </div>
       </div>
@@ -542,8 +642,8 @@ function MessageBubble({
     return (
       <div className="flex justify-end">
         <div
-          className="max-w-[80%] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm leading-relaxed"
-          style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)" }}
+          className="max-w-[80%] text-[#F6EEE6] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm leading-relaxed"
+          style={{ background: inkGradient }}
         >
           {msg.content}
         </div>
@@ -554,10 +654,13 @@ function MessageBubble({
   if (msg.isError) {
     return (
       <div className="flex items-start gap-2.5">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 bg-red-400">
+        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 bg-[#B25A4E]">
           <AlertCircle size={12} />
         </div>
-        <div className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-red-600 leading-relaxed border border-red-100 bg-red-50">
+        <div
+          className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed"
+          style={{ color: "#93534A", border: "1px solid #E8D3CE", background: "#F8EEEC" }}
+        >
           {msg.content}
         </div>
       </div>
@@ -575,9 +678,9 @@ function MessageBubble({
         <div
           className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm border"
           style={{
-            background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
-            borderColor: "rgba(59,130,246,0.15)",
-            fontFamily: "'DM Serif Display', Georgia, serif",
+            background: T.paper,
+            borderColor: T.hairline,
+            fontFamily: '"Elms Sans", sans-serif',
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -587,7 +690,10 @@ function MessageBubble({
 
         {hasCategories && (
           <>
-            <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-3 mb-1 px-0.5">
+            <p
+              className="text-[9px] uppercase tracking-[0.14em] font-semibold mt-3 mb-1 px-0.5"
+              style={{ color: T.stoneLight }}
+            >
               Categories
             </p>
             <ScrollCarousel count={msg.categories!.length}>
@@ -605,7 +711,10 @@ function MessageBubble({
 
         {hasSubcategories && (
           <>
-            <p className="text-[9px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-3 mb-1 px-0.5">
+            <p
+              className="text-[9px] uppercase tracking-[0.14em] font-semibold mt-3 mb-1 px-0.5"
+              style={{ color: T.stoneLight }}
+            >
               {msg.subcategories![0]?.parentName
                 ? `${msg.subcategories![0].parentName} › Subcategories`
                 : "Subcategories"}
@@ -620,8 +729,9 @@ function MessageBubble({
                 />
               ))}
             </ScrollCarousel>
-            <p className="text-[9px] text-slate-400 text-center mt-1.5 tracking-wide">
-              Tap <span className="text-blue-600">Browse</span> to open · <span className="text-slate-500">Explore</span> to ask Victoria
+            <p className="text-[9px] text-center mt-1.5 tracking-wide" style={{ color: T.stoneLight }}>
+              Tap <span style={{ color: T.goldDeep }}>Browse</span> to open ·{" "}
+              <span style={{ color: T.stone }}>Explore</span> to ask Victoria
             </p>
           </>
         )}
@@ -633,7 +743,7 @@ function MessageBubble({
                 <GemCard key={p._id} product={p} onNavigate={onNavigateProduct} />
               ))}
             </ScrollCarousel>
-            <p className="text-[9px] text-slate-400 text-center mt-1.5 tracking-wide">
+            <p className="text-[9px] text-center mt-1.5 tracking-wide" style={{ color: T.stoneLight }}>
               Tap any card to view full details
             </p>
           </>
@@ -646,13 +756,13 @@ function MessageBubble({
 }
 
 /* ─────────────────────────────────────────────
-   Avatar — blue gradient
+   Avatar — gold gradient
 ───────────────────────────────────────────── */
 function AvatarIcon() {
   return (
     <div
       className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 mt-0.5"
-      style={{ background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)" }}
+      style={{ background: goldGradient }}
     >
       <Sparkles size={12} />
     </div>
@@ -671,7 +781,7 @@ function SuggestedQuestions({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-semibold px-0.5">
+      <p className="text-[9px] uppercase tracking-[0.15em] font-semibold px-0.5" style={{ color: T.stoneLight }}>
         Try asking
       </p>
       {SUGGESTED.map((q, i) => (
@@ -682,14 +792,22 @@ function SuggestedQuestions({
           transition={{ delay: 0.04 + i * 0.04 }}
           onClick={() => onSelect(q)}
           disabled={isLoading}
-          className="flex items-center gap-2.5 w-full text-left text-xs text-slate-500 bg-white/80 rounded-xl px-3 py-2 hover:bg-blue-50 hover:text-blue-800 transition-all group disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ border: "1px solid rgba(59,130,246,0.12)" }}
+          className="flex items-center gap-2.5 w-full text-left text-xs bg-white rounded-xl px-3 py-2 transition-all group disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ border: `1px solid ${T.hairline}`, color: T.stone }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = T.blush;
+            (e.currentTarget as HTMLButtonElement).style.color = T.goldDeep;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = T.paper;
+            (e.currentTarget as HTMLButtonElement).style.color = T.stone;
+          }}
         >
           <span
-            className="w-1 h-1 rounded-full flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
-            style={{ background: "#3b82f6" }}
+            className="w-1 h-1 rounded-full flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
+            style={{ background: T.gold }}
           />
-          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>{q}</span>
+          <span style={{ fontFamily: '"Elms Sans", sans-serif' }}>{q}</span>
         </motion.button>
       ))}
     </div>
@@ -697,149 +815,89 @@ function SuggestedQuestions({
 }
 
 /* ─────────────────────────────────────────────
-   FAB Orbital rings — blue theme
+   FAB halo — one restrained pulse, not a swarm of rings
 ───────────────────────────────────────────── */
-function OrbitalRings() {
+function FabHalo() {
   return (
     <>
-      {/* Glow halo */}
       <span
-        className="absolute inset-[-6px] rounded-full pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 70%)",
-        }}
+        className="absolute inset-[-7px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(180,145,79,0.22) 0%, transparent 72%)" }}
       />
-      {/* Ring 1 — slow spin with orb */}
-      <motion.span
-        className="absolute inset-[-10px] rounded-full pointer-events-none"
-        style={{
-          border: "1px solid rgba(59,130,246,0.4)",
-          boxShadow: "inset 0 0 8px rgba(59,130,246,0.08)",
-        }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-      >
-        <span
-          className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full"
-          style={{ background: "linear-gradient(135deg, #93c5fd, #3b82f6)" }}
-        />
-      </motion.span>
-      {/* Ring 2 — counter-spin dashed */}
-      <motion.span
-        className="absolute inset-[-18px] rounded-full pointer-events-none"
-        style={{ border: "1px dashed rgba(147,197,253,0.25)" }}
-        animate={{ rotate: -360 }}
-        transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-      >
-        <span
-          className="absolute bottom-0 right-1/4 w-1 h-1 rounded-full"
-          style={{ background: "rgba(96,165,250,0.55)" }}
-        />
-      </motion.span>
-      {/* Ripple pulse 1 */}
       <motion.span
         className="absolute inset-0 rounded-full pointer-events-none"
-        style={{ background: "rgba(59,130,246,0.15)" }}
-        animate={{ scale: [1, 1.9], opacity: [0.55, 0] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
-      />
-      {/* Ripple pulse 2 */}
-      <motion.span
-        className="absolute inset-0 rounded-full pointer-events-none"
-        style={{ background: "rgba(59,130,246,0.1)" }}
-        animate={{ scale: [1, 2.3], opacity: [0.4, 0] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay: 0.55 }}
+        style={{ background: "rgba(180,145,79,0.16)" }}
+        animate={{ scale: [1, 1.85], opacity: [0.5, 0] }}
+        transition={{ duration: 2.6, repeat: Infinity, ease: "easeOut" }}
       />
     </>
   );
 }
 
 /* ─────────────────────────────────────────────
-   Diamond SVG icon
+   Diamond SVG icon — warm gold facets
 ───────────────────────────────────────────── */
 function GemFacetIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 2L7 8H17L12 2Z" fill="rgba(255,255,255,0.95)" />
-      <path d="M7 8L2 8L6 14L12 8H7Z" fill="rgba(255,255,255,0.7)" />
-      <path d="M17 8H22L18 14L12 8H17Z" fill="rgba(255,255,255,0.82)" />
-      <path d="M6 14L12 22L12 14H6Z" fill="rgba(255,255,255,0.6)" />
-      <path d="M18 14L12 22L12 14H18Z" fill="rgba(255,255,255,0.75)" />
-      <path d="M12 14H6L12 22L18 14H12Z" fill="rgba(255,255,255,0.55)" />
-      <path d="M7 8L12 8L12 14L6 14Z" fill="rgba(255,255,255,0.12)" />
+      <path d="M12 2L7 8H17L12 2Z" fill="rgba(255,255,255,0.97)" />
+      <path d="M7 8L2 8L6 14L12 8H7Z" fill="rgba(255,255,255,0.78)" />
+      <path d="M17 8H22L18 14L12 8H17Z" fill="rgba(255,255,255,0.88)" />
+      <path d="M6 14L12 22L12 14H6Z" fill="rgba(255,255,255,0.66)" />
+      <path d="M18 14L12 22L12 14H18Z" fill="rgba(255,255,255,0.8)" />
+      <path d="M12 14H6L12 22L18 14H12Z" fill="rgba(255,255,255,0.6)" />
+      <path d="M7 8L12 8L12 14L6 14Z" fill="rgba(255,255,255,0.18)" />
     </svg>
   );
 }
 
 /* ─────────────────────────────────────────────
-   FAB Tooltip — dark slate, blue accents
+   FAB Tooltip — ink & gold
+───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   FAB Tooltip — compact pill above the button
+───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   FAB Tooltip — compact pill, left of the button
 ───────────────────────────────────────────── */
 function FabTooltip() {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 16, scale: 0.92 }}
+      initial={{ opacity: 0, x: 10, scale: 0.92 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 12, scale: 0.92 }}
-      transition={{ delay: 2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="absolute right-[72px] top-1/2 -translate-y-1/2 pointer-events-none"
+      exit={{ opacity: 0, x: 8, scale: 0.92 }}
+      transition={{ delay: 2, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="hidden sm:block absolute right-full top-2/3 -translate-y-1/2 mr-3 pointer-events-none"
     >
-      <div className="relative flex flex-col items-end">
-        {/* Pill */}
+      <div className="relative">
         <div
-          className="flex items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-2xl"
+          className="flex items-center gap-1.5 whitespace-nowrap pl-2.5 pr-3 py-1.5 rounded-full"
           style={{
-            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-            border: "1px solid rgba(59,130,246,0.28)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.28), 0 0 0 1px rgba(59,130,246,0.07), inset 0 1px 0 rgba(255,255,255,0.05)",
+            background: inkGradient,
+            border: "1px solid rgba(92,163,255,0.35)",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.22)",
           }}
         >
-          {/* Animated dots */}
-          <div className="flex gap-[3px] items-center">
-            {[0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                className="w-[3px] h-[3px] rounded-full"
-                style={{ background: "#60a5fa" }}
-                animate={{ opacity: [0.3, 1, 0.3], scaleY: [0.6, 1.4, 0.6] }}
-                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
-              />
-            ))}
-          </div>
-
-          {/* Label */}
+          <motion.span
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+            style={{ background: "#5ca3ff" }}
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          />
           <span
-            className="text-[11px] font-semibold tracking-wide"
-            style={{
-              background: "linear-gradient(90deg, #e0f2fe, #93c5fd, #60a5fa)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontFamily: "'DM Serif Display', Georgia, serif",
-            }}
+            className="text-[11px] font-medium"
+            style={{ color: "#EAF2FF", fontFamily: '"Elms Sans", sans-serif' }}
           >
             Ask Victoria
           </span>
-
-          {/* AI badge */}
-          <span
-            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-widest"
-            style={{
-              background: "rgba(59,130,246,0.14)",
-              color: "rgba(147,197,253,0.85)",
-              border: "1px solid rgba(59,130,246,0.22)",
-              letterSpacing: "0.12em",
-            }}
-          >
-            AI
-          </span>
         </div>
 
-        {/* Caret */}
         <div
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-0 h-0"
+          className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0"
           style={{
             borderTop: "5px solid transparent",
             borderBottom: "5px solid transparent",
-            borderLeft: "6px solid rgba(59,130,246,0.28)",
+            borderLeft: "5px solid #0b174a",
           }}
         />
       </div>
@@ -848,14 +906,14 @@ function FabTooltip() {
 }
 
 /* ─────────────────────────────────────────────
-   Live badge dot (green on blue)
+   Live badge dot
 ───────────────────────────────────────────── */
-function LiveBadgeDot({ borderColor = "#1d4ed8" }: { borderColor?: string }) {
+function LiveBadgeDot({ borderColor = "#1A1815" }: { borderColor?: string }) {
   return (
     <motion.div
-      className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full"
+      className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full"
       style={{ border: `1.5px solid ${borderColor}` }}
-      animate={{ boxShadow: ["0 0 0 0px rgba(52,211,153,0.4)", "0 0 0 4px rgba(52,211,153,0)"] }}
+      animate={{ boxShadow: ["0 0 0 0px rgba(16,185,129,0.35)", "0 0 0 4px rgba(16,185,129,0)"] }}
       transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
     />
   );
@@ -1061,73 +1119,55 @@ export default function GemConsultant() {
     <>
       {/* ── FAB ── */}
       <div className="fixed bottom-5 right-5 z-[9998]" style={{ isolation: "isolate" }}>
+        <AnimatePresence>{!isOpen && <FabTooltip />}</AnimatePresence>
 
-        {/* Tooltip */}
-        <AnimatePresence>
-          {!isOpen && <FabTooltip />}
-        </AnimatePresence>
-
-        {/* FAB button */}
         <motion.button
-          onClick={() => setIsOpen((v) => !v)}
-          className="relative w-14 h-14 rounded-full flex items-center justify-center"
-          style={{
-            background: isOpen
-              ? "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)"
-              : "linear-gradient(150deg, #1d4ed8 0%, #1e40af 100%)",
-            boxShadow: isOpen
-              ? "0 4px 20px rgba(29,78,216,0.35), inset 0 1px 0 rgba(255,255,255,0.08)"
-              : "0 12px 40px rgba(29,78,216,0.45), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)",
-            border: "1px solid rgba(147,197,253,0.25)",
-          }}
-          whileHover={{ scale: 1.07 }}
-          whileTap={{ scale: 0.93 }}
-          aria-label="Open Gem Consultant"
-        >
-          {/* Orbital rings — only when closed */}
-          {!isOpen && <OrbitalRings />}
+  onClick={() => setIsOpen((v) => !v)}
+  className="relative w-14 h-14 rounded-full flex items-center justify-center"
+  style={{
+    background: isOpen
+      ? "linear-gradient(135deg, #163b8a 0%, #0b174a 100%)"
+      : "linear-gradient(160deg, #5ca3ff 0%, #2661e0 42%, #1710a2 100%)",
+    boxShadow: isOpen
+      ? "0 4px 20px rgba(22, 68, 138, 0.35), inset 0 1px 0 rgba(255,255,255,0.12)"
+      : "0 14px 40px rgba(16, 72, 162, 0.38), 0 4px 14px rgba(0,0,0,0.18), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -6px 10px rgba(0,0,0,0.22)",
+    border: "1px solid rgba(255,255,255,0.25)",
+  }}
+  whileHover={{ scale: 1.06 }}
+  whileTap={{ scale: 0.94 }}
+  aria-label="Open Gem Consultant"
+>
+  {!isOpen && <FabHalo />}
 
-          {/* Conic shimmer rim */}
-          {!isOpen && (
-            <span
-              className="absolute inset-0 rounded-full pointer-events-none"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, rgba(147,197,253,0.45) 0deg, transparent 60deg, transparent 180deg, rgba(96,165,250,0.3) 240deg, transparent 300deg)",
-              }}
-            />
-          )}
+  <LiveBadgeDot borderColor={isOpen ? "#0b3a4a" : "#1052a2"} />
 
-          {/* Live dot */}
-          <LiveBadgeDot borderColor={isOpen ? "#1e40af" : "#1d4ed8"} />
-
-          {/* Icon */}
-          <AnimatePresence mode="wait">
-            {isOpen ? (
-              <motion.span
-                key="close"
-                className="relative z-10 text-blue-200"
-                initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <X size={18} strokeWidth={1.5} />
-              </motion.span>
-            ) : (
-              <motion.span
-                key="gem"
-                className="relative z-10"
-                initial={{ rotate: 30, opacity: 0, scale: 0.6 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                exit={{ rotate: -30, opacity: 0, scale: 0.6 }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <GemFacetIcon size={22} />
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+  <AnimatePresence mode="wait">
+    {isOpen ? (
+      <motion.span
+        key="close"
+        className="relative z-10"
+        style={{ color: "#FFE8E8" }}
+        initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+        animate={{ rotate: 0, opacity: 1, scale: 1 }}
+        exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <X size={18} strokeWidth={1.5} />
+      </motion.span>
+    ) : (
+      <motion.span
+        key="gem"
+        className="relative z-10"
+        initial={{ rotate: 30, opacity: 0, scale: 0.6 }}
+        animate={{ rotate: 0, opacity: 1, scale: 1 }}
+        exit={{ rotate: -30, opacity: 0, scale: 0.6 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <GemFacetIcon size={22} />
+      </motion.span>
+    )}
+  </AnimatePresence>
+</motion.button>
       </div>
 
       {/* ── Chat Panel ── */}
@@ -1141,18 +1181,15 @@ export default function GemConsultant() {
             transition={{ type: "spring", stiffness: 360, damping: 32 }}
             className={panelClass}
             style={{
-              background: "#f8faff",
-              boxShadow: "0 32px 80px rgba(29,78,216,0.12), 0 4px 16px rgba(0,0,0,0.07)",
-              border: "1px solid rgba(59,130,246,0.18)",
+              background: T.ivory,
+              boxShadow: "0 32px 80px rgba(33,30,27,0.10), 0 4px 16px rgba(0,0,0,0.05)",
+              border: `1px solid ${T.hairline}`,
             }}
           >
             {/* ── Header ── */}
             <div
               className="flex items-center justify-between px-4 py-3 flex-shrink-0 border-b"
-              style={{
-                background: "linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%)",
-                borderColor: "rgba(59,130,246,0.12)",
-              }}
+              style={{ background: T.paper, borderColor: T.hairline }}
             >
               <div className="flex items-center gap-2.5">
                 {hasMessages && (
@@ -1160,7 +1197,10 @@ export default function GemConsultant() {
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     onClick={() => { setMessages([]); setShowSuggestions(false); }}
-                    className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50/60 transition-colors"
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: T.stoneLight }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.goldDeep; (e.currentTarget as HTMLButtonElement).style.background = T.blush; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.stoneLight; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                     title="New conversation"
                   >
                     <ArrowLeft size={14} />
@@ -1169,7 +1209,7 @@ export default function GemConsultant() {
                 <div className="relative">
                   <div
                     className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
-                    style={{ background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)" }}
+                    style={{ background: goldGradient }}
                   >
                     <Sparkles size={13} />
                   </div>
@@ -1177,29 +1217,28 @@ export default function GemConsultant() {
                 </div>
                 <div>
                   <p
-                    className="text-sm font-semibold text-slate-800 leading-none"
-                    style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+                    className="text-sm font-semibold leading-none"
+                    style={{ color: T.graphite, fontFamily: "Georgia, 'Times New Roman', serif" }}
                   >
                     Victoria
                   </p>
-                  <p className="text-[9px] text-blue-500/80 uppercase tracking-[0.14em] mt-0.5 font-medium">
+                  <p
+                    className="text-[9px] uppercase tracking-[0.14em] mt-0.5 font-medium"
+                    style={{ color: T.gold }}
+                  >
                     AI Gem Consultant
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5">
-                {/* Model badge */}
                 <div
                   className="hidden sm:flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-full"
-                  style={{
-                    background: "rgba(59,130,246,0.08)",
-                    color: "#1d4ed8",
-                    border: "1px solid rgba(59,130,246,0.2)",
-                  }}
+                  style={{ background: T.goldPale, color: T.goldDeep, border: `1px solid ${T.hairline}` }}
                 >
                   <motion.span
-                    className="w-1 h-1 rounded-full bg-blue-400"
+                    className="w-1 h-1 rounded-full"
+                    style={{ background: T.gold }}
                     animate={{ opacity: [1, 0.4, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   />
@@ -1207,13 +1246,19 @@ export default function GemConsultant() {
                 </div>
                 <button
                   onClick={() => setIsFullscreen((v) => !v)}
-                  className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: T.stoneLight }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.graphite; (e.currentTarget as HTMLButtonElement).style.background = T.hairlineSoft; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.stoneLight; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                 >
                   {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: T.stoneLight }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.graphite; (e.currentTarget as HTMLButtonElement).style.background = T.hairlineSoft; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.stoneLight; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                 >
                   <X size={13} />
                 </button>
@@ -1221,10 +1266,7 @@ export default function GemConsultant() {
             </div>
 
             {/* ── Messages ── */}
-            <div
-              className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-              style={{ background: "#eef3fc" }}
-            >
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ background: T.ivory }}>
               {/* Welcome screen */}
               {!hasMessages && (
                 <motion.div
@@ -1234,26 +1276,26 @@ export default function GemConsultant() {
                   className="space-y-4"
                 >
                   <div
-                    className="rounded-2xl p-4"
-                    style={{
-                      background: "linear-gradient(135deg, #fff 0%, #f0f7ff 100%)",
-                      border: "1px solid rgba(59,130,246,0.15)",
-                    }}
+                    className="rounded-2xl p-4 bg-white"
+                    style={{ border: `1px solid ${T.hairline}` }}
                   >
                     <div className="flex items-start gap-3 mb-3">
                       <div
                         className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                        style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+                        style={{ background: goldGradient }}
                       >
                         <Sparkles size={13} />
                       </div>
                       <div>
-                        <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.14em] mb-1.5">
+                        <p
+                          className="text-[9px] font-bold uppercase tracking-[0.14em] mb-1.5"
+                          style={{ color: T.gold }}
+                        >
                           Victoria · AI Gem Consultant
                         </p>
                         <p
-                          className="text-sm text-slate-600 leading-relaxed"
-                          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+                          className="text-sm leading-relaxed"
+                          style={{ color: T.stone, fontFamily: '"Elms Sans", sans-serif' }}
                         >
                           Good day. I&apos;m Victoria — your personal gemologist at GMStone.
                           Whether you seek the perfect engagement diamond, a rare coloured stone, or
@@ -1266,15 +1308,16 @@ export default function GemConsultant() {
                         {["💎", "💍", "✨"].map((e, i) => (
                           <span
                             key={i}
-                            className="w-5 h-5 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[9px]"
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]"
+                            style={{ background: T.goldPale, border: `1px solid ${T.hairline}` }}
                           >
                             {e}
                           </span>
                         ))}
                       </div>
                       <p
-                        className="text-[10px] text-slate-400 italic"
-                        style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+                        className="text-[10px] italic"
+                        style={{ color: T.stoneLight, fontFamily: '"Elms Sans", sans-serif' }}
                       >
                         Every recommendation drawn from live inventory
                       </p>
@@ -1307,7 +1350,10 @@ export default function GemConsultant() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   onClick={() => setShowSuggestions(true)}
-                  className="text-[9px] text-slate-400 hover:text-blue-500 block mx-auto transition-colors tracking-wide"
+                  className="text-[9px] block mx-auto transition-colors tracking-wide"
+                  style={{ color: T.stoneLight }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.goldDeep; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = T.stoneLight; }}
                 >
                   ◆ show suggestions
                 </motion.button>
@@ -1324,12 +1370,16 @@ export default function GemConsultant() {
                   >
                     <div className="pt-1 pb-2">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-semibold">
+                        <p
+                          className="text-[9px] uppercase tracking-[0.15em] font-semibold"
+                          style={{ color: T.stoneLight }}
+                        >
                           Suggestions
                         </p>
                         <button
                           onClick={() => setShowSuggestions(false)}
-                          className="text-slate-300 hover:text-slate-500 transition-colors"
+                          className="transition-colors"
+                          style={{ color: T.stoneLight }}
                         >
                           <X size={10} />
                         </button>
@@ -1349,11 +1399,13 @@ export default function GemConsultant() {
             {/* ── Input ── */}
             <div
               className="px-3 pb-3 pt-2 flex-shrink-0 border-t"
-              style={{ background: "#ffffff", borderColor: "rgba(59,130,246,0.1)" }}
+              style={{ background: T.paper, borderColor: T.hairline }}
             >
               <div
-                className="flex items-end gap-2 rounded-2xl border px-3 py-2 transition-all focus-within:border-blue-300 focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.08)]"
-                style={{ background: "#f8faff", borderColor: "rgba(59,130,246,0.12)" }}
+                className="flex items-end gap-2 rounded-2xl border px-3 py-2 transition-all"
+                style={{ background: T.ivory, borderColor: T.hairline }}
+                onFocus={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = T.gold; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(180,145,79,0.1)"; }}
+                onBlur={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = T.hairline; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
               >
                 <textarea
                   ref={textareaRef}
@@ -1363,22 +1415,23 @@ export default function GemConsultant() {
                   onKeyDown={handleKeyDown}
                   placeholder="Ask about gemstones, categories, pricing…"
                   disabled={isLoading}
-                  className="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-300 resize-none outline-none leading-relaxed disabled:opacity-50"
+                  className="flex-1 bg-transparent text-sm resize-none outline-none leading-relaxed disabled:opacity-50"
                   style={{
                     maxHeight: 120,
                     minHeight: 22,
-                    fontFamily: "'DM Serif Display', Georgia, serif",
+                    color: T.graphite,
+                    fontFamily: '"Elms Sans", sans-serif',
                   }}
                 />
                 <div className="flex items-center gap-1 flex-shrink-0 pb-0.5">
                   <motion.button
                     onClick={toggleVoice}
                     whileTap={{ scale: 0.9 }}
-                    className={`p-1.5 rounded-lg transition-colors ${
-                      isListening
-                        ? "text-blue-500 bg-blue-50"
-                        : "text-slate-300 hover:text-slate-500 hover:bg-slate-50"
-                    }`}
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{
+                      color: isListening ? T.goldDeep : T.stoneLight,
+                      background: isListening ? T.goldPale : "transparent",
+                    }}
                   >
                     {isListening ? <MicOff size={14} /> : <Mic size={14} />}
                   </motion.button>
@@ -1387,13 +1440,13 @@ export default function GemConsultant() {
                     disabled={isLoading || !input.trim()}
                     whileTap={{ scale: 0.9 }}
                     className="p-1.5 rounded-xl text-white disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-                    style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
+                    style={{ background: goldGradient }}
                   >
                     <Send size={14} />
                   </motion.button>
                 </div>
               </div>
-              <p className="text-[8px] text-slate-300 text-center mt-1 tracking-wider">
+              <p className="text-[8px] text-center mt-1 tracking-wider" style={{ color: T.stoneLight }}>
                 ↵ send · ⇧↵ new line
               </p>
             </div>

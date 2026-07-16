@@ -6,6 +6,7 @@ import "./global.css";
 import FloatingSocialIcons from "@/components/ui/FloatingSocialIcons";
 import GemConsultant from "@/components/GemConsultant/GemConsultant";
 import CookieConsent from "@/components/ui/Cookieconsent";
+import HomeOnlyWidgets from "./HomeOnlyWidgets";
 
 const BASE_URL = "https://gmstone-new-2026.vercel.app";
 
@@ -116,11 +117,8 @@ export default function RootLayout({
         }}
       >
         <Providers>
-          <StartupLoader>
-            {children}
-            <FloatingSocialIcons />
-          </StartupLoader>
-          <GemConsultant />
+          <StartupLoader>{children}</StartupLoader>
+          <HomeOnlyWidgets />
         </Providers>
         <CookieConsent />
       </body>

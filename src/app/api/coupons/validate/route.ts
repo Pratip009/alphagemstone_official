@@ -2,10 +2,15 @@ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { validateCoupon } from '@/services/coupon.service';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 // POST /api/coupons/validate
 export async function POST(req: NextRequest) {
   try {
+    // Prevent coupon-code brute forcing / discovery scripts.
+    const limit = await rateLimit(req, { id: 'coupon-validate', limit: 20, windowSec: 60 });
+    if (!limit.success) return rateLimitResponse(limit);
+
     await connectDB();
     const body = await req.json();
     const code     = body?.code?.toString().trim();

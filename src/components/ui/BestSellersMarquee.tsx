@@ -109,7 +109,7 @@ function BestSellerCard({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontFamily: '"Barlow Condensed", sans-serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: 9,
               fontWeight: 800,
               color: "#1a1a2e",
@@ -124,7 +124,7 @@ function BestSellerCard({
       <div style={{ padding: "12px 14px 14px" }}>
         <p
           style={{
-            fontFamily: '"Playfair Display", Georgia, serif',
+            fontFamily: '"Elms Sans", sans-serif',
             fontSize: 13,
             fontWeight: 500,
             color: hovered ? "#fff" : "rgba(240,235,255,0.88)",
@@ -149,7 +149,7 @@ function BestSellerCard({
         >
           <span
             style={{
-              fontFamily: '"Playfair Display", Georgia, serif',
+              fontFamily: '"Elms Sans", sans-serif',
               fontSize: 14,
               fontWeight: 600,
               color: "#e8c96a",
@@ -278,7 +278,8 @@ export default function BestSellersMarquee() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         .bs-section {
           background: linear-gradient(160deg, #0d1528 0%, #0a1020 40%, #111827 100%);
@@ -317,7 +318,7 @@ export default function BestSellersMarquee() {
           z-index: 2;
         }
         .bs-eyebrow {
-          font-family: 'Barlow Condensed', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 9px;
           font-weight: 600;
           letter-spacing: 0.36em;
@@ -337,7 +338,7 @@ export default function BestSellersMarquee() {
         }
         .bs-eyebrow::after { background: linear-gradient(90deg, #e8c96a, transparent); }
         .bs-title {
-          font-family: 'Playfair Display', Georgia, serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 28px;
           font-weight: 700;
           color: #fff;
@@ -346,7 +347,7 @@ export default function BestSellersMarquee() {
         }
         .bs-title em { font-style: italic; color: rgba(232,201,106,0.85); }
         .bs-count-pill {
-          font-family: 'Barlow Condensed', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 9px;
           font-weight: 600;
           letter-spacing: 0.18em;
@@ -413,7 +414,7 @@ export default function BestSellersMarquee() {
         .bs-error {
           padding: 32px;
           text-align: center;
-          font-family: 'Barlow Condensed', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 12px;
           letter-spacing: 0.08em;
           color: rgba(232,201,106,0.4);
@@ -432,7 +433,7 @@ export default function BestSellersMarquee() {
           z-index: 2;
         }
         .bs-cta-btn {
-          font-family: 'Barlow Condensed', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 10px;
           font-weight: 600;
           letter-spacing: 0.22em;
@@ -448,7 +449,7 @@ export default function BestSellersMarquee() {
         }
         .bs-cta-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .bs-pause-btn {
-          font-family: 'Barlow Condensed', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 9px;
           font-weight: 500;
           letter-spacing: 0.18em;

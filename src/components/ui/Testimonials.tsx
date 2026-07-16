@@ -95,7 +95,8 @@ export default function Testimonials() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 
         .tr-root {
           background: #080f1e;
@@ -103,7 +104,7 @@ export default function Testimonials() {
           height: 80vh;
           min-height: 480px;
           max-height: 900px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: "Elms Sans", sans-serif;
           overflow: hidden;
           position: relative;
           display: flex;
@@ -160,7 +161,7 @@ export default function Testimonials() {
         .tr-eyebrow::after { background: linear-gradient(90deg, #3a5a9a, transparent); }
 
         .tr-heading {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: clamp(28px, 3.8vw, 48px);
           font-weight: 300;
           color: #eef2fb;
@@ -262,7 +263,7 @@ export default function Testimonials() {
         }
 
         .tr-big-quote {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: 80px;
           line-height: 0.6;
           color: rgba(90,130,210,0.12);
@@ -272,7 +273,7 @@ export default function Testimonials() {
         }
 
         .tr-quote {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: "Elms Sans", sans-serif;
           font-size: clamp(16px, 1.7vw, 20px);
           font-style: italic;
           font-weight: 400;
