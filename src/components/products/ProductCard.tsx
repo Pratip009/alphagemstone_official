@@ -1,10 +1,9 @@
 'use client'
 import Link from 'next/link';
-import { useState, useRef, useCallback } from 'react';
-
- 
+import { useState } from 'react';
 
 import { WishlistIconButton } from '@/components/wishlist/WishlistButton';
+
 interface ProductCardProps {
   productType?: 'watch' | 'diamond';
   product: {
@@ -38,6 +37,8 @@ interface ProductCardProps {
   };
 }
 
+// ── Data helpers ────────────────────────────────────────────────────────────
+
 function first(val?: string | string[]): string {
   if (!val) return '';
   return Array.isArray(val) ? (val[0] ?? '') : val;
@@ -58,12 +59,22 @@ function isWatch(p: ProductCardProps['product']): boolean {
     p.watchStrapType || p.watchCaseSize
   );
 }
+function cap(s?: string): string {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function possessive(g?: string): string {
+  if (!g) return '';
+  const map: Record<string, string> = {
+    Men: "Men's", Women: "Women's", Unisex: 'Unisex', Boys: "Boys'", Girls: "Girls'", Kids: "Kids'",
+  };
+  return map[g] || g;
+}
 
 const WATCH_PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80&fit=crop';
 const DIAMOND_PLACEHOLDER = 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80&fit=crop';
 
-// Best-effort word -> hex map so a stated color (dial color, stone color, gem
-// color) can render as a tiny inspection swatch rather than just a word.
+// Best-effort word -> hex map so a stated color renders as an inspection swatch.
 const COLOR_HEX: Record<string, string> = {
   black: '#1C1C1E', white: '#F5F5F7', ivory: '#F2EAD9', cream: '#F3E9D2',
   silver: '#C8C9CC', gold: '#CBA658', 'rose gold': '#E0B3A1', 'two-tone': '#C9B37E',
@@ -83,61 +94,43 @@ function swatchHex(text?: string): string | null {
   return found ? COLOR_HEX[found] : null;
 }
 
-function ProductImage({ src, alt, fallback }: { src: string; alt: string; fallback: string }) {
-  const [imgSrc, setImgSrc] = useState(src);
-  return (
-    <img
-      src={imgSrc}
-      alt={alt}
-      onError={() => setImgSrc(fallback)}
-      className="pc6-photo"
-      draggable={false}
-    />
-  );
+// Lot reference — the last four hex characters of the real Mongo _id, so the
+// number printed on the card is an actual stable identifier, not decoration.
+function lotNumber(id: string): string {
+  const clean = (id || '').replace(/[^a-fA-F0-9]/g, '');
+  const tail = clean.slice(-4).toUpperCase();
+  return tail || '0000';
 }
 
-function WatchIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.25" />
-      <path d="M9 5.5V9l2 2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="7" y="1" width="4" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1" />
-      <rect x="7" y="14.5" width="4" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  );
-}
-
-function GemIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M9 16L2 7l2.5-5h9L16 7z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
-      <path d="M2 7h14M9 16L5 7l4-5 4 5z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function buildEyebrow(product: ProductCardProps['product'], watch: boolean): string {
+// Headline descriptor — "Round-Cut Sapphire" / "Men's Sport Watch" — the
+// catalog's classification line, built from the piece's own attributes.
+function buildKicker(product: ProductCardProps['product'], watch: boolean): string {
   if (watch) {
-    return [product.watchCaseSize, product.watchMovement].filter(Boolean).join(' · ');
+    const parts = [possessive(product.watchGender), product.watchStyle].filter(Boolean);
+    return `${parts.join(' ')} Watch`.replace(/^\s+/, '');
   }
-  const carat = product.size ? `${product.size} ct` : '';
-  return [carat, product.gemstoneName].filter(Boolean).join(' · ');
+  const shape = first(product.shape) || product.shapeRaw;
+  const stone = product.gemstoneName || 'Diamond';
+  const shapePart = shape ? `${cap(shape)}-Cut` : '';
+  return [shapePart, stone].filter(Boolean).join(' ');
 }
 
-function buildChips(product: ProductCardProps['product'], watch: boolean): string[] {
-  if (watch) {
-    return [product.watchGender, product.watchStyle, product.watchCaseMaterial].filter(Boolean) as string[];
-  }
-  const shape = first(product.shape) || product.shapeRaw || '';
-  return [shape].filter(Boolean);
+function buildSubtitle(product: ProductCardProps['product'], watch: boolean): string | undefined {
+  if (!watch) return undefined;
+  const parts = [product.watchBrand, product.watchModel].filter(Boolean);
+  return parts.length ? parts.join(' — ') : undefined;
 }
 
-interface LedgerRow { label: string; value: string; swatch?: string | null; }
+interface Particular { label: string; value: string; swatch?: string | null; }
 
-function buildLedger(product: ProductCardProps['product'], watch: boolean): LedgerRow[] {
-  const rows: LedgerRow[] = [];
+// The condition-report grid — every field shown here appears nowhere else on
+// the card, so nothing is repeated twice.
+function buildParticulars(product: ProductCardProps['product'], watch: boolean): Particular[] {
+  const rows: Particular[] = [];
   if (watch) {
-    if (product.watchModel) rows.push({ label: 'Model', value: product.watchModel });
+    if (product.watchMovement) rows.push({ label: 'Movement', value: product.watchMovement });
+    if (product.watchCaseSize) rows.push({ label: 'Case Size', value: product.watchCaseSize });
+    if (product.watchCaseMaterial) rows.push({ label: 'Case', value: product.watchCaseMaterial });
     if (product.watchDialColor) {
       rows.push({ label: 'Dial', value: product.watchDialColor, swatch: swatchHex(product.watchDialColor) });
     }
@@ -146,408 +139,445 @@ function buildLedger(product: ProductCardProps['product'], watch: boolean): Ledg
       const extra = product.watchFeatures.length > 2 ? ` +${product.watchFeatures.length - 2}` : '';
       rows.push({ label: 'Features', value: product.watchFeatures.slice(0, 2).join(', ') + extra });
     }
-    return rows.slice(0, 3);
+    return rows.slice(0, 6);
   }
+  const carat = product.size ? `${product.size} ct` : '';
+  if (carat) rows.push({ label: 'Carat', value: carat });
   const color = display(product.color) || product.colorRaw || '';
   if (color) rows.push({ label: 'Color', value: color, swatch: swatchHex(product.colorRaw || first(product.color)) });
   const clarity = display(product.clarity) || product.clarityRaw || '';
   if (clarity) rows.push({ label: 'Clarity', value: clarity });
   const certValue = certDisplay(product.certification) || product.gradeRaw || '';
-  if (certValue) rows.push({ label: certDisplay(product.certification) ? 'Cert' : 'Grade', value: certValue });
-  return rows.slice(0, 3);
+  if (certValue) rows.push({ label: certDisplay(product.certification) ? 'Certification' : 'Grade', value: certValue });
+  return rows.slice(0, 6);
 }
 
-interface TiltState { rx: number; ry: number; mx: number; my: number; active: boolean; }
-const REST_TILT: TiltState = { rx: 0, ry: 0, mx: 50, my: 50, active: false };
+// ── Icons — fine single-stroke linework, echoing engraved hallmark marks ──
+
+function WatchIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.1" />
+      <path d="M9 5.5V9l2 2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="7" y="1" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="0.9" />
+      <rect x="7" y="14.7" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="0.9" />
+    </svg>
+  );
+}
+function GemIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6" stroke="currentColor" strokeWidth="0.7" />
+    </svg>
+  );
+}
+function ArrowIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M4 14L14 4M14 4H6M14 4V12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ProductImage({ src, alt, fallback }: { src: string; alt: string; fallback: string }) {
+  const [imgSrc, setImgSrc] = useState(src);
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      onError={() => setImgSrc(fallback)}
+      className="apc-photo"
+      draggable={false}
+    />
+  );
+}
 
 export default function ProductCard({ product, productType }: ProductCardProps) {
   const watch = productType ? productType === 'watch' : isWatch(product);
   const isAvailable = product.stock > 0;
+  const lowStock = isAvailable && product.stock <= 3;
   const placeholder = watch ? WATCH_PLACEHOLDER : DIAMOND_PLACEHOLDER;
-  const eyebrow = buildEyebrow(product, watch);
-  const chips = buildChips(product, watch);
-  const ledger = buildLedger(product, watch);
-  const certLabel = watch
-    ? product.watchBrand
-    : (certDisplay(product.certification) || product.gradeRaw);
-  const subtitle = watch ? product.watchModel : undefined;
 
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState<TiltState>(REST_TILT);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = cardRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width;
-    const py = (e.clientY - rect.top) / rect.height;
-    const ry = (px - 0.5) * 16;
-    const rx = (0.5 - py) * 11;
-    setTilt({ rx, ry, mx: px * 100, my: py * 100, active: true });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => setTilt(REST_TILT), []);
+  const kicker = buildKicker(product, watch);
+  const subtitle = buildSubtitle(product, watch);
+  const particulars = buildParticulars(product, watch);
+  const lot = lotNumber(product._id);
 
   return (
     <>
       <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-        .pc6 {
+        .apc {
+          --paper: #fefdfb;
+          --paper-deep: #f6f1e6;
+          --brass: #a9823e;
+          --brass-bright: #8f6c30;
+          --ink: #1b1812;
+          --ink-dim: #6f665a;
+          --muted: #9a9081;
+          --line: rgba(169,130,62,0.3);
+          --line-bright: rgba(169,130,62,0.6);
+          --oxblood: #8a2e39;
+          --oxblood-bright: #a8434f;
+          --avail: #3f7a55;
+
           display: block;
           text-decoration: none;
           color: inherit;
-          font-family: "Elms Sans", sans-serif;
-          perspective: 1000px;
+          font-family: 'Inter', sans-serif;
+          outline: none;
         }
 
-        .pc6-card {
+        .apc-card {
           position: relative;
-          background: #FFFFFF;
-          border-radius: 12px;
-          border: 1px solid #EAEAEC;
-          padding: 14px;
+          background: linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
+          border: 1px solid var(--line);
+          border-radius: 3px;
           display: flex;
           flex-direction: column;
           height: 100%;
-          transform-style: preserve-3d;
-          box-shadow: 0 1px 2px rgba(20,20,22,0.03), 0 14px 30px -20px rgba(20,20,22,0.14);
-          transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.4s ease, border-color 0.4s ease;
-        }
-        .pc6-card.is-active {
-          transition: box-shadow 0.2s ease, border-color 0.2s ease;
-          box-shadow: 0 32px 54px -22px rgba(20,20,22,0.22), 0 4px 12px rgba(20,20,22,0.06);
-          border-color: #DCDCE0;
-        }
-
-        /* thin silver rule that draws in on hover — the card's signature */
-        .pc6-card::before {
-          content: '';
-          position: absolute;
-          top: -1px; left: 14px; right: 14px;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, #B9B9C0, transparent);
-          transform: scaleX(0);
-          transition: transform 0.5s ease;
-          transform-origin: center;
-        }
-        .pc6-card.is-active::before { transform: scaleX(1); }
-
-        .pc6-mat {
-          position: relative;
-          width: 100%;
-          height: 148px;
-          flex-shrink: 0;
-background: #ffffff;
-          border-radius: 13px;
           overflow: hidden;
+          box-shadow: 0 1px 2px rgba(27,24,18,0.05), 0 16px 30px -24px rgba(27,24,18,0.22);
+          transition: transform 0.4s cubic-bezier(0.22,0.8,0.24,1), box-shadow 0.4s ease, border-color 0.4s ease;
+        }
+        .apc:hover .apc-card, .apc:focus-visible .apc-card {
+          transform: translateY(-4px);
+          border-color: var(--line-bright);
+          box-shadow: 0 26px 44px -20px rgba(27,24,18,0.24), 0 0 0 1px rgba(169,130,62,0.16);
+        }
+        .apc:focus-visible .apc-card {
+          box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--brass);
+        }
+
+        /* ── Lot strip — the catalog reference line ─────────────────── */
+        .apc-lot-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px 9px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9.5px;
+          letter-spacing: 0.08em;
+          color: var(--brass-bright);
+          border-bottom: 1px solid var(--line);
+        }
+        .apc-lot-num::before { content: 'LOT № '; color: var(--ink-dim); }
+        .apc-lot-type {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: var(--ink-dim);
+          text-transform: uppercase;
+        }
+
+        /* ── Plate photograph ────────────────────────────────────────── */
+        .apc-mat-wrap { position: relative; padding: 14px 14px 0; }
+        .apc-mat {
+          position: relative;
+          aspect-ratio: 4 / 3;
+          border: 1px solid var(--line);
+          border-radius: 2px;
+          background: radial-gradient(120% 100% at 50% 18%, #ffffff 0%, #f7f2e6 62%, #efe6d2 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          transform: translateZ(28px);
+          overflow: hidden;
         }
-
-        .pc6-photo {
-          max-width: 78%;
-          max-height: 78%;
+        .apc-photo {
+          max-width: 54%;
+          max-height: 54%;
           object-fit: contain;
-       
-          transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+          filter: drop-shadow(0 12px 16px rgba(27,24,18,0.18));
+          transition: transform 0.5s cubic-bezier(0.22,0.8,0.24,1);
         }
-        .pc6-card.is-active .pc6-photo { transform: scale(1.06); }
+        .apc:hover .apc-photo, .apc:focus-visible .apc-photo { transform: scale(1.045); }
+        .apc-mat.is-out .apc-photo {
+          filter: grayscale(0.6) drop-shadow(0 6px 10px rgba(27,24,18,0.1));
+          opacity: 0.5;
+        }
 
-        /* specular sweep that tracks the cursor */
-        .pc6-sheen {
+        /* registration / crop marks — the print-plate cue, the card's one
+           deliberate flourish, quiet until the piece is examined */
+        .apc-crop {
           position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,0.85), rgba(255,255,255,0) 42%);
-          mix-blend-mode: overlay;
+          width: 13px; height: 13px;
           opacity: 0;
           transition: opacity 0.35s ease;
           pointer-events: none;
         }
-        .pc6-card.is-active .pc6-sheen { opacity: 1; }
+        .apc-crop::before, .apc-crop::after { content: ''; position: absolute; background: var(--brass); }
+        .apc-crop::before { width: 13px; height: 1px; top: 6px; left: 0; }
+        .apc-crop::after { width: 1px; height: 13px; left: 6px; top: 0; }
+        .apc-crop-tl { top: 7px; left: 7px; }
+        .apc-crop-tr { top: 7px; right: 7px; }
+        .apc-crop-bl { bottom: 7px; left: 7px; }
+        .apc-crop-br { bottom: 7px; right: 7px; }
+        .apc:hover .apc-crop, .apc:focus-visible .apc-crop { opacity: 0.85; }
 
-        .pc6-facet {
+        .apc-stock-tag {
           position: absolute;
-          width: 16px; height: 16px;
-          border-top: 1.5px solid rgba(24,24,27,0.18);
-          border-left: 1.5px solid rgba(24,24,27,0.18);
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity 0.35s ease;
-        }
-        .pc6-facet.tl { top: 6px; left: 6px; }
-        .pc6-facet.br { bottom: 6px; right: 6px; transform: rotate(180deg); }
-        .pc6-card.is-active .pc6-facet { opacity: 1; }
-
-        .pc6-badge {
-          position: absolute;
-          z-index: 2;
-          font-family: "Google Sans Flex", sans-serif
-          font-size: 5px;
-          font-weight: 200;
-          letter-spacing: 0.04em;
-          
-          padding: 4px 9px;
-          border-radius: 5px;
-        }
-        .pc6-badge-cert {
           top: 8px; left: 8px;
-          background: rgba(255,255,255,0.94);
-          color: #18181B;
-          border: 1px solid #EAEAEC;
-          backdrop-filter: blur(2px);
-        }
-        .pc6-badge-stock {
-          top: 8px; right: 8px;
-          background: #FBEAE9;
-          color: #B3261E;
-        }
-        .pc6-badge-type {
-          bottom: 8px; left: 8px;
+          z-index: 2;
           display: flex; align-items: center; gap: 4px;
-        }
-        .pc6-badge-type.watch { background: rgba(238,241,244,0.95); color: #ff5100; }
-        .pc6-badge-type.gem   { background: rgba(238,241,244,0.95); color: #2600ff; }
-
-        .pc6-sold {
-          position: absolute; inset: 0; z-index: 3;
-          background: rgba(255,255,255,0.92);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .pc6-sold span {
-          font-family: "Google Sans Flex", sans-serif
-          font-size: 10px;
-          font-weight: 400;
-          letter-spacing: 0.06em;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 8.5px;
+          letter-spacing: 0.07em;
           text-transform: uppercase;
-          padding: 5px 12px;
-          border-radius: 20px;
-          background: #F7F7F8;
-          color: #8E8E93;
-          border: 1px solid #EAEAEC;
+          color: var(--oxblood-bright);
+          background: rgba(254,253,251,0.92);
+          border: 1px solid rgba(138,53,64,0.35);
+          padding: 3px 7px;
+          border-radius: 2px;
+        }
+        .apc-pulse {
+          width: 4px; height: 4px; border-radius: 50%; background: var(--oxblood-bright);
+          animation: apc-breathe 1.8s ease-in-out infinite;
         }
 
-        .pc6-body {
+        .apc-ribbon {
+          position: absolute;
+          right: -30px; bottom: 14px;
+          z-index: 3;
+          transform: rotate(-45deg);
+          background: var(--oxblood);
+          color: var(--paper);
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 8.5px;
+          font-weight: 500;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
+          padding: 3px 34px;
+          box-shadow: 0 2px 8px rgba(27,24,18,0.25);
+        }
+
+        .apc-wishlist {
+          position: absolute;
+          top: 8px; right: 8px;
+          z-index: 3;
+        }
+
+        .apc-reveal {
+          position: absolute;
+          left: 8px; bottom: 8px;
+          z-index: 2;
+          display: flex; align-items: center; gap: 5px;
+          font-family: 'Inter', sans-serif;
+          font-size: 9px;
+          font-weight: 600;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: var(--paper);
+          background: var(--ink);
+          padding: 5px 9px;
+          border-radius: 2px;
+          opacity: 0;
+          transform: translateY(6px);
+          transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .apc:hover .apc-reveal, .apc:focus-visible .apc-reveal { opacity: 1; transform: translateY(0); }
+
+        /* ── Body ─────────────────────────────────────────────────────── */
+        .apc-body {
           display: flex;
           flex-direction: column;
           flex: 1;
-          transform: translateZ(16px);
+          padding: 13px 16px 16px;
         }
-        .pc6-eyebrow {
-          margin-top: 12px;
-          font-family: "Elms Sans", sans-serif;
-          font-size: 9.5px;
-          font-weight: 200;
-          letter-spacing: 0.07em;
-          
-          color: #3f3f3f;
+        .apc-kicker {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 8.5px;
+          font-weight: 500;
+          letter-spacing: 0.13em;
+          text-transform: uppercase;
+          color: var(--brass-bright);
         }
-        .pc6-name {
-          margin-top: 3px;
-          font-family: "Elms Sans", sans-serif;
-          font-size: 13px;
-          font-weight: 400;
-          color: #000000;
+        .apc-name {
+          margin-top: 5px;
+          font-family: 'Fraunces', serif;
+          font-weight: 500;
+          font-size: 17px;
+          color: var(--ink);
           line-height: 1.3;
+          letter-spacing: -0.005em;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .pc6-subtitle {
-          margin-top: 1px;
-          font-family: "Elms Sans", sans-serif;
+        .apc-subtitle {
+          margin-top: 3px;
+          font-family: 'Inter', sans-serif;
           font-style: italic;
           font-size: 11px;
-          font-weight: 500;
-          color: #8E8E93;
+          color: var(--ink-dim);
         }
 
-        .pc6-chips {
-          margin-top: 7px;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 5px;
+        /* condition-report grid — two columns, every field appears once */
+        .apc-particulars {
+          margin-top: 12px;
+          padding-top: 11px;
+          border-top: 1px solid var(--line);
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px 14px;
         }
-        .pc6-chip {
-          font-family: "Elms Sans", sans-serif;
-          font-size: 9.5px;
+        .apc-p-label {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 7.5px;
           font-weight: 500;
-          letter-spacing: 0.01em;
-          color: #ffffff;
-          background: #0000ff;
-          border: 1px solid #ffffff;
-          border-radius: 6px;
-          padding: 3px 7px;
-          white-space: nowrap;
-        }
-
-        /* the ledger: a compact appraisal-report strip — dotted leaders
-           tying a small-caps label to its value, like a hallmark tag */
-        .pc6-ledger {
-          margin-top: 9px;
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-        }
-        .pc6-ledger-row {
-          display: flex;
-          align-items: baseline;
-          gap: 6px;
-        }
-        .pc6-ledger-label {
-          flex-shrink: 0;
-          font-family: "Elms Sans", sans-serif;
-          font-size: 8.5px;
-          font-weight: 600;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.09em;
           text-transform: uppercase;
-          color: #ADADB3;
+          color: var(--muted);
         }
-        .pc6-ledger-leader {
-          flex: 1;
-          min-width: 6px;
-          border-bottom: 1px dotted #ffffff;
-          transform: translateY(-3px);
-        }
-        .pc6-ledger-value {
-          flex-shrink: 0;
+        .apc-p-value {
+          margin-top: 3px;
           display: flex;
           align-items: center;
-          gap: 4px;
-          font-family: "Elms Sans", sans-serif;
-          font-size: 11px;
-          font-weight: 600;
-          color: #000000;
-          max-width: 62%;
+          gap: 5px;
+          font-family: 'Inter', sans-serif;
+          font-size: 11.5px;
+          font-weight: 500;
+          color: var(--ink);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .pc6-swatch {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
+        .apc-swatch {
+          width: 7px; height: 7px; border-radius: 50%;
           flex-shrink: 0;
-          border: 1px solid rgba(20,20,22,0.15);
+          border: 1px solid rgba(27,24,18,0.18);
         }
 
-        .pc6-price-row {
-          margin-top: 12px;
-          padding-top: 11px;
-          border-top: 1px solid #EAEAEC;
+        .apc-price-row {
+          margin-top: 14px;
+          padding-top: 13px;
+          border-top: 1px solid var(--line);
           display: flex;
-          align-items: baseline;
+          align-items: flex-end;
           justify-content: space-between;
         }
-
-        .pc6-price {
-          font-family: "Elms Sans", sans-serif;
-          font-size: 16px;
-          font-weight: 600;
-          color: #000000;
-          letter-spacing: -0.01em;
+        .apc-price-label {
+          display: block;
+          margin-bottom: 4px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 8px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--muted);
         }
-        .pc6-avail {
+        .apc-price {
+          font-family: 'Fraunces', serif;
+          font-weight: 600;
+          font-size: 19px;
+          color: var(--ink);
+        }
+        .apc-price sup {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 9px;
+          font-weight: 500;
+          color: var(--muted);
+          margin-left: 3px;
+        }
+        .apc-avail {
           display: flex;
           align-items: center;
           gap: 5px;
-          font-family: "Elms Sans", sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 10.5px;
-          font-weight: 400;
-          color: #1F7A4D;
+          font-weight: 500;
+          color: var(--avail);
         }
-        .pc6-avail .pc6-dot { width: 5px; height: 5px; border-radius: 50%; background: #1F7A4D; }
-        .pc6-avail.out { color: #8E8E93; }
-        .pc6-avail.out .pc6-dot { background: #8E8E93; }
-        .pc6-wishlist {
-          position: absolute;
-         bottom: 8px; right: 8px;
-          z-index: 2;
+        .apc-avail .apc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--avail); }
+        .apc-avail.out { color: var(--muted); }
+        .apc-avail.out .apc-dot { background: var(--muted); }
+
+        @keyframes apc-breathe {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .apc-card, .apc-photo, .apc-reveal, .apc-crop { transition: none !important; }
+          .apc:hover .apc-card, .apc:focus-visible .apc-card { transform: none !important; }
+          .apc-pulse { animation: none !important; }
         }
       `}</style>
 
-      <Link
-        href={`/products/${product._id}`}
-        className="pc6"
-        style={{ ['--mx' as string]: `${tilt.mx}%`, ['--my' as string]: `${tilt.my}%` }}
-      >
-        <div
-          ref={cardRef}
-          className={`pc6-card ${tilt.active ? 'is-active' : ''}`}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          style={{ transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) ${tilt.active ? 'scale3d(1.015,1.015,1.015)' : 'scale3d(1,1,1)'}` }}
-        >
+      <Link href={`/products/${product._id}`} className="apc">
+        <div className="apc-card">
 
-          <div className="pc6-mat">
-            {product.images[0] ? (
-              <ProductImage src={product.images[0]} alt={product.name} fallback={placeholder} />
-            ) : (
-              <img src={placeholder} alt={product.name} className="pc6-photo" />
-            )}
-
-            <div className="pc6-sheen" />
-            <span className="pc6-facet tl" />
-            <span className="pc6-facet br" />
-
-            {certLabel && (
-              <div className="pc6-badge pc6-badge-cert">{certLabel}</div>
-            )}
-
-            {isAvailable && product.stock <= 3 && (
-              <div className="pc6-badge pc6-badge-stock">{product.stock} left</div>
-            )}
-
-            {!isAvailable && (
-              <div className="pc6-sold">
-                <span>Unavailable</span>
-              </div>
-            )}
-
-            <div className={`pc6-badge pc6-badge-type ${watch ? 'watch' : 'gem'}`}>
+          <div className="apc-lot-row">
+            <span className="apc-lot-num">{lot}</span>
+            <span className="apc-lot-type">
               {watch ? <WatchIcon /> : <GemIcon />}
               {watch ? 'Watch' : 'Gem'}
-            </div>
-            <div className="pc6-wishlist">
-              <WishlistIconButton productId={product._id} size="sm" />
+            </span>
+          </div>
+
+          <div className="apc-mat-wrap">
+            <div className={`apc-mat ${isAvailable ? '' : 'is-out'}`}>
+              {product.images[0] ? (
+                <ProductImage src={product.images[0]} alt={product.name} fallback={placeholder} />
+              ) : (
+                <img src={placeholder} alt={product.name} className="apc-photo" />
+              )}
+
+              <span className="apc-crop apc-crop-tl" />
+              <span className="apc-crop apc-crop-tr" />
+              <span className="apc-crop apc-crop-bl" />
+              <span className="apc-crop apc-crop-br" />
+
+              {lowStock && (
+                <div className="apc-stock-tag">
+                  <span className="apc-pulse" />
+                  Only {product.stock} left
+                </div>
+              )}
+
+              {!isAvailable && <div className="apc-ribbon">Sold Out</div>}
+
+              <div className="apc-wishlist">
+                <WishlistIconButton productId={product._id} size="sm" />
+              </div>
+
+              {isAvailable && (
+                <div className="apc-reveal" aria-hidden="true">
+                  View details <ArrowIcon />
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="pc6-body">
-            {eyebrow && <div className="pc6-eyebrow">{eyebrow}</div>}
-            <div className="pc6-name">{product.name}</div>
-            {subtitle && <div className="pc6-subtitle">{subtitle}</div>}
+          <div className="apc-body">
+            <div className="apc-kicker">{kicker}</div>
+            <div className="apc-name">{product.name}</div>
+            {subtitle && <div className="apc-subtitle">{subtitle}</div>}
 
-            {chips.length > 0 && (
-              <div className="pc6-chips">
-                {chips.map((c, i) => (
-                  <span key={i} className="pc6-chip">{c}</span>
-                ))}
-              </div>
-            )}
-
-            {ledger.length > 0 && (
-              <div className="pc6-ledger">
-                {ledger.map((row, i) => (
-                  <div key={i} className="pc6-ledger-row">
-                    <span className="pc6-ledger-label">{row.label}</span>
-                    <span className="pc6-ledger-leader" />
-                    <span className="pc6-ledger-value">
-                      {row.swatch && <span className="pc6-swatch" style={{ background: row.swatch }} />}
+            {particulars.length > 0 && (
+              <div className="apc-particulars">
+                {particulars.map((row, i) => (
+                  <div key={i}>
+                    <div className="apc-p-label">{row.label}</div>
+                    <div className="apc-p-value">
+                      {row.swatch && <span className="apc-swatch" style={{ background: row.swatch }} />}
                       {row.value}
-                    </span>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="pc6-price-row">
-              <span className="pc6-price">${product.price.toLocaleString()}</span>
-              <span className={`pc6-avail ${isAvailable ? '' : 'out'}`}>
-                <span className="pc6-dot" />
+            <div className="apc-price-row">
+              <div>
+                <span className="apc-price-label">Price</span>
+                <span className="apc-price">
+                  ${product.price.toLocaleString()}<sup>USD</sup>
+                </span>
+              </div>
+              <span className={`apc-avail ${isAvailable ? '' : 'out'}`}>
+                <span className="apc-dot" />
                 {isAvailable ? `${product.stock} available` : 'Sold out'}
               </span>
             </div>

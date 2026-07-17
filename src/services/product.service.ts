@@ -50,6 +50,20 @@ export async function getProductById(id: string) {
     .lean();
 }
 
+// Used by the "Recently Viewed" feature to hydrate a list of localStorage
+// ids into full product docs in one round trip. Silently drops invalid
+// ObjectId strings and inactive/deleted products rather than erroring, so a
+// stale id in a visitor's browser history never breaks the request.
+export async function getProductsByIds(ids: string[]) {
+  const validIds = Array.from(new Set(ids)).filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length === 0) return [];
+
+  return Product.find({ _id: { $in: validIds }, isActive: true })
+    .populate('category', 'name slug')
+    .populate('subcategory', 'name slug')
+    .lean();
+}
+
 export async function createProduct(data: Partial<IProduct>) {
   // console.log("CREATE PRODUCT DATA:", JSON.stringify(data, null, 2));
   const product = new Product(data);

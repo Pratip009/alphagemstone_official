@@ -6,6 +6,8 @@ import AddToCartButton from '@/components/cart/AddToCartButton';
 import ProductGallery from '@/components/products/ProductGallery';
 import Link from 'next/link';
 import WishlistButton from '@/components/wishlist/WishlistButton';
+import RecordRecentlyViewed from '@/components/products/RecordRecentlyViewed';
+import RecentlyViewedProducts from '@/components/products/RecentlyViewedProducts';
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -403,6 +405,7 @@ export default async function ProductDetailPage({
 
   return (
     <>
+      <RecordRecentlyViewed productId={String(p._id)} inStock={p.stock > 0} />
       <link
         href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap"
         rel="stylesheet"
@@ -656,6 +659,10 @@ export default async function ProductDetailPage({
               })
             )}
           </div>
+
+          {/* Recently Viewed — client-rendered from the visitor's own
+              browsing history; hidden automatically when there's none. */}
+          <RecentlyViewedProducts excludeId={String(p._id)} />
 
           {/* Testimonials */}
           <div className="pd-testimonials">
