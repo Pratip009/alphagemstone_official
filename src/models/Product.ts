@@ -237,11 +237,36 @@ export const WATCH_CASE_SIZES = [
 ] as const;
 
 // ─── Product kind ──────────────────────────────────────────────────────────────
-// Explicit, stored classification instead of inferring from which fields
-// happen to be populated. Four real buckets exist in the actual catalog:
-// diamonds, colored gemstones, watches, and stoneless jewelry/silver/vouchers.
 export const PRODUCT_KINDS = ['diamond', 'gemstone', 'watch', 'jewelry'] as const;
 export type ProductKind = (typeof PRODUCT_KINDS)[number];
+
+// ─── Memo status (per-item) ────────────────────────────────────────────────────
+// Mirrors the status enum on the Memo model itself (src/models/Memo.ts).
+// Kept here too so Product never has to import Memo just for this union.
+export const MEMO_ITEM_STATUSES = [
+  'pending',
+  'rejected',
+  'approved',
+  'shipped',
+  'with_customer',
+  'return_requested',
+  'return_in_transit',
+  'returned',
+  'overdue',
+  'recalled',
+  'force_converted',
+  'lost',
+  'damaged',
+  'cancelled',
+] as const;
+export type MemoItemStatus = (typeof MEMO_ITEM_STATUSES)[number];
+
+// Hard business ceiling — no product may offer a memo window longer than
+// this, and no in-flight memo (including after an approved extension) may
+// run longer than this from approval. Enforced again in memo.service.ts;
+// duplicated here as a schema-level backstop so a bad value can never even
+// be saved on a product.
+export const MEMO_MAX_DAYS_CEILING = 14;
 
 // ─── TypeScript types ─────────────────────────────────────────────────────────
 
@@ -278,10 +303,6 @@ export interface IProduct extends Document {
   clarity?: Clarity[];
   certification?: Certification[];
 
-  // Gemstone-specific — free text preserved verbatim. The legacy catalog's
-  // color/clarity/grade vocabulary (e.g. "Raspberry Red", "Top Clean/Superior")
-  // doesn't fit the diamond-grading enums above, so it's kept here rather
-  // than lossily forced into them.
   gemstoneName?: string;
   shapeRaw?: string;
   colorRaw?: string;
@@ -300,21 +321,10 @@ export interface IProduct extends Document {
   watchStyle?:        WatchStyle;
   watchCaseSize?:     WatchCaseSize;
 
-  // Everything else from the legacy catalog that doesn't map to a fixed
-  // enum (cut style, luster, hardness, treatment, origin, metal, ring size,
-  // carat/size ranges, approx weight, shipping weight, clarity description
-  // text) — stored verbatim so no data is lost.
   legacyAttributes?: Record<string, string>;
-
-  // Re-import idempotency — lets bulk upload upsert by original legacy ID
-  // instead of creating duplicates on repeated runs.
   legacyProductId?: number;
   legacySku?: string;
 
-  // SEO metadata carried over from the legacy catalog's per-product head
-  // tags (products_head_title_tag / _desc_tag / _keywords_tag). Populated
-  // on the vast majority of legacy rows, so worth first-class fields
-  // rather than burying them in legacyAttributes.
   metaTitle?: string;
   metaDescription?: string;
   metaKeywords?: string[];
@@ -323,6 +333,22 @@ export interface IProduct extends Document {
   stock: number;
   isActive: boolean;
   description?: string;
+
+  // ── Memo fields ──────────────────────────────────────────────────────────
+  // Most SKUs should never be memo-eligible — memo only makes sense for
+  // unique, high-value, one-of-a-kind pieces. An admin opts a product in
+  // explicitly via `memoEligible`.
+  memoEligible: boolean;
+  // Units currently out on an active memo. NEVER read `stock` directly to
+  // decide purchasability anywhere in the storefront/cart/order code —
+  // always read the `availableStock` virtual below instead.
+  reservedForMemo: number;
+  memoMinDays?: number;
+  memoMaxDays?: number;
+
+  // Virtual, not persisted: stock - reservedForMemo, floored at 0.
+  readonly availableStock: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -357,7 +383,6 @@ const ProductSchema = new Schema<IProduct>(
       enum: { values: PRODUCT_KINDS, message: 'Invalid product kind: {VALUE}' },
     },
 
-    // ── Diamond / gemstone fields (all optional at schema level) ────────────
     shape: {
       type: [String],
       enum: { values: SHAPES, message: 'Invalid shape: {VALUE}' },
@@ -389,7 +414,6 @@ const ProductSchema = new Schema<IProduct>(
     clarityRaw:   { type: String, trim: true, maxlength: 100 },
     gradeRaw:     { type: String, trim: true, maxlength: 100 },
 
-    // ── Watch fields ────────────────────────────────────────────────────────
     watchGender: {
       type: String,
       enum: { values: WATCH_GENDERS, message: 'Invalid gender: {VALUE}' },
@@ -441,7 +465,6 @@ const ProductSchema = new Schema<IProduct>(
     },
     legacySku: { type: String, trim: true, maxlength: 100 },
 
-    // ── SEO fields ──────────────────────────────────────────────────────────
     metaTitle: { type: String, trim: true, maxlength: 200 },
     metaDescription: { type: String, trim: true, maxlength: 500 },
     metaKeywords: {
@@ -449,7 +472,6 @@ const ProductSchema = new Schema<IProduct>(
       default: undefined,
     },
 
-    // ── Common fields ───────────────────────────────────────────────────────
     images: {
       type: [String],
       default: [],
@@ -469,6 +491,37 @@ const ProductSchema = new Schema<IProduct>(
       trim: true,
       maxlength: [2000, 'Description cannot exceed 2000 characters'],
     },
+
+    // ── Memo fields ─────────────────────────────────────────────────────────
+    memoEligible: {
+      type: Boolean,
+      default: false,
+    },
+    reservedForMemo: {
+      type: Number,
+      default: 0,
+      min: [0, 'reservedForMemo cannot be negative'],
+    },
+    memoMinDays: {
+      type: Number,
+      default: 3,
+      min: [1, 'memoMinDays must be at least 1'],
+    },
+    memoMaxDays: {
+      type: Number,
+      default: MEMO_MAX_DAYS_CEILING,
+      min: [1, 'memoMaxDays must be at least 1'],
+      max: [
+        MEMO_MAX_DAYS_CEILING,
+        `memoMaxDays cannot exceed ${MEMO_MAX_DAYS_CEILING} days`,
+      ],
+      validate: {
+        validator: function (this: IProduct, v: number) {
+          return v >= (this.memoMinDays ?? 3);
+        },
+        message: 'memoMaxDays must be greater than or equal to memoMinDays',
+      },
+    },
   },
   {
     timestamps: true,
@@ -476,6 +529,16 @@ const ProductSchema = new Schema<IProduct>(
     toObject: { virtuals: true },
   }
 );
+
+// ─── Virtuals ─────────────────────────────────────────────────────────────────
+
+// Every "is this in stock / can I add to cart" check across the storefront
+// must read THIS instead of raw `stock` — otherwise a customer can buy an
+// item that's physically out on memo with a trade customer. Not stored, so
+// it can never drift from stock/reservedForMemo.
+ProductSchema.virtual('availableStock').get(function (this: IProduct) {
+  return Math.max(0, this.stock - (this.reservedForMemo || 0));
+});
 
 // ─── Indexes ──────────────────────────────────────────────────────────────────
 
@@ -510,6 +573,9 @@ ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ category: 1, price: 1 });
 ProductSchema.index({ shape: 1, size: 1 });
 ProductSchema.index({ name: 'text', description: 'text' });
+
+// Memo index
+ProductSchema.index({ memoEligible: 1 });
 
 const Product = (() => {
   if (mongoose.models && mongoose.models.Product) {

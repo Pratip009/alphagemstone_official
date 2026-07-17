@@ -10,6 +10,14 @@ export interface IUserAddress {
   country?: string;
 }
 
+// ─── Memo trade-vetting status ─────────────────────────────────────────────────
+// Memo is not something every customer gets by default — shipping a loose
+// one-of-a-kind stone to an unverified buyer on trust is how the business
+// loses money. This is a lightweight KYC/trade-vetting layer gating access
+// to the memo feature (see src/services/memo.service.ts).
+export const MEMO_USER_STATUSES = ['none', 'pending', 'approved', 'suspended'] as const;
+export type MemoUserStatus = (typeof MEMO_USER_STATUSES)[number];
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
@@ -20,6 +28,25 @@ export interface IUser extends Document {
   avatarPublicId?: string;
   address?: IUserAddress;
   role: 'admin' | 'user';
+
+  // ── Memo trade-vetting fields ──────────────────────────────────────────
+  // Gates whether this user may request a memo at all (see
+  // POST /api/memos, which rejects unless memoStatus === 'approved').
+  memoStatus: MemoUserStatus;
+  // Max total retail value this user may hold on memo at once, summed
+  // across all their outstanding (non-terminal) memos. Set by an admin at
+  // approval time — see PUT /api/admin/memo-eligibility/[userId].
+  memoCreditLimit: number;
+  // Collected at application time (POST /api/memo-eligibility/apply).
+  memoBusinessName?: string;
+  memoResaleCertNumber?: string;
+  memoReferences?: string;
+  memoApprovedAt?: Date | null;
+  memoApprovedBy?: mongoose.Types.ObjectId | null;
+  // Set when an admin suspends memo privileges — e.g. after a force-convert
+  // on a non-returned item. Cleared on re-approval.
+  memoSuspendedReason?: string | null;
+
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -87,6 +114,48 @@ const UserSchema = new Schema<IUser>(
       enum: ['admin', 'user'],
       default: 'user',
     },
+
+    // ── Memo trade-vetting fields ────────────────────────────────────────
+    memoStatus: {
+      type: String,
+      enum: { values: MEMO_USER_STATUSES, message: 'Invalid memoStatus: {VALUE}' },
+      default: 'none',
+    },
+    memoCreditLimit: {
+      type: Number,
+      default: 0,
+      min: [0, 'memoCreditLimit cannot be negative'],
+    },
+    memoBusinessName: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'memoBusinessName cannot exceed 200 characters'],
+    },
+    memoResaleCertNumber: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'memoResaleCertNumber cannot exceed 100 characters'],
+    },
+    memoReferences: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'memoReferences cannot exceed 1000 characters'],
+    },
+    memoApprovedAt: {
+      type: Date,
+      default: null,
+    },
+    memoApprovedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    memoSuspendedReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'memoSuspendedReason cannot exceed 500 characters'],
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -113,6 +182,7 @@ UserSchema.methods.comparePassword = async function (
 };
 
 UserSchema.index({ role: 1 });
+UserSchema.index({ memoStatus: 1 });
 
 const User = (() => {
   if (mongoose.models && mongoose.models.User) {
