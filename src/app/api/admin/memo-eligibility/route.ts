@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { adminListEligibilityApplications } from '@/services/fileParser.service';
+import { adminListEligibilityApplications } from '@/services/memo.service';
 
 export const GET = withAdmin(async (_req: NextRequest) => {
   try {

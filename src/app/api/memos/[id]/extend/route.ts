@@ -9,13 +9,14 @@ const extendSchema = z.object({
 });
 
 export const POST = withAuth(
-  async (req: NextRequest & { user: { userId: string } }, { params }: { params: { id: string } }) => {
+  async (req: NextRequest & { user: { userId: string } }, { params }: { params: Promise<{ id: string }> }) => {
     try {
+      const { id } = await params;
       const body = await req.json();
       const parsed = extendSchema.safeParse(body);
       if (!parsed.success) return errorResponse('Invalid request', 400, parsed.error.flatten().fieldErrors);
 
-      const memo = await requestExtension(params.id, req.user.userId, parsed.data.extraDays);
+      const memo = await requestExtension(id, req.user.userId, parsed.data.extraDays);
       return successResponse(memo, 200);
     } catch (err) {
       if (err instanceof MemoError) return errorResponse(err.message, err.status);

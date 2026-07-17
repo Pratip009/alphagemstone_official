@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { applyForMemoEligibility, MemoError } from '@/services/memo.service';
 
 const applySchema = z.object({
@@ -13,8 +13,14 @@ const applySchema = z.object({
 
 export const POST = withAuth(async (req: NextRequest & { user: { userId: string } }) => {
   try {
-    const rate = await checkRateLimit(`memo-apply:${req.user.userId}`, { max: 3, windowSeconds: 86400 });
-    if (!rate.allowed) return errorResponse('Too many applications — please try again tomorrow', 429);
+    const rate = await rateLimit(req, {
+      id: 'memo-apply',
+      limit: 3,
+      windowSec: 86400,
+      extraKey: req.user.userId,
+      scope: 'key',
+    });
+    if (!rate.success) return rateLimitResponse(rate);
 
     const body = await req.json();
     const parsed = applySchema.safeParse(body);

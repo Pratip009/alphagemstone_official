@@ -12,9 +12,10 @@ import {
 } from '@/services/memo.service';
 
 export const GET = withAdmin(
-  async (req: NextRequest, { params }: { params: { id: string } }) => {
+  async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
-      const memo = await adminGetMemo(params.id);
+      const { id } = await params;
+      const memo = await adminGetMemo(id);
       return successResponse(memo, 200);
     } catch (err) {
       if (err instanceof MemoError) return errorResponse(err.message, err.status);
@@ -32,8 +33,9 @@ const putSchema = z.discriminatedUnion('action', [
 ]);
 
 export const PUT = withAdmin(
-  async (req: NextRequest & { user: { userId: string } }, { params }: { params: { id: string } }) => {
+  async (req: NextRequest & { user: { userId: string } }, { params }: { params: Promise<{ id: string }> }) => {
     try {
+      const { id } = await params;
       const body = await req.json();
       const parsed = putSchema.safeParse(body);
       if (!parsed.success) return errorResponse('Invalid request', 400, parsed.error.flatten().fieldErrors);
@@ -42,16 +44,16 @@ export const PUT = withAdmin(
       let memo;
       switch (parsed.data.action) {
         case 'approve':
-          memo = await adminApprove(params.id, adminId, parsed.data.note);
+          memo = await adminApprove(id, adminId, parsed.data.note);
           break;
         case 'reject':
-          memo = await adminReject(params.id, adminId, parsed.data.reason);
+          memo = await adminReject(id, adminId, parsed.data.reason);
           break;
         case 'extend':
-          memo = await adminApproveExtension(params.id, adminId, parsed.data.extraDays, parsed.data.note);
+          memo = await adminApproveExtension(id, adminId, parsed.data.extraDays, parsed.data.note);
           break;
         case 'note':
-          memo = await adminAddNote(params.id, adminId, parsed.data.note);
+          memo = await adminAddNote(id, adminId, parsed.data.note);
           break;
       }
       return successResponse(memo, 200);

@@ -517,6 +517,14 @@ export default function AccountPage() {
                     ),
                   },
                   {
+                    href: "/account/memos",
+                    label: "Memo Program",
+                    sub: "Request items on memo & track status",
+                    icon: (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                    ),
+                  },
+                  {
                     href: "/help-center",
                     label: "Help Center",
                     sub: "FAQs and support",

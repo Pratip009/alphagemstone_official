@@ -10,13 +10,14 @@ const schema = z.object({
 });
 
 export const POST = withAdmin(
-  async (req: NextRequest & { user: { userId: string } }, { params }: { params: { id: string } }) => {
+  async (req: NextRequest & { user: { userId: string } }, { params }: { params: Promise<{ id: string }> }) => {
     try {
+      const { id } = await params;
       const body = await req.json();
       const parsed = schema.safeParse(body);
       if (!parsed.success) return errorResponse('Invalid request', 400, parsed.error.flatten().fieldErrors);
 
-      const memo = await adminMarkReturned(params.id, req.user.userId, parsed.data.condition, parsed.data.note);
+      const memo = await adminMarkReturned(id, req.user.userId, parsed.data.condition, parsed.data.note);
       return successResponse(memo, 200);
     } catch (err) {
       if (err instanceof MemoError) return errorResponse(err.message, err.status);
