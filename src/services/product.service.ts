@@ -27,6 +27,92 @@ export async function listProducts(params: ProductFilterParams) {
   return { products, total, page, limit };
 }
 
+// ─── Admin listing ──────────────────────────────────────────────────────────
+// Unlike listProducts (storefront-facing: forces isActive:true, text search
+// only), this is built for the admin catalogue at /admin/products, which
+// needs to see inactive products too and filter by memo eligibility.
+// Everything happens in the query — nothing is ever pulled into memory and
+// filtered/sorted in JS, because the catalogue can run into the tens of
+// thousands of SKUs.
+export interface AdminProductQueryParams {
+  q?: string;
+  category?: string;
+  status?: 'all' | 'active' | 'inactive';
+  shape?: string;
+  clarity?: string;
+  memo?: 'all' | 'eligible' | 'not';
+  sortBy?: 'name' | 'price' | 'stock' | 'createdAt';
+  sortDir?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+const ADMIN_SORT_FIELDS = new Set(['name', 'price', 'stock', 'createdAt']);
+const ADMIN_MAX_LIMIT = 100;
+
+export async function listProductsAdmin(params: AdminProductQueryParams) {
+  const query: mongoose.FilterQuery<IProduct> = {};
+
+  if (params.q && params.q.trim()) {
+    // Escape regex metacharacters so a search like "1.5ct" doesn't break.
+    const escaped = params.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    query.name = { $regex: escaped, $options: 'i' };
+  }
+  if (params.category) query.category = params.category;
+  if (params.status === 'active') query.isActive = true;
+  else if (params.status === 'inactive') query.isActive = false;
+  if (params.shape) query.shape = params.shape;
+  if (params.clarity) query.clarity = params.clarity;
+  if (params.memo === 'eligible') query.memoEligible = true;
+  else if (params.memo === 'not') query.memoEligible = { $ne: true };
+
+  const sortField = params.sortBy && ADMIN_SORT_FIELDS.has(params.sortBy) ? params.sortBy : 'name';
+  const sortDir: 1 | -1 = params.sortDir === 'desc' ? -1 : 1;
+  const sort: Record<string, 1 | -1> = { [sortField]: sortDir };
+
+  const page = Math.max(1, Number(params.page) || 1);
+  const limit = Math.min(ADMIN_MAX_LIMIT, Math.max(1, Number(params.limit) || 20));
+  const skip = (page - 1) * limit;
+
+  const [products, total] = await Promise.all([
+    Product.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate('category', 'name slug')
+      .lean(),
+    Product.countDocuments(query),
+  ]);
+
+  return { products, total, page, limit };
+}
+
+// Global catalogue stats for the admin dashboard cards. Deliberately
+// unfiltered (independent of whatever search/filter the admin currently has
+// applied) and computed entirely in the database via a single aggregation,
+// so it stays fast regardless of catalogue size.
+export async function getProductStats() {
+  const [result] = await Product.aggregate([
+    {
+      $facet: {
+        total: [{ $count: 'count' }],
+        active: [{ $match: { isActive: true } }, { $count: 'count' }],
+        memoEligible: [{ $match: { memoEligible: true } }, { $count: 'count' }],
+        inventoryValue: [
+          { $group: { _id: null, value: { $sum: { $multiply: ['$price', '$stock'] } } } },
+        ],
+      },
+    },
+  ]);
+
+  const total = result?.total?.[0]?.count ?? 0;
+  const active = result?.active?.[0]?.count ?? 0;
+  const memoEligible = result?.memoEligible?.[0]?.count ?? 0;
+  const inventoryValue = result?.inventoryValue?.[0]?.value ?? 0;
+
+  return { total, active, inactive: total - active, memoEligible, inventoryValue };
+}
+
 export async function getProductFacets(params: ProductFilterParams) {
   // Also resolve slugs for facets so counts are scoped correctly
   const resolved = await resolveSlugFilters({

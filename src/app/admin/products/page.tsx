@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useApi } from "@/hooks/useApi";
 import {
   SHAPES, COLORS, CLARITIES, CERTIFICATIONS,
   WATCH_GENDERS, WATCH_BRANDS, WATCH_MOVEMENTS,
   WATCH_STRAP_TYPES, WATCH_CASE_MATERIALS, WATCH_DIAL_COLORS,
   WATCH_FEATURES, WATCH_STYLES, WATCH_CASE_SIZES,
+  MEMO_MAX_DAYS_CEILING,
 } from "@/models/Product";
 import Link from "next/link";
 
@@ -67,7 +68,7 @@ const css = `
   .ap-pill.active { background: #fef3c7; border-color: #d97706; color: #92400e; font-weight: 600; }
   .ap-pill-selected { font-size: 0.7rem; color: #b45309; font-weight: 600; margin-left: 0.5rem; }
 
-  .ap-filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 0.75rem; align-items: end; }
+  .ap-filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; gap: 0.75rem; align-items: end; }
   @media (max-width: 900px) { .ap-filter-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 560px) { .ap-filter-grid { grid-template-columns: 1fr; } }
 
@@ -92,6 +93,10 @@ const css = `
   .ap-badge.inactive { background: #f1f5f9; color: #64748b; }
   .ap-badge.watch { background: #eff6ff; color: #1d4ed8; }
   .ap-badge.diamond { background: #fdf4ff; color: #7e22ce; }
+  .ap-badge.memo-on { background: #fef3c7; color: #92400e; cursor: pointer; border: none; font-family: "Elms Sans", sans-serif; }
+  .ap-badge.memo-on:hover { background: #fde68a; }
+  .ap-badge.memo-off { background: #f1f5f9; color: #94a3b8; cursor: pointer; border: none; font-family: "Elms Sans", sans-serif; }
+  .ap-badge.memo-off:hover { background: #e2e8f0; color: #64748b; }
 
   .ap-row-actions { display: flex; align-items: center; gap: 6px; }
   .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
@@ -193,6 +198,10 @@ interface Product {
   watchBrand?: string;
   watchMovement?: string;
   watchGender?: string;
+  memoEligible?: boolean;
+  memoMinDays?: number;
+  memoMaxDays?: number;
+  reservedForMemo?: number;
 }
 interface Category {
   _id: string;
@@ -220,6 +229,9 @@ const EMPTY_DIAMOND_FORM = {
   certifications: [] as string[],
   stock: "",
   description: "",
+  memoEligible: false,
+  memoMinDays: "3",
+  memoMaxDays: "14",
 };
 
 const EMPTY_WATCH_FORM = {
@@ -239,6 +251,9 @@ const EMPTY_WATCH_FORM = {
   watchFeatures: [] as string[],
   watchStyle: "",
   watchCaseSize: "",
+  memoEligible: false,
+  memoMinDays: "3",
+  memoMaxDays: "14",
 };
 
 type DiamondForm = typeof EMPTY_DIAMOND_FORM;
@@ -302,6 +317,117 @@ function ConfirmDeleteModal({
             disabled={!canConfirm || loading}
           >
             {loading ? "Deleting…" : mode === "all" ? "Delete All Products" : "Delete Product"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── MemoSettingsModal ────────────────────────────────────────────────────── */
+function MemoSettingsModal({
+  product, onSave, onCancel, loading, error,
+}: {
+  product: Product;
+  onSave: (patch: { memoEligible: boolean; memoMinDays?: number; memoMaxDays?: number }) => void;
+  onCancel: () => void;
+  loading: boolean;
+  error: string;
+}) {
+  const [eligible, setEligible] = useState(!!product.memoEligible);
+  const [minDays, setMinDays] = useState(String(product.memoMinDays ?? 3));
+  const [maxDays, setMaxDays] = useState(String(product.memoMaxDays ?? MEMO_MAX_DAYS_CEILING));
+  const [localError, setLocalError] = useState("");
+
+  const submit = () => {
+    setLocalError("");
+    if (eligible) {
+      const minD = Number(minDays);
+      const maxD = Number(maxDays);
+      if (!minD || minD < 1) { setLocalError("Min days must be at least 1"); return; }
+      if (!maxD || maxD < 1) { setLocalError("Max days must be at least 1"); return; }
+      if (maxD > MEMO_MAX_DAYS_CEILING) { setLocalError(`Max days cannot exceed ${MEMO_MAX_DAYS_CEILING}`); return; }
+      if (maxD < minD) { setLocalError("Max days must be ≥ min days"); return; }
+      onSave({ memoEligible: true, memoMinDays: minD, memoMaxDays: maxD });
+    } else {
+      onSave({ memoEligible: false });
+    }
+  };
+
+  return (
+    <div className="ap-modal-backdrop" onClick={onCancel}>
+      <div className="ap-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ap-modal-icon" style={{ background: "#fef3c7" }}>📋</div>
+        <h2 className="ap-modal-title">Memo Settings</h2>
+        <p className="ap-modal-body">
+          Control whether <strong style={{ color: "#0f172a" }}>{product.name}</strong>{" "}
+          can be requested by trade customers on memo.
+          {typeof product.reservedForMemo === "number" && product.reservedForMemo > 0 && (
+            <>
+              {" "}
+              <strong style={{ color: "#b45309" }}>
+                {product.reservedForMemo} unit(s) currently out on memo.
+              </strong>
+            </>
+          )}
+        </p>
+
+        <div className="ap-modal-input-wrap">
+          <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={eligible}
+              onChange={(e) => setEligible(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "#b45309" }}
+            />
+            <span className="ap-modal-input-label" style={{ marginBottom: 0 }}>
+              Memo-eligible product
+            </span>
+          </label>
+        </div>
+
+        {eligible && (
+          <div className="ap-modal-input-wrap" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div>
+              <label className="ap-modal-input-label">Min Days</label>
+              <input
+                type="number"
+                className="ap-modal-confirm-input"
+                value={minDays}
+                min={1}
+                max={MEMO_MAX_DAYS_CEILING}
+                onChange={(e) => setMinDays(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="ap-modal-input-label">
+                Max Days <span className="ap-label-hint">≤ {MEMO_MAX_DAYS_CEILING}</span>
+              </label>
+              <input
+                type="number"
+                className="ap-modal-confirm-input"
+                value={maxDays}
+                min={1}
+                max={MEMO_MAX_DAYS_CEILING}
+                onChange={(e) => setMaxDays(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {(localError || error) && (
+          <p style={{ fontSize: "0.78rem", color: "#dc2626", marginBottom: "1rem" }}>⚠ {localError || error}</p>
+        )}
+
+        <div className="ap-modal-actions">
+          <button className="ap-modal-cancel" onClick={onCancel}>Cancel</button>
+          <button
+            className="ap-modal-confirm-btn"
+            style={{ background: "#b45309" }}
+            onClick={submit}
+            disabled={loading}
+          >
+            {loading ? "Saving…" : "Save Memo Settings"}
           </button>
         </div>
       </div>
@@ -561,6 +687,16 @@ function AddProductForm({
       if (!watchForm.watchMovement) { setError("Movement type is required"); return; }
     }
 
+    // Memo window sanity check (mirrors server-side validation)
+    if (form.memoEligible) {
+      const minD = Number(form.memoMinDays);
+      const maxD = Number(form.memoMaxDays);
+      if (!minD || minD < 1) { setError("Memo minimum days must be at least 1"); return; }
+      if (!maxD || maxD < 1) { setError("Memo maximum days must be at least 1"); return; }
+      if (maxD > MEMO_MAX_DAYS_CEILING) { setError(`Memo maximum days cannot exceed ${MEMO_MAX_DAYS_CEILING}`); return; }
+      if (maxD < minD) { setError("Memo maximum days must be ≥ minimum days"); return; }
+    }
+
     // Collect successfully uploaded Cloudinary URLs
     const imageUrls = uploadItems
       .filter((i) => i.status === "done" && i.cloudUrl)
@@ -571,7 +707,7 @@ function AddProductForm({
       let payload: Record<string, unknown>;
 
       if (productType === "diamond") {
-        const { shapes, colors, clarities, certifications, productType: _pt, ...rest } = diamondForm;
+        const { shapes, colors, clarities, certifications, productType: _pt, memoEligible, memoMinDays, memoMaxDays, ...rest } = diamondForm;
         payload = {
           productType: "diamond",
           ...rest,
@@ -583,9 +719,13 @@ function AddProductForm({
           clarity: clarities,
           certification: certifications,
           images: imageUrls,
+          memoEligible,
+          ...(memoEligible
+            ? { memoMinDays: Number(memoMinDays), memoMaxDays: Number(memoMaxDays) }
+            : {}),
         };
       } else {
-        const { productType: _pt, watchFeatures, ...rest } = watchForm;
+        const { productType: _pt, watchFeatures, memoEligible, memoMinDays, memoMaxDays, ...rest } = watchForm;
         payload = {
           productType: "watch",
           ...rest,
@@ -593,6 +733,10 @@ function AddProductForm({
           stock: Number(watchForm.stock),
           watchFeatures,
           images: imageUrls,
+          memoEligible,
+          ...(memoEligible
+            ? { memoMinDays: Number(memoMinDays), memoMaxDays: Number(memoMaxDays) }
+            : {}),
         };
         Object.keys(payload).forEach((k) => {
           if (payload[k] === "") delete payload[k];
@@ -900,6 +1044,70 @@ function AddProductForm({
                 apiFetch={apiFetch}
               />
 
+              {/* ── Memo settings ── */}
+              <div className="ap-subsection">
+                <div className="ap-subsection-title">Memo Program</div>
+              </div>
+              <div className="ap-col-2">
+                <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.memoEligible}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      if (productType === "diamond") {
+                        setDiamondForm((prev) => ({ ...prev, memoEligible: checked }));
+                      } else {
+                        setWatchForm((prev) => ({ ...prev, memoEligible: checked }));
+                      }
+                    }}
+                    style={{ width: 16, height: 16, accentColor: "#b45309" }}
+                  />
+                  <span className="ap-label" style={{ marginBottom: 0 }}>
+                    Allow this product to be requested on memo
+                    <span className="ap-label-hint">Off by default — most SKUs should never be memo-eligible</span>
+                  </span>
+                </label>
+              </div>
+
+              {form.memoEligible && (
+                <>
+                  <div>
+                    <label className="ap-label">Memo Min Days</label>
+                    <input
+                      type="number"
+                      className="ap-input"
+                      value={form.memoMinDays}
+                      min={1}
+                      max={MEMO_MAX_DAYS_CEILING}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (productType === "diamond") setDiamondForm((prev) => ({ ...prev, memoMinDays: v }));
+                        else setWatchForm((prev) => ({ ...prev, memoMinDays: v }));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="ap-label">
+                      Memo Max Days
+                      <span className="ap-label-hint">Ceiling: {MEMO_MAX_DAYS_CEILING} days</span>
+                    </label>
+                    <input
+                      type="number"
+                      className="ap-input"
+                      value={form.memoMaxDays}
+                      min={1}
+                      max={MEMO_MAX_DAYS_CEILING}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (productType === "diamond") setDiamondForm((prev) => ({ ...prev, memoMaxDays: v }));
+                        else setWatchForm((prev) => ({ ...prev, memoMaxDays: v }));
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
               {/* ── Description ── */}
               <div className="ap-col-2">
                 <label className="ap-label">Description</label>
@@ -950,17 +1158,24 @@ function AddProductForm({
 export default function AdminProductsPage() {
   const { apiFetch } = useApi();
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, memoEligible: 0, inventoryValue: 0 });
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
 
+  // `search` is what's typed immediately; `debouncedSearch` is what's actually
+  // sent to the server, 350ms after typing stops. With an 18k+ product
+  // catalogue, firing a request on every keystroke would hammer the DB.
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterShape, setFilterShape] = useState("");
   const [filterClarity, setFilterClarity] = useState("");
+  const [filterMemo, setFilterMemo] = useState<"all" | "eligible" | "not">("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
@@ -973,66 +1188,76 @@ export default function AdminProductsPage() {
   >(null);
   const [modalLoading, setModalLoading] = useState(false);
 
-  const fetchData = async () => {
+  const [memoModalProduct, setMemoModalProduct] = useState<Product | null>(null);
+  const [memoModalLoading, setMemoModalLoading] = useState(false);
+  const [memoModalError, setMemoModalError] = useState("");
+
+  // Debounce the search box; reset to page 1 in the same state update so the
+  // fetch effect only fires once per search change, not twice.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const fetchProducts = async () => {
+    setTableLoading(true);
     try {
-      const [pData, cData] = await Promise.all([
-        apiFetch("/api/admin/products"),
-        apiFetch("/api/categories?withSubcategories=true"),
-      ]);
-      setProducts((pData as { data: Product[] }).data || []);
-      let cats: Category[] = [];
-      const raw = cData as { data?: Category[] } | Category[];
-      if (Array.isArray((raw as { data?: Category[] }).data)) cats = (raw as { data: Category[] }).data;
-      else if (Array.isArray(raw)) cats = raw as Category[];
-      setCategories(cats);
+      const params = new URLSearchParams();
+      if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+      if (filterCategory) params.set("category", filterCategory);
+      if (filterStatus !== "all") params.set("status", filterStatus);
+      if (filterShape) params.set("shape", filterShape);
+      if (filterClarity) params.set("clarity", filterClarity);
+      if (filterMemo !== "all") params.set("memo", filterMemo);
+      params.set("sortBy", sortKey);
+      params.set("sortDir", sortDir);
+      params.set("page", String(page));
+      params.set("limit", String(PAGE_SIZE));
+
+      const pData = await apiFetch(`/api/admin/products?${params.toString()}`) as {
+        data: Product[];
+        total: number;
+        stats: typeof stats;
+      };
+      setProducts(pData.data || []);
+      setTotal(pData.total || 0);
+      if (pData.stats) setStats(pData.stats);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to load products");
+    } finally {
+      setTableLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterCategory, filterStatus, filterShape, filterClarity, filterMemo, sortKey, sortDir, page]);
 
-  const filtered = useMemo(() => {
-    let list = [...products];
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(q));
-    }
-    if (filterCategory)
-      list = list.filter((p) => {
-        const id = typeof p.category === "object" ? p.category?._id : p.category;
-        return id === filterCategory;
-      });
-    if (filterStatus !== "all")
-      list = list.filter((p) => (filterStatus === "active" ? p.isActive : !p.isActive));
-    if (filterShape)
-      list = list.filter((p) =>
-        Array.isArray(p.shape)
-          ? (p.shape as string[]).includes(filterShape)
-          : p.shape === filterShape,
-      );
-    if (filterClarity)
-      list = list.filter((p) =>
-        Array.isArray(p.clarity)
-          ? (p.clarity as string[]).includes(filterClarity)
-          : p.clarity === filterClarity,
-      );
-    list.sort((a, b) => {
-      const av = a[sortKey], bv = b[sortKey];
-      if (typeof av === "number" && typeof bv === "number")
-        return sortDir === "asc" ? av - bv : bv - av;
-      return sortDir === "asc"
-        ? String(av).localeCompare(String(bv))
-        : String(bv).localeCompare(String(av));
-    });
-    return list;
-  }, [products, search, filterCategory, filterStatus, filterShape, filterClarity, sortKey, sortDir]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const cData = await apiFetch("/api/categories?withSubcategories=true");
+        let cats: Category[] = [];
+        const raw = cData as { data?: Category[] } | Category[];
+        if (Array.isArray((raw as { data?: Category[] }).data)) cats = (raw as { data: Category[] }).data;
+        else if (Array.isArray(raw)) cats = raw as Category[];
+        setCategories(cats);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [search, filterCategory, filterStatus, filterShape, filterClarity]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paginated = products;
 
   const handleSort = (key: SortKey) => {
+    setPage(1);
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   };
@@ -1044,7 +1269,7 @@ export default function AdminProductsPage() {
 
   const handleDeactivate = async (id: string) => {
     await apiFetch(`/api/admin/products/${id}`, { method: "DELETE" });
-    fetchData();
+    fetchProducts();
   };
 
   const handleDeleteSingle = async () => {
@@ -1054,7 +1279,7 @@ export default function AdminProductsPage() {
       await apiFetch(`/api/admin/products/${modal.id}`, { method: "DELETE" });
       setSuccess(`"${modal.name}" deleted successfully.`);
       setModal(null);
-      fetchData();
+      fetchProducts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete product");
       setModal(null);
@@ -1064,18 +1289,16 @@ export default function AdminProductsPage() {
   };
 
   const handleDeleteAll = async () => {
+    // NOTE: with a catalogue this large, bulk-deleting by looping individual
+    // DELETE requests client-side is not viable — that path is intentionally
+    // not attempted here. This now requires a real server-side bulk endpoint;
+    // until one exists, this action is disabled (see button below).
     setModalLoading(true);
     try {
-      try {
-        await apiFetch("/api/admin/products", { method: "DELETE" });
-      } catch {
-        await Promise.all(
-          products.map((p) => apiFetch(`/api/admin/products/${p._id}`, { method: "DELETE" }))
-        );
-      }
-      setSuccess(`All ${products.length} products deleted successfully.`);
+      await apiFetch("/api/admin/products", { method: "DELETE" });
+      setSuccess(`All products deleted successfully.`);
       setModal(null);
-      fetchData();
+      fetchProducts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete all products");
       setModal(null);
@@ -1084,9 +1307,26 @@ export default function AdminProductsPage() {
     }
   };
 
-  const hasFilters = !!(search || filterCategory || filterStatus !== "all" || filterShape || filterClarity);
-  const activeCount = products.filter((p) => p.isActive).length;
-  const totalValue = products.reduce((s, p) => s + p.price * p.stock, 0);
+  const handleMemoSave = async (patch: { memoEligible: boolean; memoMinDays?: number; memoMaxDays?: number }) => {
+    if (!memoModalProduct) return;
+    setMemoModalLoading(true);
+    setMemoModalError("");
+    try {
+      await apiFetch(`/api/admin/products/${memoModalProduct._id}`, {
+        method: "PUT",
+        body: JSON.stringify(patch),
+      });
+      setSuccess(`Memo settings updated for "${memoModalProduct.name}".`);
+      setMemoModalProduct(null);
+      fetchProducts();
+    } catch (err) {
+      setMemoModalError(err instanceof Error ? err.message : "Failed to update memo settings");
+    } finally {
+      setMemoModalLoading(false);
+    }
+  };
+
+  const hasFilters = !!(search || filterCategory || filterStatus !== "all" || filterShape || filterClarity || filterMemo !== "all");
   const isWatch = (p: Product) => !!(p.watchBrand || p.watchMovement || p.watchGender);
 
   return (
@@ -1097,10 +1337,20 @@ export default function AdminProductsPage() {
         <ConfirmDeleteModal
           mode={modal.mode}
           productName={modal.mode === "single" ? modal.name : undefined}
-          totalCount={products.length}
+          totalCount={stats.total}
           onConfirm={modal.mode === "all" ? handleDeleteAll : handleDeleteSingle}
           onCancel={() => setModal(null)}
           loading={modalLoading}
+        />
+      )}
+
+      {memoModalProduct && (
+        <MemoSettingsModal
+          product={memoModalProduct}
+          onSave={handleMemoSave}
+          onCancel={() => { setMemoModalProduct(null); setMemoModalError(""); }}
+          loading={memoModalLoading}
+          error={memoModalError}
         />
       )}
 
@@ -1111,7 +1361,7 @@ export default function AdminProductsPage() {
           <h1 className="ap-display" style={{ marginTop: "0.35rem" }}>Product Catalogue</h1>
         </div>
         <div className="ap-topbar-actions">
-          {products.length > 0 && (
+          {stats.total > 0 && (
             <button className="ap-btn-danger" onClick={() => setModal({ mode: "all" })}>
               🗑 Delete All
             </button>
@@ -1129,19 +1379,23 @@ export default function AdminProductsPage() {
       <div className="ap-stats">
         <div className="ap-stat">
           <div className="ap-stat-label">Total Products</div>
-          <div className="ap-stat-value">{products.length}</div>
+          <div className="ap-stat-value">{stats.total.toLocaleString()}</div>
         </div>
         <div className="ap-stat">
           <div className="ap-stat-label">Active</div>
-          <div className="ap-stat-value green">{activeCount}</div>
+          <div className="ap-stat-value green">{stats.active.toLocaleString()}</div>
         </div>
         <div className="ap-stat">
           <div className="ap-stat-label">Inactive</div>
-          <div className="ap-stat-value">{products.length - activeCount}</div>
+          <div className="ap-stat-value">{stats.inactive.toLocaleString()}</div>
         </div>
         <div className="ap-stat">
           <div className="ap-stat-label">Inventory Value</div>
-          <div className="ap-stat-value amber">${totalValue.toLocaleString()}</div>
+          <div className="ap-stat-value amber">${Math.round(stats.inventoryValue).toLocaleString()}</div>
+        </div>
+        <div className="ap-stat">
+          <div className="ap-stat-label">Memo Eligible</div>
+          <div className="ap-stat-value amber">{stats.memoEligible.toLocaleString()}</div>
         </div>
       </div>
 
@@ -1155,7 +1409,7 @@ export default function AdminProductsPage() {
           onSuccess={() => {
             setSuccess("Product created successfully.");
             setShowForm(false);
-            fetchData();
+            fetchProducts();
           }}
           onCancel={() => setShowForm(false)}
         />
@@ -1174,39 +1428,49 @@ export default function AdminProductsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <select className="ap-input" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <select className="ap-input" value={filterCategory} onChange={(e) => { setPage(1); setFilterCategory(e.target.value); }}>
               <option value="">All Categories</option>
               {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
-            <select className="ap-input" value={filterShape} onChange={(e) => setFilterShape(e.target.value)}>
+            <select className="ap-input" value={filterShape} onChange={(e) => { setPage(1); setFilterShape(e.target.value); }}>
               <option value="">All Shapes</option>
               {SHAPES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            <select className="ap-input" value={filterClarity} onChange={(e) => setFilterClarity(e.target.value)}>
+            <select className="ap-input" value={filterClarity} onChange={(e) => { setPage(1); setFilterClarity(e.target.value); }}>
               <option value="">All Clarities</option>
               {CLARITIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               className="ap-input"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as "all" | "active" | "inactive")}
+              onChange={(e) => { setPage(1); setFilterStatus(e.target.value as "all" | "active" | "inactive"); }}
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+            </select>
+            <select
+              className="ap-input"
+              value={filterMemo}
+              onChange={(e) => { setPage(1); setFilterMemo(e.target.value as "all" | "eligible" | "not"); }}
+            >
+              <option value="all">All Memo Status</option>
+              <option value="eligible">Memo Eligible</option>
+              <option value="not">Not Memo Eligible</option>
             </select>
           </div>
 
           {hasFilters && (
             <div className="ap-filter-summary">
               <span className="ap-filter-count">
-                Showing <strong>{filtered.length}</strong> of <strong>{products.length}</strong> products
+                Showing <strong>{total.toLocaleString()}</strong> of <strong>{stats.total.toLocaleString()}</strong> products
               </span>
               <button
                 className="ap-clear-btn"
                 onClick={() => {
-                  setSearch(""); setFilterCategory(""); setFilterStatus("all");
-                  setFilterShape(""); setFilterClarity("");
+                  setPage(1);
+                  setSearch(""); setDebouncedSearch(""); setFilterCategory(""); setFilterStatus("all");
+                  setFilterShape(""); setFilterClarity(""); setFilterMemo("all");
                 }}
               >
                 Clear all filters ×
@@ -1218,7 +1482,7 @@ export default function AdminProductsPage() {
 
       {/* Table */}
       <div className="ap-card">
-        <div className="ap-table-wrap">
+        <div className="ap-table-wrap" style={{ opacity: tableLoading ? 0.55 : 1, transition: "opacity 0.12s" }}>
           <table className="ap-table">
             <thead>
               <tr>
@@ -1230,6 +1494,7 @@ export default function AdminProductsPage() {
                 <th>Clarity / Gender</th>
                 <th className="sortable" onClick={() => handleSort("stock")}>Stock <SortArrow k="stock" /></th>
                 <th>Status</th>
+                <th>Memo</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1269,6 +1534,18 @@ export default function AdminProductsPage() {
                       </span>
                     </td>
                     <td>
+                      <button
+                        type="button"
+                        className={`ap-badge ${p.memoEligible ? "memo-on" : "memo-off"}`}
+                        onClick={() => { setMemoModalProduct(p); setMemoModalError(""); }}
+                        title="Click to edit memo settings"
+                      >
+                        {p.memoEligible
+                          ? `📋 Memo (${p.memoMinDays ?? 3}–${p.memoMaxDays ?? MEMO_MAX_DAYS_CEILING}d)`
+                          : "— Not Memo"}
+                      </button>
+                    </td>
+                    <td>
                       <div className="ap-row-actions">
                         <button
                           className="ap-deactivate"
@@ -1293,7 +1570,7 @@ export default function AdminProductsPage() {
           </table>
         </div>
 
-        {paginated.length === 0 && (
+        {paginated.length === 0 && !tableLoading && (
           <div className="ap-empty">
             <div className="ap-empty-icon">◇</div>
             <div className="ap-empty-title">
@@ -1308,7 +1585,7 @@ export default function AdminProductsPage() {
         {totalPages > 1 && (
           <div className="ap-pagination">
             <span className="ap-page-info">
-              Page {page} of {totalPages} · {filtered.length} results
+              Page {page} of {totalPages} · {total.toLocaleString()} results
             </span>
             <div className="ap-page-btns">
               <button className="ap-page-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>

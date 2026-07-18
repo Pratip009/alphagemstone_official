@@ -216,20 +216,50 @@ export async function createMemoRequest(input: CreateMemoInput): Promise<IMemo> 
       }
 
       // Single conditional update — never read-then-write for stock (§5.1).
+      // $ifNull guards against documents that predate the memo fields (e.g.
+      // bulk-imported catalogue rows that never went through a Mongoose
+      // save/create, so they never got the schema default written to disk).
+      // Without it, a missing reservedForMemo makes $subtract return null,
+      // and null >= quantity is always false — silently failing every
+      // reservation for such products even though memoEligible/isActive/
+      // stock all look correct on a normal (Mongoose-hydrated) read.
       const updated = await Product.findOneAndUpdate(
         {
           _id: line.productId,
           memoEligible: true,
           isActive: true,
           $expr: {
-            $gte: [{ $subtract: ['$stock', '$reservedForMemo'] }, line.quantity],
+            $gte: [
+              { $subtract: ['$stock', { $ifNull: ['$reservedForMemo', 0] }] },
+              line.quantity,
+            ],
           },
         },
         { $inc: { reservedForMemo: line.quantity } },
         { new: true }
       );
       if (!updated) {
-        throw new MemoError(`"${product.name}" is no longer available for memo`, 409);
+        // The atomic update's filter bundles three conditions together, so a
+        // failure here doesn't say which one tripped. Diagnose against the
+        // pre-update read so admins/customers get an actionable reason
+        // instead of a generic "not available" — this was previously the
+        // single biggest source of confusing memo-request failures.
+        if (!product.memoEligible) {
+          throw new MemoError(`"${product.name}" is not eligible for memo requests`, 409);
+        }
+        if (!product.isActive) {
+          throw new MemoError(`"${product.name}" is not currently active`, 409);
+        }
+        const available = Math.max(0, product.stock - (product.reservedForMemo || 0));
+        if (available < line.quantity) {
+          throw new MemoError(
+            `"${product.name}" only has ${available} unit(s) available for memo (requested ${line.quantity})`,
+            409
+          );
+        }
+        // Fell through: state must have changed between the read above and
+        // the write (e.g. another request reserved the last unit first).
+        throw new MemoError(`"${product.name}" is no longer available for memo — please try again`, 409);
       }
       reserved.push({ productId: updated._id, quantity: line.quantity });
 
