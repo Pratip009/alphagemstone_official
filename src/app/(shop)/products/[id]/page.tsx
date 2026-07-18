@@ -1,19 +1,20 @@
-import { notFound } from 'next/navigation';
-import { connectDB } from '@/lib/db';
-import { getProductById } from '@/services/product.service';
-import Product from '@/models/Product';
-import AddToCartButton from '@/components/cart/AddToCartButton';
-import ProductGallery from '@/components/products/ProductGallery';
-import Link from 'next/link';
-import WishlistButton from '@/components/wishlist/WishlistButton';
-import RecordRecentlyViewed from '@/components/products/RecordRecentlyViewed';
-import RecentlyViewedProducts from '@/components/products/RecentlyViewedProducts';
+import { notFound } from "next/navigation";
+import { connectDB } from "@/lib/db";
+import { getProductById } from "@/services/product.service";
+import Product from "@/models/Product";
+import AddToCartButton from "@/components/cart/AddToCartButton";
+import ProductGallery from "@/components/products/ProductGallery";
+import Link from "next/link";
+import WishlistButton from "@/components/wishlist/WishlistButton";
+import RecordRecentlyViewed from "@/components/products/RecordRecentlyViewed";
+import RecentlyViewedProducts from "@/components/products/RecentlyViewedProducts";
+import CompareLaunchButton from "@/components/compare/CompareLaunchButton";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
   name: string;
   price: number;
-  productKind?: 'diamond' | 'gemstone' | 'watch' | 'jewelry';
+  productKind?: "diamond" | "gemstone" | "watch" | "jewelry";
 
   // Diamond / gemstone
   shape?: string | string[];
@@ -65,28 +66,28 @@ type RelatedItem = {
   watchGender?: string;
 };
 
-type ProductKind = 'watch' | 'diamond' | 'gemstone' | 'jewelry';
+type ProductKind = "watch" | "diamond" | "gemstone" | "jewelry";
 
 type Spec = { label: string; value: string; highlight?: boolean };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function first(val?: string | string[]): string {
-  if (!val) return '';
-  return Array.isArray(val) ? (val[0] ?? '') : val;
+  if (!val) return "";
+  return Array.isArray(val) ? (val[0] ?? "") : val;
 }
 function display(val?: string | string[]): string {
-  if (!val) return '';
-  return Array.isArray(val) ? val.join(', ') : val;
+  if (!val) return "";
+  return Array.isArray(val) ? val.join(", ") : val;
 }
 function capitalize(val?: string | string[]): string {
   const s = first(val);
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 }
 function certDisplay(val?: string | string[]): string {
-  if (!val) return '—';
+  if (!val) return "—";
   const arr = Array.isArray(val) ? val : [val];
-  const filtered = arr.filter((c) => c && c.toLowerCase() !== 'none');
-  return filtered.length > 0 ? filtered.join(', ') : '—';
+  const filtered = arr.filter((c) => c && c.toLowerCase() !== "none");
+  return filtered.length > 0 ? filtered.join(", ") : "—";
 }
 function isWatchDoc(p: ProductDoc): boolean {
   return !!(p.watchBrand || p.watchMovement || p.watchGender);
@@ -98,11 +99,11 @@ function isWatchDoc(p: ProductDoc): boolean {
 // the productKind field.
 function getProductKind(p: ProductDoc): ProductKind {
   if (p.productKind) return p.productKind;
-  if (isWatchDoc(p)) return 'watch';
-  const categoryName = (p.category?.name ?? '').toLowerCase();
-  if (categoryName.includes('diamond')) return 'diamond';
-  if (p.gemstoneName) return 'gemstone';
-  return 'jewelry';
+  if (isWatchDoc(p)) return "watch";
+  const categoryName = (p.category?.name ?? "").toLowerCase();
+  if (categoryName.includes("diamond")) return "diamond";
+  if (p.gemstoneName) return "gemstone";
+  return "jewelry";
 }
 
 // "metalMaterial" -> "Metal Material" — used only for legacyAttributes keys
@@ -110,13 +111,13 @@ function getProductKind(p: ProductDoc): ProductKind {
 // captured at import time silently disappears from the page.
 function titleCase(key: string): string {
   return key
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/^./, (c) => c.toUpperCase());
 }
 
 // legacyAttributes keys that are internal bookkeeping, not customer-facing
 // specs, and should never render even as a leftover row.
-const SKIP_ATTR_KEYS = new Set(['legacyCategoryRaw', 'shippingWeight']);
+const SKIP_ATTR_KEYS = new Set(["legacyCategoryRaw", "shippingWeight"]);
 
 // ─── Spec table builder ────────────────────────────────────────────────────
 // Builds the "spec sheet" rows for a product, tailored per productKind.
@@ -129,8 +130,12 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
   const rows: Spec[] = [];
   const usedAttrKeys = new Set<string>();
 
-  const push = (label: string, value: string | number | undefined | null, opts?: { highlight?: boolean }) => {
-    if (value === undefined || value === null || value === '') return;
+  const push = (
+    label: string,
+    value: string | number | undefined | null,
+    opts?: { highlight?: boolean },
+  ) => {
+    if (value === undefined || value === null || value === "") return;
     rows.push({ label, value: String(value), highlight: opts?.highlight });
   };
   // Reads a legacyAttributes key and marks it "already shown" so it isn't
@@ -140,60 +145,74 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
     return attrs[key] || undefined;
   };
 
-  if (kind === 'diamond') {
-    push('Item', 'Diamond');
-    push('Polish', attr('polish'));
-    push('Shape', p.shapeRaw || capitalize(p.shape));
-    push('Cut', attr('cut'));
-    push('Color', p.colorRaw || display(p.color));
-    push('Size', attr('dimensions'));
-    push('Depth', attr('depth'));
-    push('Treatment', attr('treatment'));
-    push('Clarity', p.clarityRaw || display(p.clarity));
+  if (kind === "diamond") {
+    push("Item", "Diamond");
+    push("Polish", attr("polish"));
+    push("Shape", p.shapeRaw || capitalize(p.shape));
+    push("Cut", attr("cut"));
+    push("Color", p.colorRaw || display(p.color));
+    push("Size", attr("dimensions"));
+    push("Depth", attr("depth"));
+    push("Treatment", attr("treatment"));
+    push("Clarity", p.clarityRaw || display(p.clarity));
     const cert = certDisplay(p.certification);
-    if (cert !== '—') push('Certification', cert);
-    const diamondApproxWeightAttr = attr('approxWeight');
-    push('Approx Weight', diamondApproxWeightAttr ? `${diamondApproxWeightAttr} ct.` : (p.size ? `${p.size} ct.` : undefined));
-  } else if (kind === 'gemstone') {
-    push('Name', p.gemstoneName || p.name);
-    push('Shape', p.shapeRaw || capitalize(p.shape));
-    push('Cut', attr('cut'));
-    push('Color', p.colorRaw || display(p.color));
-    push('Origin', attr('origin'));
-    push('Size', attr('dimensions'));
-    push('Luster', attr('luster'));
-    push('Treatment', attr('treatment'));
-    push('Hardness', attr('hardness'));
-    push('Clarity', p.clarityRaw || display(p.clarity));
+    if (cert !== "—") push("Certification", cert);
+    const diamondApproxWeightAttr = attr("approxWeight");
+    push(
+      "Approx Weight",
+      diamondApproxWeightAttr
+        ? `${diamondApproxWeightAttr} ct.`
+        : p.size
+          ? `${p.size} ct.`
+          : undefined,
+    );
+  } else if (kind === "gemstone") {
+    push("Name", p.gemstoneName || p.name);
+    push("Shape", p.shapeRaw || capitalize(p.shape));
+    push("Cut", attr("cut"));
+    push("Color", p.colorRaw || display(p.color));
+    push("Origin", attr("origin"));
+    push("Size", attr("dimensions"));
+    push("Luster", attr("luster"));
+    push("Treatment", attr("treatment"));
+    push("Hardness", attr("hardness"));
+    push("Clarity", p.clarityRaw || display(p.clarity));
     // attr() must be called unconditionally here — if it only runs on the
     // right side of `||` (i.e. only when p.gradeRaw is empty), the 'grade'
     // key never gets marked "used" on products that have both, and it
     // resurfaces a second time in the leftover-attributes pass below,
     // producing a duplicate "Grade" row (and a React duplicate-key error).
-    const gradeAttr = attr('grade');
-    push('Grade', p.gradeRaw || gradeAttr);
-    const approxWeightAttr = attr('approxWeight');
-    push('Approx Weight', approxWeightAttr ? `${approxWeightAttr} ct.` : (p.size ? `${p.size} ct.` : undefined));
-  } else if (kind === 'watch') {
-    push('Brand', p.watchBrand);
-    push('Model', p.watchModel);
-    push('Movement', p.watchMovement);
-    push('Gender', p.watchGender);
-    push('Style', p.watchStyle);
-    push('Strap', p.watchStrapType);
-    push('Case Material', p.watchCaseMaterial);
-    push('Dial Color', p.watchDialColor);
-    push('Case Size', p.watchCaseSize);
-    push('Features', p.watchFeatures?.join(', '));
+    const gradeAttr = attr("grade");
+    push("Grade", p.gradeRaw || gradeAttr);
+    const approxWeightAttr = attr("approxWeight");
+    push(
+      "Approx Weight",
+      approxWeightAttr
+        ? `${approxWeightAttr} ct.`
+        : p.size
+          ? `${p.size} ct.`
+          : undefined,
+    );
+  } else if (kind === "watch") {
+    push("Brand", p.watchBrand);
+    push("Model", p.watchModel);
+    push("Movement", p.watchMovement);
+    push("Gender", p.watchGender);
+    push("Style", p.watchStyle);
+    push("Strap", p.watchStrapType);
+    push("Case Material", p.watchCaseMaterial);
+    push("Dial Color", p.watchDialColor);
+    push("Case Size", p.watchCaseSize);
+    push("Features", p.watchFeatures?.join(", "));
   } else {
     // jewelry / silver / vouchers / anything without a dedicated kind
-    push('Metal', attr('metalMaterial'));
-    push('Metal Weight', attr('metalWeight'));
-    push('Ring Size', attr('ringSize'));
-    push('Size Range', attr('sizeRange'));
-    push('Carat Range', attr('caratRange'));
-    push('Shape', p.shapeRaw || capitalize(p.shape));
-    push('Color', p.colorRaw || display(p.color));
+    push("Metal", attr("metalMaterial"));
+    push("Metal Weight", attr("metalWeight"));
+    push("Ring Size", attr("ringSize"));
+    push("Size Range", attr("sizeRange"));
+    push("Carat Range", attr("caratRange"));
+    push("Shape", p.shapeRaw || capitalize(p.shape));
+    push("Color", p.colorRaw || display(p.color));
   }
 
   // Anything still sitting in legacyAttributes that wasn't already pulled
@@ -205,7 +224,9 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
     push(titleCase(key), value);
   }
 
-  push('Availability', p.stock > 0 ? `${p.stock} in stock` : 'Out of stock', { highlight: p.stock > 0 });
+  push("Availability", p.stock > 0 ? `${p.stock} in stock` : "Out of stock", {
+    highlight: p.stock > 0,
+  });
 
   return rows;
 }
@@ -213,19 +234,63 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 function WatchIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
       <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.25" />
-      <path d="M9 5.5V9l2 2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="7" y="1" width="4" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1" />
-      <rect x="7" y="14.5" width="4" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <path
+        d="M9 5.5V9l2 2"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="7"
+        y="1"
+        width="4"
+        height="2.5"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+      <rect
+        x="7"
+        y="14.5"
+        width="4"
+        height="2.5"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
     </svg>
   );
 }
 function DiamondIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M9 16L2 7l2.5-5h9L16 7z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
-      <path d="M2 7h14M9 16L5 7l4-5 4 5z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M9 16L2 7l2.5-5h9L16 7z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2 7h14M9 16L5 7l4-5 4 5z"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -233,31 +298,65 @@ function DiamondIcon() {
 // the brilliant-cut diamond shape, so the two badges read differently at a glance.
 function GemstoneIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <rect x="4" y="3" width="10" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
-      <path d="M4 7h10M4 11h10M8 3v12M10 3v12" stroke="currentColor" strokeWidth="0.9" />
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="4"
+        y="3"
+        width="10"
+        height="12"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 7h10M4 11h10M8 3v12M10 3v12"
+        stroke="currentColor"
+        strokeWidth="0.9"
+      />
     </svg>
   );
 }
 // Jewelry / silver / vouchers — simple ring silhouette.
 function JewelryIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
       <circle cx="9" cy="11" r="5" stroke="currentColor" strokeWidth="1.25" />
-      <path d="M9 6L6.5 2h5L9 6z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+      <path
+        d="M9 6L6.5 2h5L9 6z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function kindIcon(kind: ProductKind) {
-  if (kind === 'watch') return <WatchIcon />;
-  if (kind === 'diamond') return <DiamondIcon />;
-  if (kind === 'gemstone') return <GemstoneIcon />;
+  if (kind === "watch") return <WatchIcon />;
+  if (kind === "diamond") return <DiamondIcon />;
+  if (kind === "gemstone") return <GemstoneIcon />;
   return <JewelryIcon />;
 }
 
 // ─── Related products ─────────────────────────────────────────────────────────
-async function getRelatedProducts(p: ProductDoc, excludeId: string, limit = 4): Promise<RelatedItem[]> {
+async function getRelatedProducts(
+  p: ProductDoc,
+  excludeId: string,
+  limit = 4,
+): Promise<RelatedItem[]> {
   const watch = isWatchDoc(p);
   let docs: any[] = [];
 
@@ -267,7 +366,9 @@ async function getRelatedProducts(p: ProductDoc, excludeId: string, limit = 4): 
       _id: { $ne: excludeId },
       isActive: true,
       stock: { $gt: 0 },
-    }).limit(limit).lean();
+    })
+      .limit(limit)
+      .lean();
 
     if (docs.length < limit) {
       const existingIds = docs.map((d) => String(d._id));
@@ -276,16 +377,20 @@ async function getRelatedProducts(p: ProductDoc, excludeId: string, limit = 4): 
         _id: { $nin: [excludeId, ...existingIds] },
         isActive: true,
         stock: { $gt: 0 },
-      }).limit(limit - docs.length).lean();
+      })
+        .limit(limit - docs.length)
+        .lean();
       docs = [...docs, ...fallback];
     }
   } else {
     docs = await Product.find({
-      shape: { $regex: new RegExp(first(p.shape), 'i') },
+      shape: { $regex: new RegExp(first(p.shape), "i") },
       _id: { $ne: excludeId },
       isActive: true,
       stock: { $gt: 0 },
-    }).limit(limit).lean();
+    })
+      .limit(limit)
+      .lean();
 
     if (docs.length < limit) {
       const existingIds = docs.map((d) => String(d._id));
@@ -293,7 +398,9 @@ async function getRelatedProducts(p: ProductDoc, excludeId: string, limit = 4): 
         _id: { $nin: [excludeId, ...existingIds] },
         isActive: true,
         stock: { $gt: 0 },
-      }).limit(limit - docs.length).lean();
+      })
+        .limit(limit - docs.length)
+        .lean();
       docs = [...docs, ...fallback];
     }
   }
@@ -302,7 +409,7 @@ async function getRelatedProducts(p: ProductDoc, excludeId: string, limit = 4): 
     id: String(r._id),
     name: r.name as string,
     price: r.price as number,
-    img: (r.images as string[])?.[0] ?? '',
+    img: (r.images as string[])?.[0] ?? "",
     shape: first(r.shape as string | string[]),
     size: r.size as number,
     color: first(r.color as string | string[]),
@@ -316,33 +423,128 @@ async function getRelatedProducts(p: ProductDoc, excludeId: string, limit = 4): 
 // ─── Static content ───────────────────────────────────────────────────────────
 const TRUST_ITEMS = [
   {
-    icon: (<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>),
-    label: 'SSL Secured', sub: 'Bank-grade encryption',
+    icon: (
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+        <path
+          d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9 12l2 2 4-4"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+    label: "SSL Secured",
+    sub: "Bank-grade encryption",
   },
   {
-    icon: (<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" strokeWidth="1.3"/></svg>),
-    label: 'Free Insured Shipping', sub: 'On all orders worldwide',
+    icon: (
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+        <path
+          d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+          stroke="currentColor"
+          strokeWidth="1.3"
+        />
+      </svg>
+    ),
+    label: "Free Insured Shipping",
+    sub: "On all orders worldwide",
   },
   {
-    icon: (<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M3.51 15a9 9 0 1 0 .49-4.95" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>),
-    label: '30-Day Returns', sub: 'Hassle-free policy',
+    icon: (
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+        <polyline
+          points="1 4 1 10 7 10"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3.51 15a9 9 0 1 0 .49-4.95"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+    label: "30-Day Returns",
+    sub: "Hassle-free policy",
   },
   {
-    icon: (<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>),
-    label: 'Complimentary Gift', sub: 'Luxury packaging included',
+    icon: (
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+        <path
+          d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+    label: "Complimentary Gift",
+    sub: "Luxury packaging included",
   },
 ];
 
 const INFO_SECTIONS = [
-  { title: 'Learning Center', links: ['Diamond Guide', '4Cs Explained', 'Ring Size Chart', 'Metal Guide', 'Setting Styles'] },
-  { title: 'Customer Care', links: ['Contact Us', 'FAQ', 'Shipping & Returns', 'Privacy Policy', 'Customer Support'] },
-  { title: 'Our Promise', links: ['Testimonials', 'Sustainability', 'Certifications', 'About Us', 'Press'] },
+  {
+    title: "Learning Center",
+    links: [
+      "Diamond Guide",
+      "4Cs Explained",
+      "Ring Size Chart",
+      "Metal Guide",
+      "Setting Styles",
+    ],
+  },
+  {
+    title: "Customer Care",
+    links: [
+      "Contact Us",
+      "FAQ",
+      "Shipping & Returns",
+      "Privacy Policy",
+      "Customer Support",
+    ],
+  },
+  {
+    title: "Our Promise",
+    links: [
+      "Testimonials",
+      "Sustainability",
+      "Certifications",
+      "About Us",
+      "Press",
+    ],
+  },
 ];
 
 const TESTIMONIALS = [
-  { quote: 'Absolutely breathtaking quality. My fiancée was speechless.', author: 'James R.', location: 'New York', stars: 5 },
-  { quote: 'The craftsmanship is extraordinary. Worth every penny.', author: 'Priya M.', location: 'London', stars: 5 },
-  { quote: 'Flawless from order to delivery. Truly world-class.', author: 'Lucas T.', location: 'Sydney', stars: 5 },
+  {
+    quote: "Absolutely breathtaking quality. My fiancée was speechless.",
+    author: "James R.",
+    location: "New York",
+    stars: 5,
+  },
+  {
+    quote: "The craftsmanship is extraordinary. Worth every penny.",
+    author: "Priya M.",
+    location: "London",
+    stars: 5,
+  },
+  {
+    quote: "Flawless from order to delivery. Truly world-class.",
+    author: "Lucas T.",
+    location: "Sydney",
+    stars: 5,
+  },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -361,8 +563,8 @@ export default async function ProductDetailPage({
   const rawObj = raw as unknown as ProductDoc;
   const p: ProductDoc = { ...rawObj, _id: String(rawObj._id) };
   const kind = getProductKind(p);
-  const watch = kind === 'watch';
-  const gemstone = kind === 'gemstone';
+  const watch = kind === "watch";
+  const gemstone = kind === "gemstone";
 
   const related = await getRelatedProducts(p, String(p._id), 4);
 
@@ -385,23 +587,29 @@ export default async function ProductDetailPage({
   const specs = buildSpecs(p, kind);
 
   const certBadge = certDisplay(p.certification);
-  const showCertBadge = !watch && certBadge !== '—';
+  const showCertBadge = !watch && certBadge !== "—";
 
   const heroSubtitle = watch
-    ? [p.watchGender, p.watchStyle, p.watchMovement].filter(Boolean).join(' · ')
+    ? [p.watchGender, p.watchStyle, p.watchMovement].filter(Boolean).join(" · ")
     : [
-        (p.colorRaw || display(p.color)) ? `${p.colorRaw || display(p.color)} Color` : '',
-        (p.clarityRaw || display(p.clarity)) ? `${p.clarityRaw || display(p.clarity)} Clarity` : '',
-        p.size ? `${p.size} ct` : '',
-      ].filter(Boolean).join(' · ');
+        p.colorRaw || display(p.color)
+          ? `${p.colorRaw || display(p.color)} Color`
+          : "",
+        p.clarityRaw || display(p.clarity)
+          ? `${p.clarityRaw || display(p.clarity)} Clarity`
+          : "",
+        p.size ? `${p.size} ct` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
   const typeLabel = watch
-    ? 'Luxury Watch'
+    ? "Luxury Watch"
     : gemstone
-    ? (p.gemstoneName || p.category?.name || 'Fine Gemstone')
-    : kind === 'diamond'
-    ? 'Fine Diamond'
-    : (p.category?.name || 'Fine Jewelry');
+      ? p.gemstoneName || p.category?.name || "Fine Gemstone"
+      : kind === "diamond"
+        ? "Fine Diamond"
+        : p.category?.name || "Fine Jewelry";
 
   return (
     <>
@@ -518,16 +726,23 @@ export default async function ProductDetailPage({
       `}</style>
 
       <div className="pd-page">
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 40px' }}>
-
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
           {/* Breadcrumb */}
           <nav className="pd-breadcrumb">
             <Link href="/">Home</Link>
             <span className="sep">›</span>
-            <Link href="/products">{p.category?.name ?? (watch ? 'Watches' : 'Diamonds')}</Link>
+            <Link href="/products">
+              {p.category?.name ?? (watch ? "Watches" : "Diamonds")}
+            </Link>
             {p.subcategory?.name && (
-              <><span className="sep">›</span>
-              <Link href={`/products?subcategory=${p.subcategory.slug ?? ''}`}>{p.subcategory.name}</Link></>
+              <>
+                <span className="sep">›</span>
+                <Link
+                  href={`/products?subcategory=${p.subcategory.slug ?? ""}`}
+                >
+                  {p.subcategory.name}
+                </Link>
+              </>
             )}
             <span className="sep">›</span>
             <span className="current">{p.name}</span>
@@ -551,8 +766,8 @@ export default async function ProductDetailPage({
               </div>
 
               <p className="pd-category-label">
-                {p.category?.name ?? (watch ? 'Watches' : 'Fine Diamond')}
-                {p.subcategory?.name ? ` · ${p.subcategory.name}` : ''}
+                {p.category?.name ?? (watch ? "Watches" : "Fine Diamond")}
+                {p.subcategory?.name ? ` · ${p.subcategory.name}` : ""}
               </p>
 
               <h1 className="pd-title">{p.name}</h1>
@@ -562,7 +777,13 @@ export default async function ProductDetailPage({
               <div className="pd-price-block">
                 <span className="pd-currency">$</span>
                 <span className="pd-price-num">{p.price.toLocaleString()}</span>
-                <span className="pd-price-meta">USD<br />Free insured<br />shipping</span>
+                <span className="pd-price-meta">
+                  USD
+                  <br />
+                  Free insured
+                  <br />
+                  shipping
+                </span>
               </div>
 
               {/* Specs — dynamic per productKind, see buildSpecs() */}
@@ -571,36 +792,135 @@ export default async function ProductDetailPage({
                   {specs.map(({ label, value, highlight }, i) => (
                     <tr key={`${label}-${i}`}>
                       <td>{label}</td>
-                      <td className={highlight ? 'highlight' : ''}>{value}</td>
+                      <td className={highlight ? "highlight" : ""}>{value}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              {p.description && <p className="pd-description">{p.description}</p>}
+              {p.description && (
+                <p className="pd-description">{p.description}</p>
+              )}
 
               {/* Stock */}
               <div className="pd-stock">
-                <div className="pd-stock-dot" style={{ background: p.stock > 0 ? '#4a8a5a' : '#c0392b' }} />
-                <span className="pd-stock-label" style={{ color: p.stock > 0 ? '#4a8a5a' : '#c0392b' }}>
-                  {p.stock > 0 ? 'In stock — ready to ship' : 'Currently unavailable'}
+                <div
+                  className="pd-stock-dot"
+                  style={{ background: p.stock > 0 ? "#4a8a5a" : "#c0392b" }}
+                />
+                <span
+                  className="pd-stock-label"
+                  style={{ color: p.stock > 0 ? "#4a8a5a" : "#c0392b" }}
+                >
+                  {p.stock > 0
+                    ? "In stock — ready to ship"
+                    : "Currently unavailable"}
                 </span>
               </div>
 
-              <AddToCartButton productId={String(p._id)} inStock={p.stock > 0} />
-
+              <AddToCartButton
+                productId={String(p._id)}
+                inStock={p.stock > 0}
+              />
 
               <div style={{ marginTop: 10 }}>
                 <WishlistButton productId={String(p._id)} />
               </div>
-
+              <div style={{ marginTop: 10 }}>
+                <CompareLaunchButton
+                  product={{
+                    _id: String(p._id),
+                    name: p.name,
+                    price: p.price,
+                    productKind: kind,
+                    shape: p.shape,
+                    size: p.size,
+                    color: p.color,
+                    clarity: p.clarity,
+                    certification: p.certification,
+                    gemstoneName: p.gemstoneName,
+                    watchBrand: p.watchBrand,
+                    watchModel: p.watchModel,
+                    watchGender: p.watchGender,
+                    watchMovement: p.watchMovement,
+                    watchStrapType: p.watchStrapType,
+                    watchCaseMaterial: p.watchCaseMaterial,
+                    watchDialColor: p.watchDialColor,
+                    watchStyle: p.watchStyle,
+                    watchCaseSize: p.watchCaseSize,
+                    watchFeatures: p.watchFeatures,
+                    images: p.images,
+                    stock: p.stock,
+                  }}
+                />
+              </div>
               <div className="pd-mini-trust">
                 {[
-                  { icon: <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>, label: 'SSL Secured' },
-                  { icon: <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M3.51 15a9 9 0 1 0 .49-4.95" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>, label: '30-Day Returns' },
-                  { icon: <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" strokeWidth="1.4"/></svg>, label: 'Free Insured Shipping' },
+                  {
+                    icon: (
+                      <svg
+                        width="13"
+                        height="13"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ),
+                    label: "SSL Secured",
+                  },
+                  {
+                    icon: (
+                      <svg
+                        width="13"
+                        height="13"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <polyline
+                          points="1 4 1 10 7 10"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M3.51 15a9 9 0 1 0 .49-4.95"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    ),
+                    label: "30-Day Returns",
+                  },
+                  {
+                    icon: (
+                      <svg
+                        width="13"
+                        height="13"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                        />
+                      </svg>
+                    ),
+                    label: "Free Insured Shipping",
+                  },
                 ].map((item) => (
-                  <div key={item.label} className="pd-mini-trust-item">{item.icon}{item.label}</div>
+                  <div key={item.label} className="pd-mini-trust-item">
+                    {item.icon}
+                    {item.label}
+                  </div>
                 ))}
               </div>
             </div>
@@ -624,7 +944,15 @@ export default async function ProductDetailPage({
             <h2 className="pd-section-title">You May Also Love</h2>
             <Link href="/products" className="pd-section-link">
               View all
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M5 12h14M12 5l7 7-7 7"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </Link>
           </div>
 
@@ -635,25 +963,55 @@ export default async function ProductDetailPage({
               related.map((item) => {
                 const relIsWatch = !!(item.watchBrand || item.watchMovement);
                 const relMeta = relIsWatch
-                  ? [item.watchBrand, item.watchGender, item.watchMovement].filter(Boolean).join(' · ')
-                  : [item.shape, item.size ? `${item.size} ct` : '', item.color, item.clarity].filter(Boolean).join(' · ');
+                  ? [item.watchBrand, item.watchGender, item.watchMovement]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : [
+                      item.shape,
+                      item.size ? `${item.size} ct` : "",
+                      item.color,
+                      item.clarity,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                 return (
-                  <Link key={item.id} href={`/products/${item.id}`} className="pd-related-card">
+                  <Link
+                    key={item.id}
+                    href={`/products/${item.id}`}
+                    className="pd-related-card"
+                  >
                     <div className="pd-related-img">
-                      {item.img
-                        ? <img src={item.img} alt={item.name} />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--border)', fontSize: 32 }}>◇</div>
-                      }
+                      {item.img ? (
+                        <img src={item.img} alt={item.name} />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "var(--border)",
+                            fontSize: 32,
+                          }}
+                        >
+                          ◇
+                        </div>
+                      )}
                       <div className="pd-related-img-overlay" />
                     </div>
                     {/* SVG icons instead of emoji */}
-                    <div className={`pd-related-type-pip ${relIsWatch ? 'watch' : 'diamond'}`}>
+                    <div
+                      className={`pd-related-type-pip ${relIsWatch ? "watch" : "diamond"}`}
+                    >
                       {relIsWatch ? <WatchIcon /> : <DiamondIcon />}
-                      {relIsWatch ? 'Watch' : 'Gem'}
+                      {relIsWatch ? "Watch" : "Gem"}
                     </div>
                     <div className="pd-related-meta">{relMeta}</div>
                     <div className="pd-related-name">{item.name}</div>
-                    <div className="pd-related-price">${item.price.toLocaleString()}</div>
+                    <div className="pd-related-price">
+                      ${item.price.toLocaleString()}
+                    </div>
                   </Link>
                 );
               })
@@ -670,13 +1028,21 @@ export default async function ProductDetailPage({
               <h2 className="pd-section-title">What Our Clients Say</h2>
               <Link href="#" className="pd-section-link">
                 All reviews
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d="M5 12h14M12 5l7 7-7 7"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </Link>
             </div>
             <div className="pd-testimonial-grid">
               {TESTIMONIALS.map((t) => (
                 <div key={t.author} className="pd-testimonial-card">
-                  <div className="pd-stars">{'★'.repeat(t.stars)}</div>
+                  <div className="pd-stars">{"★".repeat(t.stars)}</div>
                   <div className="pd-testimonial-quote">{t.quote}</div>
                   <div className="pd-testimonial-author">{t.author}</div>
                   <div className="pd-testimonial-loc">{t.location}</div>
@@ -690,7 +1056,13 @@ export default async function ProductDetailPage({
             {INFO_SECTIONS.map((sec) => (
               <div key={sec.title} className="pd-info-col">
                 <div className="pd-info-col-title">{sec.title}</div>
-                <ul>{sec.links.map((link) => <li key={link}><a href="#">{link}</a></li>)}</ul>
+                <ul>
+                  {sec.links.map((link) => (
+                    <li key={link}>
+                      <a href="#">{link}</a>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>
@@ -698,12 +1070,28 @@ export default async function ProductDetailPage({
           {/* Bottom strip */}
           <div className="pd-bottom-strip">
             <div className="pd-bottom-cert">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              SSL Certificate &nbsp;·&nbsp; Payments Secured &nbsp;·&nbsp; Privacy Protected
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M9 12l2 2 4-4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              SSL Certificate &nbsp;·&nbsp; Payments Secured &nbsp;·&nbsp;
+              Privacy Protected
             </div>
-            <div className="pd-copyright">© {new Date().getFullYear()} &nbsp;·&nbsp; All rights reserved</div>
+            <div className="pd-copyright">
+              © {new Date().getFullYear()} &nbsp;·&nbsp; All rights reserved
+            </div>
           </div>
-
         </div>
       </div>
     </>

@@ -119,6 +119,10 @@ const FOOTER_COLUMNS = [
         label: "Join Our Alpha Club",
         href: "/join-alpha-club",
       },
+      {
+        label: "Compare Stones",
+        href: "/compare",
+      },
     ],
   },
 ];
