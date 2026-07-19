@@ -54,7 +54,18 @@ export default function ProductGallery({
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   // 'ok' | 'placeholder' | 'fallback' | 'dead'
   const [errorStages, setErrorStages] = useState<Record<number, string>>({});
+  // Tracks the REAL pixel width of the currently-loaded main image, so we
+  // know whether zoom would actually add detail or just stretch a small
+  // source. Keyed by activeIdx so switching thumbnails re-checks.
+  const [naturalWidths, setNaturalWidths] = useState<Record<number, number>>({});
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Below this, a hover-zoom would just be CSS-stretching a small source —
+  // worse than not zooming at all. Tune if your source photos improve.
+  const MIN_WIDTH_FOR_ZOOM = 1400;
+  // Softer magnification than before (220%) — less visible stretching on
+  // borderline-resolution images while we wait on better source photos.
+  const ZOOM_MAGNIFICATION = "150%";
 
   const THUMB_SLOTS = 4;
   const realImages = images.slice(0, THUMB_SLOTS);
@@ -82,7 +93,12 @@ export default function ProductGallery({
   const activeSrc =
     realImages.length > 0 ? resolvedSrc(activeIdx) : shapePlaceholder;
   const displaySrc = cldUrl(activeSrc, { width: 900 });
-  const zoomSrc = cldUrl(activeSrc, { width: 2200 });
+  const zoomSrc = cldUrl(activeSrc, { width: 2200, quality: 'auto:best' });
+  const activeNaturalWidth = naturalWidths[activeIdx];
+  // Undefined = not measured yet (assume zoomable until proven otherwise,
+  // so the hint doesn't flicker on first paint); once measured, gate on it.
+  const zoomAvailable =
+    activeNaturalWidth === undefined || activeNaturalWidth >= MIN_WIDTH_FOR_ZOOM;
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = containerRef.current;
     if (!el) return;
@@ -173,7 +189,7 @@ export default function ProductGallery({
           <div
             ref={containerRef}
             className="pg-container"
-            onMouseEnter={() => setIsZooming(true)}
+            onMouseEnter={() => zoomAvailable && setIsZooming(true)}
             onMouseLeave={() => setIsZooming(false)}
             onMouseMove={handleMouseMove}
           >
@@ -182,6 +198,12 @@ export default function ProductGallery({
               src={displaySrc}
               alt={name}
               onError={() => handleImgError(activeIdx)}
+              onLoad={(e) => {
+                const w = e.currentTarget.naturalWidth;
+                setNaturalWidths((prev) =>
+                  prev[activeIdx] === w ? prev : { ...prev, [activeIdx]: w }
+                );
+              }}
               draggable={false}
               style={{
                 width: "100%",
@@ -191,7 +213,7 @@ export default function ProductGallery({
               }}
             />
 
-            {isZooming && (
+            {isZooming && zoomAvailable && (
               <div
                 className="pg-zoom-pane"
                 style={{
@@ -199,20 +221,20 @@ export default function ProductGallery({
                   inset: 0,
                   backgroundImage: `url(${zoomSrc})`,
                   backgroundRepeat: "no-repeat",
-                  backgroundSize: "220%",
+                  backgroundSize: ZOOM_MAGNIFICATION,
                   backgroundPosition: `${origin.x}% ${origin.y}%`,
                   pointerEvents: "none",
                 }}
               />
             )}
 
-            {isZooming && (
+            {isZooming && zoomAvailable && (
               <div
                 className="pg-lens"
                 style={{ left: `${origin.x}%`, top: `${origin.y}%` }}
               />
             )}
-            {!isZooming && (
+            {!isZooming && zoomAvailable && (
               <div className="pg-hint">
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <circle

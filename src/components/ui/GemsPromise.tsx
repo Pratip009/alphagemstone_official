@@ -1,74 +1,119 @@
 'use client';
 
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import Image from 'next/image';
 import { useRef } from 'react';
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// DESIGN NOTE
+// This section is framed as a gemological appraisal report — the same
+// document format every stone in the inventory actually ships with (GIA /
+// IGI / AGL certificates). Report numbers, hairline rules, corner
+// registration marks, and per-stone facet icons all borrow directly from
+// that document language, rather than generic marketing-card decoration.
+// ─────────────────────────────────────────────────────────────────────────
 
+// ─── Design tokens ──────────────────────────────────────────────────────────
+const paper = '#FAFAF7';
+const ink = '#161A21';
+const inkSoft = '#5B6472';
+const inkFaint = '#8B8F96';
+const hairline = '#E3E0D6';
+const brass = '#8A6A2E';
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+// Each entry maps to one gemstone family — the accent + facet icon are not
+// decorative, they signal which stone that promise is most associated with.
 const promiseItems = [
   {
     id: 1,
-    num: '01',
+    report: 'GS–01',
     title: 'Largest Gemstone Inventory',
     description:
-      'Over 50,000 rare coloured gemstones, carefully curated and certified. The perfect stone is one click away.',
-    image: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=1200',
-    tag: 'Collection',
-    // Sapphire
-    accentHex: '#2a4a9e',
-    accentSoft: 'rgba(42,74,158,0.18)',
-    accentBorder: 'rgba(42,74,158,0.32)',
-    accentText: '#6a92e8',
+      'Over 50,000 rare coloured gemstones, catalogued and certified — the stone you want is one search away.',
+    image:
+      'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=1200',
+    stone: 'Sapphire',
+    accent: '#2C4A86',
+    accentSoft: 'rgba(44,74,134,0.08)',
   },
   {
     id: 2,
-    num: '02',
+    report: 'GS–02',
     title: 'Truly Bespoke',
     description:
-      'Made to order — your gemstone, your metal, your style. Every detail shaped to match your vision.',
-    image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=1200',
-    tag: 'Bespoke',
-    // Amethyst
-    accentHex: '#5c2a8e',
-    accentSoft: 'rgba(92,42,142,0.18)',
-    accentBorder: 'rgba(92,42,142,0.32)',
-    accentText: '#b880f0',
+      'Made to order — your gemstone, your metal, your silhouette. Every detail specified before it\u2019s made.',
+    image:
+      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=1200',
+    stone: 'Amethyst',
+    accent: '#5B3B82',
+    accentSoft: 'rgba(91,59,130,0.08)',
   },
   {
     id: 3,
-    num: '03',
+    report: 'GS–03',
     title: 'Best-in-Class Craftsmanship',
     description:
-      'Expert jewellers, precision techniques, and enduring quality in every single piece we create.',
-    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1200',
-    tag: 'Craft',
-    // Emerald
-    accentHex: '#1a5c3a',
-    accentSoft: 'rgba(26,92,58,0.18)',
-    accentBorder: 'rgba(26,92,58,0.32)',
-    accentText: '#3ecc82',
+      'Set by hand under magnification, by jewellers who\u2019ve cut their teeth on stones worth more than the tools they hold.',
+    image:
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1200',
+    stone: 'Emerald',
+    accent: '#1E6B47',
+    accentSoft: 'rgba(30,107,71,0.08)',
   },
   {
     id: 4,
-    num: '04',
+    report: 'GS–04',
     title: 'Full Transparency',
     description:
-      "All our gemstones carry complete certifications from the world's most trusted gemmological labs.",
-    image: 'https://images.unsplash.com/photo-1588449668365-d15e397f6787?q=80&w=1200',
-    tag: 'Certified',
-    // Gold
-    accentHex: '#b8953a',
-    accentSoft: 'rgba(184,149,58,0.15)',
-    accentBorder: 'rgba(184,149,58,0.32)',
-    accentText: '#d4b060',
+      'Every gemstone ships with its own certificate from an internationally recognised gemmological laboratory.',
+    image:
+      'https://images.unsplash.com/photo-1588449668365-d15e397f6787?q=80&w=1200',
+    stone: 'Citrine',
+    accent: '#A67C22',
+    accentSoft: 'rgba(166,124,34,0.10)',
   },
 ];
 
 const certLabs = ['GIA', 'IGI', 'AGL', 'Gübelin', 'HRD'];
 
-// ─── PromiseCard ──────────────────────────────────────────────────────────────
+// ─── Facet icon ───────────────────────────────────────────────────────────────
+// A minimal faceted-stone glyph, recoloured per item. Stands in for a wax
+// seal / lab stamp rather than a literal product photo of the gem.
+function FacetIcon({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2L4 9L12 22L20 9L12 2Z"
+        stroke={color}
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <path d="M4 9H20" stroke={color} strokeWidth="1.1" />
+      <path d="M8.5 9L12 2L15.5 9" stroke={color} strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="M8.5 9L12 22" stroke={color} strokeWidth="1" opacity="0.6" />
+      <path d="M15.5 9L12 22" stroke={color} strokeWidth="1" opacity="0.6" />
+    </svg>
+  );
+}
 
+// ─── Corner registration mark ─────────────────────────────────────────────────
+function CornerMark({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) {
+  const styles: Record<string, React.CSSProperties> = {
+    tl: { top: -1, left: -1, borderRight: 'none', borderBottom: 'none' },
+    tr: { top: -1, right: -1, borderLeft: 'none', borderBottom: 'none' },
+    bl: { bottom: -1, left: -1, borderRight: 'none', borderTop: 'none' },
+    br: { bottom: -1, right: -1, borderLeft: 'none', borderTop: 'none' },
+  };
+  return (
+    <div
+      className="absolute w-[14px] h-[14px] pointer-events-none"
+      style={{ border: `1px solid ${brass}`, opacity: 0.55, ...styles[position] }}
+    />
+  );
+}
+
+// ─── PromiseCard ──────────────────────────────────────────────────────────────
 function PromiseCard({
   item,
   index,
@@ -76,149 +121,89 @@ function PromiseCard({
   item: (typeof promiseItems)[0];
   index: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'end start'],
-  });
-  const imgY = useTransform(scrollYProgress, [0, 1], ['6%', '-6%']);
-
   return (
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 36 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.7, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative flex flex-col cursor-pointer"
+      transition={{ duration: 0.6, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+      className="group relative flex flex-col"
       style={{
-        background: '#0c0907',
-        borderRight: '1px solid rgba(180,145,60,0.10)',
+        background: paper,
+        borderRight: `1px solid ${hairline}`,
       }}
-      whileHover={{ background: '#110e0a' } as never}
     >
-      {/* Gemstone-coloured shimmer line across the top */}
-      <div
-        className="h-[2px] w-full transition-opacity duration-500 opacity-60 group-hover:opacity-100"
-        style={{
-          background: `linear-gradient(90deg, transparent, ${item.accentHex}, transparent)`,
-        }}
-      />
-
-      {/* Image */}
-      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '3/2' }}>
-        <motion.div
-          className="absolute will-change-transform"
-          style={{ inset: '-8%', y: imgY }}
-        >
+      {/* Photo — clean, true colour, framed like a report exhibit photo */}
+      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '4/3' }}>
+        <div className="absolute inset-3 overflow-hidden" style={{ border: `1px solid ${hairline}` }}>
           <Image
             src={item.image}
             alt={item.title}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            className="object-cover transition-all duration-700"
-            style={{
-              filter: 'brightness(0.55) saturate(0.65) sepia(0.2)',
-            }}
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
           />
-        </motion.div>
-
-        {/* Bottom gradient — card bg bleeds into the image */}
+        </div>
+        {/* Facet seal, overlapping the photo's bottom-right corner */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-[60%] pointer-events-none"
-          style={{
-            background: 'linear-gradient(transparent, #0c0907)',
-          }}
-        />
-
-        {/* Tag — bottom-right, Cinzel engraved style */}
-        <div
-          className="absolute bottom-3 right-3 px-[10px] py-[4px] text-[8px] tracking-[0.26em] uppercase border"
-          style={{
-            fontFamily: '"Elms Sans", sans-serif',
-            color: item.accentText,
-            borderColor: item.accentBorder,
-            background: 'rgba(8,6,5,0.6)',
-            backdropFilter: 'blur(4px)',
-            fontWeight: 500,
-          }}
+          className="absolute bottom-1 right-1 w-10 h-10 flex items-center justify-center"
+          style={{ background: paper, border: `1px solid ${hairline}` }}
         >
-          {item.tag}
+          <FacetIcon color={item.accent} />
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-col flex-1 px-[22px] pt-[22px] pb-[26px]">
-        {/* Number */}
+      {/* Report header strip */}
+      <div
+        className="flex items-center justify-between px-5 pt-4 pb-3"
+        style={{ borderBottom: `1px solid ${hairline}` }}
+      >
         <span
-          className="block mb-[10px] text-[8px] tracking-[0.30em]"
-          style={{ fontFamily: '"Elms Sans", sans-serif', color: '#7a6a52', fontWeight: 500 }}
+          className="text-[10px] tracking-[0.16em]"
+          style={{ fontFamily: '"Elms Sans", sans-serif', color: item.accent, fontWeight: 500 }}
         >
-          — {item.num}
+          REPORT {item.report}
         </span>
+        <span
+          className="text-[9px] tracking-[0.14em] uppercase"
+          style={{ fontFamily: '"Elms Sans", sans-serif', color: inkFaint }}
+        >
+          {item.stone}
+        </span>
+      </div>
 
-        {/* Title */}
+      {/* Body */}
+      <div className="flex flex-col flex-1 px-5 pt-4 pb-6">
         <h3
-          className="mb-3 text-[17px] leading-[1.25]"
+          className="mb-2.5 text-[18px] leading-[1.3]"
           style={{
             fontFamily: '"Elms Sans", sans-serif',
-            color: '#f0e8d8',
-            letterSpacing: '0.01em',
+            color: ink,
             fontWeight: 500,
+            letterSpacing: '-0.005em',
           }}
         >
           {item.title}
         </h3>
 
-        {/* Description */}
         <p
-          className="flex-1 mb-5 leading-[1.75] transition-colors duration-400 group-hover:text-[#b0a090]"
+          className="flex-1 leading-[1.7]"
           style={{
             fontFamily: '"Elms Sans", sans-serif',
-            fontSize: '12.5px',
-            color: '#9a8c7c',
-            letterSpacing: '0.01em',
+            fontSize: '13px',
+            color: inkSoft,
             fontWeight: 400,
           }}
         >
           {item.description}
         </p>
 
-        {/* Accent bar */}
         <div
-          className="h-[1px] w-6 group-hover:w-12 transition-all duration-500 ease-out"
-          style={{ background: item.accentHex }}
+          className="mt-5 h-[2px] w-7 group-hover:w-14 transition-all duration-500 ease-out"
+          style={{ background: item.accent }}
         />
       </div>
     </motion.div>
-  );
-}
-
-// ─── Divider ──────────────────────────────────────────────────────────────────
-
-function OrnamentalDivider() {
-  return (
-    <div className="flex items-center">
-      <div className="flex-1 h-px" style={{ background: 'rgba(180,145,60,0.15)' }} />
-      <div className="flex items-center gap-[10px] px-[18px]">
-        <div
-          className="w-[3px] h-[3px] rounded-full"
-          style={{ background: '#6b5030' }}
-        />
-        <div
-          className="w-[9px] h-[9px] rotate-45"
-          style={{
-            background: '#b8953a',
-            boxShadow: '0 0 10px rgba(184,149,58,0.55)',
-          }}
-        />
-        <div
-          className="w-[3px] h-[3px] rounded-full"
-          style={{ background: '#6b5030' }}
-        />
-      </div>
-      <div className="flex-1 h-px" style={{ background: 'rgba(180,145,60,0.15)' }} />
-    </div>
   );
 }
 
@@ -230,205 +215,142 @@ export default function GemsPromise() {
 
   return (
     <>
-      {/* Load Cinzel + Cormorant Garamond */}
       <style jsx global>{`
-       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
-
+        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
       `}</style>
 
-      <section
-        className="relative w-full overflow-hidden"
-        style={{ background: '#080605' }}
-      >
-        {/* Warm jewel-glow ambience */}
+      <section className="relative w-full" style={{ background: paper }}>
+        {/* Faint outlined watermark diamond — report-paper texture, not decoration */}
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: `
-              radial-gradient(ellipse 60% 40% at 82% 8%, rgba(120,60,20,0.18) 0%, transparent 60%),
-              radial-gradient(ellipse 50% 35% at 8% 88%, rgba(30,20,80,0.22) 0%, transparent 55%),
-              radial-gradient(ellipse 40% 30% at 50% 50%, rgba(80,20,20,0.10) 0%, transparent 60%)
-            `,
-          }}
-        />
-
-        {/* Engraved-metal diagonal hatching */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `repeating-linear-gradient(
-              -45deg,
-              rgba(201,168,76,0.022) 0px,
-              rgba(201,168,76,0.022) 1px,
-              transparent 1px,
-              transparent 9px
-            )`,
-          }}
-        />
-
-        {/* Large watermark diamond */}
-        <div
-          className="absolute -bottom-16 -right-10 pointer-events-none select-none leading-none"
-          style={{
-            fontSize: '320px',
-            color: 'rgba(184,149,58,0.04)',
-            fontFamily: '"Elms Sans", sans-serif',
-          }}
+          className="absolute -bottom-14 -right-8 pointer-events-none select-none"
+          style={{ opacity: 0.035 }}
         >
-          ◆
+          <svg width="280" height="280" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 9L12 22L20 9L12 2Z" stroke={ink} strokeWidth="0.5" />
+            <path d="M4 9H20" stroke={ink} strokeWidth="0.5" />
+            <path d="M8.5 9L12 2L15.5 9" stroke={ink} strokeWidth="0.5" />
+          </svg>
         </div>
 
-        {/* Content */}
         <div className="relative w-full px-6 sm:px-10 md:px-14 lg:px-20 py-16 sm:py-22 md:py-28">
-
           {/* ── HEADER ── */}
-          <div ref={headingRef} className="mb-14 sm:mb-18 md:mb-20">
-
-            {/* Eyebrow */}
+          <div ref={headingRef} className="mb-12 sm:mb-16 md:mb-18 max-w-2xl">
             <motion.div
-              initial={{ opacity: 0, x: -12 }}
+              initial={{ opacity: 0, x: -10 }}
               animate={isHeadingInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.7, ease: 'easeOut' }}
-              className="flex items-center gap-4 mb-5"
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="flex items-center gap-3 mb-5"
             >
-              <div
-                className="w-9 h-px"
-                style={{
-                  background:
-                    'linear-gradient(90deg, transparent, #b8953a, transparent)',
-                }}
-              />
+              <div className="w-6 h-px" style={{ background: brass, opacity: 0.6 }} />
               <span
-                className="text-[9px] tracking-[0.38em] uppercase"
-                style={{ fontFamily: '"Elms Sans", sans-serif', color: '#c9a84c', fontWeight: 500 }}
+                className="text-[10px] tracking-[0.30em] uppercase"
+                style={{ fontFamily: '"Elms Sans", sans-serif', color: brass, fontWeight: 500 }}
               >
-                Our Promise
+                Statement of Promise
               </span>
-              <div
-                className="w-9 h-px"
-                style={{
-                  background:
-                    'linear-gradient(90deg, transparent, #b8953a, transparent)',
-                }}
-              />
             </motion.div>
 
-            {/* Heading */}
             <div className="overflow-hidden mb-4">
               <motion.h2
-                initial={{ y: '110%' }}
+                initial={{ y: '105%' }}
                 animate={isHeadingInView ? { y: 0 } : {}}
-                transition={{ duration: 1, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.8, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
                 style={{
-                  fontFamily: "'Google Sans Flex', sans-serif",
-                  fontSize: 'clamp(38px, 6vw, 72px)',
-                  lineHeight: 1.05,
-                  fontWeight: 400,
-                  color: '#f5efe4',
-                  letterSpacing: '-0.01em',
+                  fontFamily: '"Elms Sans", sans-serif',
+                  fontSize: 'clamp(34px, 5vw, 58px)',
+                  lineHeight: 1.08,
+                  fontWeight: 500,
+                  color: ink,
+                  letterSpacing: '-0.015em',
                 }}
               >
-                Excellence<br />
-                in{' '}
-                <em
-                  style={{
-                    fontStyle: 'italic',
-                    color: '#d4a84b',
-                    fontWeight: 400,
-                  }}
-                >
-                  every detail
+                Excellence, put in{' '}
+                <em style={{ fontStyle: 'italic', color: brass, fontWeight: 500 }}>
+                  writing
                 </em>
               </motion.h2>
             </div>
 
-            {/* Subtitle */}
             <motion.p
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={isHeadingInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.35, ease: 'easeOut' }}
+              transition={{ duration: 0.7, delay: 0.28, ease: 'easeOut' }}
               style={{
                 fontFamily: '"Elms Sans", sans-serif',
-                fontSize: '13px',
-                lineHeight: 1.85,
+                fontSize: '14px',
+                lineHeight: 1.75,
                 fontWeight: 400,
-                color: '#8a7a68',
-                maxWidth: '380px',
-                letterSpacing: '0.01em',
+                color: inkSoft,
               }}
             >
-              From gemstone selection to final craftsmanship — each promise is a
-              commitment to quality you can see, touch, and trust.
+              Four commitments we hold ourselves to on every piece — each one
+              as verifiable as the certificate that comes with your stone.
             </motion.p>
           </div>
 
-          {/* ── CARD GRID ── */}
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-14 sm:mb-18 md:mb-20"
-            style={{
-              border: '1px solid rgba(180,145,60,0.14)',
-            }}
-          >
-            {promiseItems.map((item, index) => (
-              <PromiseCard key={item.id} item={item} index={index} />
-            ))}
+          {/* ── CARD GRID (framed like a document, with registration marks) ── */}
+          <div className="relative">
+            <CornerMark position="tl" />
+            <CornerMark position="tr" />
+            <CornerMark position="bl" />
+            <CornerMark position="br" />
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-14 sm:mb-18 md:mb-20"
+              style={{ border: `1px solid ${hairline}` }}
+            >
+              {promiseItems.map((item, index) => (
+                <PromiseCard key={item.id} item={item} index={index} />
+              ))}
+            </div>
           </div>
 
-          {/* ── ORNAMENTAL DIVIDER ── */}
+          {/* ── CERT BAR — styled as a verification seal row ── */}
           <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.2 }}
-            className="mb-10"
-          >
-            <OrnamentalDivider />
-          </motion.div>
-
-          {/* ── CERT BAR ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex flex-wrap items-center gap-y-3"
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="flex flex-wrap items-center gap-y-3 pt-8"
+            style={{ borderTop: `1px solid ${hairline}` }}
           >
             <span
-              className="w-full sm:w-auto text-[8px] tracking-[0.30em] uppercase mb-2 sm:mb-0 sm:mr-5"
-              style={{ fontFamily: '"Elms Sans", sans-serif', color: '#7a6a50', fontWeight: 500 }}
+              className="w-full sm:w-auto text-[10px] tracking-[0.22em] uppercase mb-3 sm:mb-0 sm:mr-6"
+              style={{ fontFamily: '"Elms Sans", sans-serif', color: inkFaint, fontWeight: 500 }}
             >
-              Certified by
+              Independently verified by
             </span>
 
             <div className="flex flex-wrap gap-2">
               {certLabs.map((lab, i) => (
                 <motion.div
                   key={lab}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 6 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }}
-                  className="text-[11px] tracking-[0.12em] px-[18px] py-[7px] cursor-default select-none transition-all duration-350"
+                  transition={{ duration: 0.45, delay: 0.15 + i * 0.06 }}
+                  className="flex items-center gap-[6px] text-[12px] px-4 py-[7px] cursor-default select-none transition-colors duration-300"
                   style={{
                     fontFamily: '"Elms Sans", sans-serif',
-                    color: '#7a6a52',
-                    border: '1px solid rgba(180,145,60,0.22)',
-                    background: 'transparent',
+                    color: ink,
+                    border: `1px solid ${hairline}`,
                     fontWeight: 500,
                   }}
-                  whileHover={{
-                    color: '#d4a84b',
-                    borderColor: 'rgba(180,145,60,0.55)',
-                    background: 'rgba(180,145,60,0.05)',
-                    boxShadow: 'inset 0 0 12px rgba(180,145,60,0.06)',
-                  } as never}
                 >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke={brass} strokeWidth="1.4" />
+                    <path
+                      d="M8 12.5L10.5 15L16 9"
+                      stroke={brass}
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   {lab}
                 </motion.div>
               ))}
             </div>
           </motion.div>
-
         </div>
       </section>
     </>
