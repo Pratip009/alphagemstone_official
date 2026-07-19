@@ -210,15 +210,15 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
         .apc {
-          --paper: #fefdfb;
-          --paper-deep: #f6f1e6;
+          --paper: #ffffff;
+          --paper-deep: #ffffff;
           --brass: #a9823e;
           --brass-bright: #8f6c30;
-          --ink: #1b1812;
+          --ink: #17140f;
           --ink-dim: #6f665a;
           --muted: #9a9081;
-          --line: rgba(169,130,62,0.3);
-          --line-bright: rgba(169,130,62,0.6);
+          --line: rgba(20,18,14,0.09);
+          --line-bright: rgba(169,130,62,0.55);
           --oxblood: #8a2e39;
           --oxblood-bright: #a8434f;
           --avail: #3f7a55;
@@ -232,20 +232,20 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
 
         .apc-card {
           position: relative;
-          background: linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
+          background: var(--paper);
           border: 1px solid var(--line);
-          border-radius: 3px;
+          border-radius: 6px;
           display: flex;
           flex-direction: column;
           height: 100%;
           overflow: hidden;
-          box-shadow: 0 1px 2px rgba(27,24,18,0.05), 0 16px 30px -24px rgba(27,24,18,0.22);
+          box-shadow: 0 1px 2px rgba(27,24,18,0.04), 0 14px 28px -22px rgba(27,24,18,0.16);
           transition: transform 0.4s cubic-bezier(0.22,0.8,0.24,1), box-shadow 0.4s ease, border-color 0.4s ease;
         }
         .apc:hover .apc-card, .apc:focus-visible .apc-card {
           transform: translateY(-4px);
           border-color: var(--line-bright);
-          box-shadow: 0 26px 44px -20px rgba(27,24,18,0.24), 0 0 0 1px rgba(169,130,62,0.16);
+          box-shadow: 0 30px 48px -20px rgba(27,24,18,0.18), 0 0 0 1px rgba(169,130,62,0.14);
         }
         .apc:focus-visible .apc-card {
           box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--brass);
@@ -273,23 +273,23 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
         }
 
         /* ── Plate photograph ────────────────────────────────────────── */
-        .apc-mat-wrap { position: relative; padding: 14px 14px 0; }
+        .apc-mat-wrap { position: relative; padding: 10px 10px 0; }
         .apc-mat {
           position: relative;
-          aspect-ratio: 4 / 3;
+          aspect-ratio: 1 / 1;
           border: 1px solid var(--line);
-          border-radius: 2px;
-          background: radial-gradient(120% 100% at 50% 18%, #ffffff 0%, #f7f2e6 62%, #efe6d2 100%);
+          border-radius: 4px;
+          background: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
         }
         .apc-photo {
-          max-width: 54%;
-          max-height: 54%;
+          max-width: 88%;
+          max-height: 88%;
           object-fit: contain;
-          filter: drop-shadow(0 12px 16px rgba(27,24,18,0.18));
+          filter: drop-shadow(0 14px 18px rgba(27,24,18,0.14));
           transition: transform 0.5s cubic-bezier(0.22,0.8,0.24,1);
         }
         .apc:hover .apc-photo, .apc:focus-visible .apc-photo { transform: scale(1.045); }
@@ -326,7 +326,7 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           letter-spacing: 0.07em;
           text-transform: uppercase;
           color: var(--oxblood-bright);
-          background: rgba(254,253,251,0.92);
+          background: rgba(255,255,255,0.94);
           border: 1px solid rgba(138,53,64,0.35);
           padding: 3px 7px;
           border-radius: 2px;
