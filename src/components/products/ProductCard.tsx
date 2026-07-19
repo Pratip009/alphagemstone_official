@@ -286,11 +286,10 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
           overflow: hidden;
         }
         .apc-photo {
-          max-width: 88%;
-          max-height: 88%;
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
-          filter: drop-shadow(0 14px 18px rgba(27,24,18,0.14));
-          transition: transform 0.5s cubic-bezier(0.22,0.8,0.24,1);
+         
         }
         .apc:hover .apc-photo, .apc:focus-visible .apc-photo { transform: scale(1.045); }
         .apc-mat.is-out .apc-photo {
