@@ -7,6 +7,7 @@ import FloatingSocialIcons from "@/components/ui/FloatingSocialIcons";
 import GemConsultant from "@/components/GemConsultant/GemConsultant";
 import CookieConsent from "@/components/ui/Cookieconsent";
 import HomeOnlyWidgets from "./HomeOnlyWidgets";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const BASE_URL = "https://gmstone-new-2026.vercel.app";
 
@@ -121,6 +122,7 @@ export default function RootLayout({
           <HomeOnlyWidgets />
         </Providers>
         <CookieConsent />
+        <SpeedInsights/>
       </body>
     </html>
   );
