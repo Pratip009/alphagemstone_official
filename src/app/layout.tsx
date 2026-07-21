@@ -8,6 +8,7 @@ import GemConsultant from "@/components/GemConsultant/GemConsultant";
 import CookieConsent from "@/components/ui/Cookieconsent";
 import HomeOnlyWidgets from "./HomeOnlyWidgets";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 const BASE_URL = "https://gmstone-new-2026.vercel.app";
 
@@ -122,7 +123,8 @@ export default function RootLayout({
           <HomeOnlyWidgets />
         </Providers>
         <CookieConsent />
-        <SpeedInsights/>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
