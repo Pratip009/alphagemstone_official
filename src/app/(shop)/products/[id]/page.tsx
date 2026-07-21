@@ -9,6 +9,8 @@ import WishlistButton from "@/components/wishlist/WishlistButton";
 import RecordRecentlyViewed from "@/components/products/RecordRecentlyViewed";
 import RecentlyViewedProducts from "@/components/products/RecentlyViewedProducts";
 import CompareLaunchButton from "@/components/compare/CompareLaunchButton";
+import type { Metadata } from "next";
+import { cache } from "react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -69,6 +71,39 @@ type RelatedItem = {
 type ProductKind = "watch" | "diamond" | "gemstone" | "jewelry";
 
 type Spec = { label: string; value: string; highlight?: boolean };
+
+// Wrap the existing getProductById() with React's cache() so that
+// generateMetadata() and the page component — which both need the same
+// product for the same request — share one underlying DB lookup instead
+// of querying twice. product.service.ts itself is untouched.
+const getCachedProduct = cache((id: string) => getProductById(id));
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  await connectDB();
+  const { id } = await params;
+  const raw = await getCachedProduct(id);
+
+  if (!raw) {
+    return { title: "Product Not Found | Alpha Imports" };
+  }
+
+  const p = raw as unknown as ProductDoc;
+
+  const description = p.description?.trim()
+    ? p.description.trim().slice(0, 160)
+    : `Shop ${p.name}${
+        p.category?.name ? ` — ${p.category.name}` : ""
+      } at Alpha Imports, offering fine diamonds, gemstones & jewelry.`;
+
+  return {
+    title: `${p.name} | Alpha Imports`,
+    description,
+  };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function first(val?: string | string[]): string {
@@ -557,7 +592,7 @@ export default async function ProductDetailPage({
 
   const { id } = await params; // ✅ unwrap first
 
-  const raw = await getProductById(id);
+  const raw = await getCachedProduct(id);
   if (!raw) notFound();
 
   const rawObj = raw as unknown as ProductDoc;

@@ -7,7 +7,7 @@ import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import MobileFilterDrawer from "@/components/filters/MobileFilterDrawer";
 import { Suspense } from "react";
-
+import type { Metadata } from "next";
 interface PageProps {
   searchParams: Promise<Record<string, string>>;
 }
@@ -53,7 +53,32 @@ function resolveProductType(
 
   return catSlug === "watches" ? "watch" : "diamond";
 }
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
 
+  // Reuse the same resolution logic the page already uses, minus the
+  // first-product fallback (no DB call needed just for a title — if no
+  // explicit signal is in the URL, default to "Diamonds").
+  const isWatch =
+    sp.category === "watches" ||
+    (!sp.category && WATCH_FILTER_PARAMS.some((k) => sp[k]));
+
+  const label = isWatch ? "Timepieces" : "Diamonds";
+
+  const filterBits = [sp.shape, sp.subcategory, sp.q ?? sp.search].filter(Boolean);
+  const title = filterBits.length
+    ? `${filterBits.join(" ")} ${label} | Alpha Imports`
+    : `${label} | Alpha Imports`;
+
+  return {
+    title,
+    description: isWatch
+      ? "Shop luxury timepieces at Alpha Imports — exceptional horological craftsmanship."
+      : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Imports.",
+  };
+}
 export default async function ProductsPage({ searchParams }: PageProps) {
   await connectDB();
 
