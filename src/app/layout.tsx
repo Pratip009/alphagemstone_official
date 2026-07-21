@@ -122,7 +122,7 @@ export default function RootLayout({
           <HomeOnlyWidgets />
         </Providers>
         <CookieConsent />
-        <SpeedInsights/>
+        <SpeedInsights />
       </body>
     </html>
   );
