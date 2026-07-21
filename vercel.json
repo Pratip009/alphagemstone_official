@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-deliveries",
-      "schedule": "0 */3 * * *"
+      "schedule": "0 */1 * * *"
     },
     {
       "path": "/api/cron/memo-reminders",
