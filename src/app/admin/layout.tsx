@@ -17,6 +17,7 @@ import {
   Tag,
   FileClock,
   UserCheck,
+  BarChart3
 } from "lucide-react";
 
 const NAV = [
@@ -32,6 +33,11 @@ const NAV = [
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
   { href: "/admin/coupons", label: "Coupons", icon: Tag },
   { href: "/admin/memos", label: "Memos", icon: FileClock },
+   {
+    href: "/admin/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+  },
   {
     href: "/admin/memo-eligibility",
     label: "Memo Applications",
