@@ -44,41 +44,33 @@ export async function POST(request: NextRequest) {
 
     if (!body.sessionId || !body.visitorId || !body.eventType) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "sessionId, visitorId and eventType are required",
-        },
+        { success: false, message: "sessionId, visitorId and eventType are required" },
         { status: 400 }
       );
     }
 
     await connectDB();
-
     const now = new Date();
 
-    // Save event
-    await AnalyticsEvent.create({
-      sessionId: body.sessionId,
-      visitorId: body.visitorId,
-      eventType: body.eventType,
+    // Only persist an event row for things that matter — heartbeats
+    // just keep the session alive and shouldn't bloat AnalyticsEvent.
+    if (body.eventType !== "heartbeat") {
+      await AnalyticsEvent.create({
+        sessionId: body.sessionId,
+        visitorId: body.visitorId,
+        eventType: body.eventType,
+        page: body.page,
+        pageTitle: body.pageTitle,
+        element: body.element,
+        elementText: body.elementText,
+        productId: body.productId,
+        productName: body.productName,
+        metadata: body.metadata || {},
+        timestamp: body.timestamp ? new Date(body.timestamp) : now,
+      });
+    }
 
-      page: body.page,
-      pageTitle: body.pageTitle,
-
-      element: body.element,
-      elementText: body.elementText,
-
-      productId: body.productId,
-      productName: body.productName,
-
-      metadata: body.metadata || {},
-
-      timestamp: body.timestamp
-        ? new Date(body.timestamp)
-        : now,
-    });
-
-    // Create or update session
+    // Session upsert stays the same for ALL event types (including heartbeat)
     const session = await AnalyticsSession.findOneAndUpdate(
       { sessionId: body.sessionId },
       {
@@ -86,7 +78,6 @@ export async function POST(request: NextRequest) {
           lastActivityAt: now,
           ...(body.page && { exitPage: body.page }),
         },
-
         $setOnInsert: {
           visitorId: body.visitorId,
           startedAt: now,
@@ -95,50 +86,30 @@ export async function POST(request: NextRequest) {
           device: body.device,
           referrer: body.referrer,
         },
-
         $inc: {
           eventCount: 1,
-          ...(body.eventType === "page_view"
-            ? { pageViews: 1 }
-            : {}),
+          ...(body.eventType === "page_view" ? { pageViews: 1 } : {}),
         },
       },
-      {
-        upsert: true,
-        new: true,
-      }
+      { upsert: true, new: true }
     );
 
-    // Update duration
     if (session) {
       const duration = Math.max(
         0,
-        Math.floor(
-          (now.getTime() - session.startedAt.getTime()) / 1000
-        )
+        Math.floor((now.getTime() - session.startedAt.getTime()) / 1000)
       );
-
       await AnalyticsSession.updateOne(
         { sessionId: body.sessionId },
-        {
-          $set: {
-            duration,
-          },
-        }
+        { $set: { duration } }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Analytics tracking error:", error);
-
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to track analytics event",
-      },
+      { success: false, message: "Failed to track analytics event" },
       { status: 500 }
     );
   }

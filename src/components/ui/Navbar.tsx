@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 import SearchBar from "./SearchBar";
 import CartSidebar from "./CartSidebar";
 import { useWishlist } from "@/hooks/useWishlist";
+import { trackCTA, trackEvent } from "@/lib/analytics";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface NavSubcategory {
@@ -278,7 +279,7 @@ export default function Navbar({
       window.removeEventListener("scroll", updateNavbarHeight);
     };
   }, []);
-  
+
   const scheduleOpen = (slug: string) => {
     cancelClose();
     if (openTimer.current) clearTimeout(openTimer.current);
@@ -312,6 +313,7 @@ export default function Navbar({
       onClick={() => {
         setMenuOpen(false);
         setCartOpen(true);
+        trackCTA("open_cart", mobile ? "mobile" : "desktop");
       }}
       aria-label="Open cart"
       className={mobile ? "nav-mobile-icon-btn" : "nav-cart-btn"}
@@ -1508,20 +1510,18 @@ export default function Navbar({
         <div className="nav-top-row">
           {/* Logo */}
           <Link
-  href="/"
-  onClick={() => setMenuOpen(false)}
-  className="nav-logo"
->
-  <Image
-    src="/logo/applogo.png"
-    alt="Alpha Gemstones Logo"
-    width={150}
-    height={50}
-    priority
-  />
-
-  
-</Link>
+            href="/"
+            onClick={() => setMenuOpen(false)}
+            className="nav-logo"
+          >
+            <Image
+              src="/logo/applogo.png"
+              alt="Alpha Gemstones Logo"
+              width={150}
+              height={50}
+              priority
+            />
+          </Link>
 
           {/* Desktop Search */}
           <div
@@ -1537,16 +1537,28 @@ export default function Navbar({
           {/* Desktop Right */}
           <div className="nav-right">
             <div className="nav-actions-row">
-              <Link href="/" className="nav-link">
+              <Link href="/" className="nav-link" data-track-click="nav_home">
                 Home
               </Link>
-              <Link href="/about" className="nav-link">
+              <Link
+                href="/about"
+                className="nav-link"
+                data-track-click="nav_about"
+              >
                 About
               </Link>
-              <Link href="/blogs" className="nav-link">
+              <Link
+                href="/blogs"
+                className="nav-link"
+                data-track-click="nav_blog"
+              >
                 Blog
               </Link>
-              <Link href="/contact" className="nav-link">
+              <Link
+                href="/contact"
+                className="nav-link"
+                data-track-click="nav_contact"
+              >
                 Contact
               </Link>
 
@@ -1660,17 +1672,29 @@ export default function Navbar({
                 </>
               ) : (
                 <>
-                  <a href="/login" className="nav-link">
+                  <a
+                    href="/login"
+                    className="nav-link"
+                    data-track-click="nav_login"
+                  >
                     Login
                   </a>
-                  <Link href="/signup" className="nav-signup-btn">
+                  <Link
+                    href="/signup"
+                    className="nav-signup-btn"
+                    data-track-click="nav_signup"
+                  >
                     Sign Up
                   </Link>
                 </>
               )}
 
               {isAdmin && (
-                <a href="/admin" className="nav-admin-badge">
+                <a
+                  href="/admin"
+                  className="nav-admin-badge"
+                  data-track-click="nav_admin"
+                >
                   Admin
                 </a>
               )}
@@ -1768,7 +1792,6 @@ export default function Navbar({
                     key={cat._id}
                     style={{ position: "relative" }}
                     onMouseEnter={() => scheduleOpen(cat.slug)}
-
                     onMouseLeave={() => {
                       cancelOpen();
                       schedulClose();
@@ -1777,6 +1800,13 @@ export default function Navbar({
                     <Link
                       href={`/products?category=${cat.slug}`}
                       className={`cat-tab${isOpen ? " open" : ""}`}
+                      data-track-click={`category_tab_${cat.slug}`}
+                      onClick={() =>
+                        trackEvent("filter_apply", {
+                          filterType: "category",
+                          filterValue: cat.slug,
+                        })
+                      }
                     >
                       {cat.name}
                       {(cat.subcategories?.length ?? 0) > 0 && (
@@ -1846,8 +1876,14 @@ export default function Navbar({
                     </p>
                     <Link
                       href={`/products?category=${cat.slug}`}
-                      onClick={() => setOpenDropdown(null)}
+                      onClick={() => {
+                        setOpenDropdown(null);
+                        trackEvent("cta_click", {
+                          ctaId: `mega_shop_all_${cat.slug}`,
+                        });
+                      }}
                       className="mega-cta"
+                      data-track-cta={`mega_shop_all_${cat.slug}`}
                     >
                       Shop all {cat.name}
                       <svg
@@ -1873,7 +1909,14 @@ export default function Navbar({
                         <Link
                           key={sub._id}
                           href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
-                          onClick={() => setOpenDropdown(null)}
+                          onClick={() => {
+                            setOpenDropdown(null);
+                            trackEvent("filter_apply", {
+                              filterType: "subcategory",
+                              filterValue: sub.slug,
+                              productCategory: cat.slug,
+                            });
+                          }}
                           className="mega-sub-item"
                           style={{
                             animationDelay: `${Math.min(si, 12) * 18}ms`,
@@ -1962,6 +2005,10 @@ export default function Navbar({
                   <button
                     onClick={() => {
                       if (!hasSubs) {
+                        trackEvent("filter_apply", {
+                          filterType: "category",
+                          filterValue: cat.slug,
+                        });
                         router.push(`/products?category=${cat.slug}`);
                         setMenuOpen(false);
                       } else {
@@ -1969,6 +2016,7 @@ export default function Navbar({
                       }
                     }}
                     className={`mobile-cat-btn${isExpanded ? " active" : ""}`}
+                    data-track-click={`mobile_category_${cat.slug}`}
                   >
                     {cat.name}
                     {hasSubs && (
@@ -2019,7 +2067,14 @@ export default function Navbar({
                         <Link
                           key={sub._id}
                           href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
-                          onClick={() => setMenuOpen(false)}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            trackEvent("filter_apply", {
+                              filterType: "subcategory",
+                              filterValue: sub.slug,
+                              productCategory: cat.slug,
+                            });
+                          }}
                           className="mobile-sub-link"
                         >
                           <DiamondDot color="#c4b5fd" size={4} />
@@ -2117,6 +2172,7 @@ export default function Navbar({
                 href="/login"
                 onClick={() => setMenuOpen(false)}
                 className="mobile-nav-link"
+                data-track-click="nav_login_mobile"
               >
                 Login
               </Link>
@@ -2124,6 +2180,7 @@ export default function Navbar({
                 href="/signup"
                 onClick={() => setMenuOpen(false)}
                 className="mobile-create-btn"
+                data-track-click="nav_signup_mobile"
               >
                 Create Account
               </Link>
