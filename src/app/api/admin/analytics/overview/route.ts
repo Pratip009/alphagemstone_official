@@ -285,6 +285,160 @@ export async function GET(request: NextRequest) {
       },
     ]);
 
+    // ------------------------------------------------
+    // TOP SEARCHES (Phase 2)
+    // ------------------------------------------------
+
+    const topSearches = await AnalyticsEvent.aggregate([
+      {
+        $match: {
+          eventType: "search",
+          searchQuery: { $exists: true, $ne: "" },
+          timestamp: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: { $toLower: "$searchQuery" },
+          count: { $sum: 1 },
+          avgResults: { $avg: "$searchResultsCount" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          query: "$_id",
+          count: 1,
+          avgResults: { $round: ["$avgResults", 0] },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    // ------------------------------------------------
+    // TOP FILTERS APPLIED (Phase 2)
+    // ------------------------------------------------
+
+    const topFilters = await AnalyticsEvent.aggregate([
+      {
+        $match: {
+          eventType: "filter_apply",
+          timestamp: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: { type: "$filterType", value: "$filterValue" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          filterType: "$_id.type",
+          filterValue: "$_id.value",
+          count: 1,
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    // ------------------------------------------------
+    // TOP PRODUCTS VIEWED (Phase 3 preview)
+    // ------------------------------------------------
+
+    const topProducts = await AnalyticsEvent.aggregate([
+      {
+        $match: {
+          eventType: "product_view",
+          productId: { $exists: true, $ne: "" },
+          timestamp: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          name: { $last: "$productName" },
+          category: { $last: "$productCategory" },
+          views: { $sum: 1 },
+          visitors: { $addToSet: "$visitorId" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          name: 1,
+          category: 1,
+          views: 1,
+          visitors: { $size: "$visitors" },
+        },
+      },
+      { $sort: { views: -1 } },
+      { $limit: 10 },
+    ]);
+
+    // ------------------------------------------------
+    // CTA CLICK BREAKDOWN (Phase 2)
+    // ------------------------------------------------
+
+    const ctaBreakdown = await AnalyticsEvent.aggregate([
+      {
+        $match: {
+          eventType: "cta_click",
+          ctaId: { $exists: true, $ne: "" },
+          timestamp: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: "$ctaId",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          ctaId: "$_id",
+          count: 1,
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    // ------------------------------------------------
+    // ENGAGEMENT FUNNEL (Phase 2/3 preview)
+    // Coarse funnel from the event types we currently track.
+    // Cart/checkout stages will slot in here once Phase 4
+    // events (add_to_cart, checkout_step, purchase) are wired
+    // up on the client.
+    // ------------------------------------------------
+
+    const [funnelPageViews, funnelProductViews, funnelCtaClicks] =
+      await Promise.all([
+        AnalyticsEvent.countDocuments({
+          eventType: "page_view",
+          timestamp: { $gte: startDate },
+        }),
+        AnalyticsEvent.countDocuments({
+          eventType: "product_view",
+          timestamp: { $gte: startDate },
+        }),
+        AnalyticsEvent.countDocuments({
+          eventType: "cta_click",
+          timestamp: { $gte: startDate },
+        }),
+      ]);
+
+    const engagementFunnel = [
+      { stage: "Page Views", count: funnelPageViews },
+      { stage: "Product Views", count: funnelProductViews },
+      { stage: "CTA Clicks", count: funnelCtaClicks },
+    ];
+
     return NextResponse.json({
       success: true,
 
@@ -312,6 +466,16 @@ export async function GET(request: NextRequest) {
         deviceBreakdown,
 
         topEvents,
+
+        topSearches,
+
+        topFilters,
+
+        topProducts,
+
+        ctaBreakdown,
+
+        engagementFunnel,
       },
     });
   } catch (error) {
