@@ -2,6 +2,7 @@ import { FilterQuery } from 'mongoose';
 import { IProduct } from '@/models/Product';
 import Category from '@/models/Category';
 import Subcategory from '@/models/Subcategory';
+import { escapeRegex, extractCarat, CARAT_MATCH_TOLERANCE } from '@/lib/search';
 
 // ─── Filter Query Params ──────────────────────────────────────────────────────
 export interface ProductFilterParams {
@@ -184,8 +185,27 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
   }
 
   // ── Full-text search ───────────────────────────────────────────────────────
+  // Was `filter.$text = { $search: params.q.trim() }`, which only matches
+  // whole, stemmed words indexed on `name`/`description` — so partial input
+  // ("diam"), watch brands/models, gemstone names, SKUs, and carat weights
+  // (e.g. "0.35 carat") all silently returned nothing or missed obvious hits.
+  // This mirrors the regex + carat matching already used by the working
+  // autocomplete dropdown (/api/products/search) so both search paths agree.
   if (params.q && params.q.trim()) {
-    filter.$text = { $search: params.q.trim() };
+    const q = params.q.trim();
+    const rx = new RegExp(escapeRegex(q), 'i');
+    const orConditions: FilterQuery<IProduct>[] = [
+      { name: rx },
+      { watchBrand: rx },
+      { watchModel: rx },
+      { gemstoneName: rx },
+      { legacySku: rx },
+    ];
+    const carat = extractCarat(q);
+    if (carat !== null) {
+      orConditions.push({ size: { $gte: carat - CARAT_MATCH_TOLERANCE, $lte: carat + CARAT_MATCH_TOLERANCE } });
+    }
+    filter.$or = orConditions;
   }
 
   // ── Sort ───────────────────────────────────────────────────────────────────

@@ -208,7 +208,13 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
         .hc-display, .hc-body, .hc-mono { font-family: "Elms Sans", sans-serif; }
-        :root { --stage-h: 62svh; }
+        /* Mobile stacks image + text vertically (flex-col), so the stage
+           must size to its content -- forcing a fixed svh height here (as
+           this used to do) squeezes both children to fit inside a box that's
+           too short for the stack, which is what was crushing the product
+           image down to a thin sliver. Desktop lays image + text out as a
+           row sharing one height, so a fixed vh height is correct there. */
+        :root { --stage-h: auto; }
         @media (min-width: 640px) { :root { --stage-h: 78vh; } }
         @keyframes hc-rise {
           from { opacity: 0; transform: translateY(14px); }
@@ -227,7 +233,12 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
         }
       `}</style>
 
-      <section className="relative w-full select-none" aria-label="Featured products" aria-roledescription="carousel" style={{ background: "#ffffff" }}>
+      <section
+        className="relative w-full select-none"
+        aria-label="Featured products"
+        aria-roledescription="carousel"
+        style={{ background: "#ffffff", isolation: "isolate", zIndex: 0 }}
+      >
         <div
           ref={stageRef}
           className="relative w-full overflow-hidden flex flex-col sm:flex-row"
@@ -244,7 +255,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.45, ease: "easeInOut" }}
-              className="absolute inset-0 w-full h-full flex flex-col sm:flex-row"
+              className="relative w-full h-auto flex flex-col sm:absolute sm:inset-0 sm:w-full sm:h-full sm:flex-row"
               aria-roledescription="slide"
               aria-label={`Product ${current + 1} of ${slides.length}`}
             >

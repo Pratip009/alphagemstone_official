@@ -519,6 +519,15 @@ export default function Navbar({
           border-bottom: 1px solid var(--border);
           transition: box-shadow 0.3s ease, background 0.3s ease;
           font-family: var(--label);
+          /* On some mobile browsers (notably iOS Safari), a sticky-positioned
+             element can get painted BELOW sibling content that has its own
+             animated transform/opacity layers -- like the Framer Motion hero
+             carousel right underneath the navbar. Promoting the nav to its
+             own compositing layer fixes the paint order so it always stays
+             on top, regardless of what's animating below it. */
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+          will-change: transform;
         }
         .main-nav.scrolled {
           background: rgb(255, 255, 255);
@@ -1226,28 +1235,9 @@ export default function Navbar({
         }
 
         /* ── Mobile search ── */
-        .mobile-search {
-          display: flex;
-          align-items: center;
-          padding: 0 14px;
-          height: 44px;
-          border: 1.5px solid var(--border);
-          border-radius: 8px;
-          background: var(--mist);
-          gap: 8px;
-          margin-bottom: 6px;
+        .mobile-search-wrap {
+          margin-bottom: 14px;
         }
-        .mobile-search input {
-          flex: 1;
-          border: none;
-          background: transparent;
-          font-family: var(--label);
-          font-size: 12px;
-          letter-spacing: 0.04em;
-          outline: none;
-          color: var(--navy);
-        }
-        .mobile-search input::placeholder { color: var(--silver); }
 
         /* ── Mobile section label ── */
         .mobile-section-label {
@@ -1959,29 +1949,12 @@ export default function Navbar({
           }}
         >
           {/* Mobile Search */}
-          <div className="mobile-search">
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 16 16"
-              fill="none"
-              style={{ color: "var(--silver)", flexShrink: 0 }}
-            >
-              <circle
-                cx="6.5"
-                cy="6.5"
-                r="4.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M10.5 10.5L14 14"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <input type="text" placeholder="Search gemstones…" />
+          <div className="mobile-search-wrap">
+            <SearchBar
+              initialCategories={initialCategories}
+              variant="mobile"
+              placeholder="Search gemstones…"
+            />
           </div>
 
           {/* Categories */}

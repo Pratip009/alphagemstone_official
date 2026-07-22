@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { useApi } from './useApi';
 import { useAuth } from './useAuth';
 
@@ -7,7 +7,23 @@ export const wishlistEvents = {
   refresh: () => window.dispatchEvent(new Event('wishlist:refresh')),
 };
 
-export function useWishlist() {
+interface WishlistContextType {
+  wishlistIds: Set<string>;
+  wishlistCount: number;
+  isInWishlist: (productId: string) => boolean;
+  toggle: (productId: string) => Promise<boolean>;
+  loading: boolean;
+}
+
+const WishlistContext = createContext<WishlistContextType | null>(null);
+
+// Every WishlistButton / WishlistIconButton on a page (e.g. one per card in a
+// product grid) used to call useWishlist() independently, and each instance
+// ran its own `/api/wishlist/ids` fetch on mount — so a 20-item grid fired 20
+// identical requests. Centralizing the fetch + state here means the whole
+// app shares ONE fetch and ONE in-memory Set, no matter how many buttons
+// are on screen.
+export function WishlistProvider({ children }: { children: ReactNode }) {
   const { apiFetch } = useApi();
   const { user, loading: authLoading } = useAuth();
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
@@ -67,7 +83,11 @@ export function useWishlist() {
           else next.delete(productId);
           return next;
         });
-        wishlistEvents.refresh();
+        // NOTE: no longer calling wishlistEvents.refresh() here — that used
+        // to trigger every OTHER mounted instance to re-fetch /ids too.
+        // Now there's only one shared instance, and it already has the
+        // fresh state from the optimistic update above, so no re-fetch
+        // is needed at all.
         return inWishlist;
       } catch (err) {
         setWishlistIds((prev) => {
@@ -84,5 +104,19 @@ export function useWishlist() {
     [apiFetch, user, wishlistIds]
   );
 
-  return { wishlistIds, wishlistCount: wishlistIds.size, isInWishlist, toggle, loading };
+  const value: WishlistContextType = {
+    wishlistIds,
+    wishlistCount: wishlistIds.size,
+    isInWishlist,
+    toggle,
+    loading,
+  };
+
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
+}
+
+export function useWishlist() {
+  const ctx = useContext(WishlistContext);
+  if (!ctx) throw new Error('useWishlist must be used within WishlistProvider');
+  return ctx;
 }
