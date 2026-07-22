@@ -2,7 +2,7 @@ import { connectDB } from "@/lib/db";
 import { listProducts, getProductFacets } from "@/services/product.service";
 import { ProductFilterParams } from "@/services/productFilter.service";
 import ProductCard from "@/components/products/ProductCard";
-import FilterSidebar from "@/components/filters/FilterSidebar";
+import FilterBar from "@/components/filters/FilterBar";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import MobileFilterDrawer from "@/components/filters/MobileFilterDrawer";
@@ -48,15 +48,13 @@ export default async function WatchesPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-[#ffffff]">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <div className="flex gap-8 xl:gap-10">
-          <aside className="hidden lg:block w-56 xl:w-60 shrink-0">
-            <div className="sticky top-6">
-              <Suspense fallback={<div>Loading filters...</div>}>
-                <FilterSidebar productType="watch" facets={facets} />
-              </Suspense>
-            </div>
-          </aside>
+        <div className="hidden lg:block -mx-4 sm:-mx-6 mb-6">
+          <Suspense fallback={<div className="px-6 py-3 text-[11px] text-gray-400">Loading filters...</div>}>
+            <FilterBar productType="watch" facets={facets} />
+          </Suspense>
+        </div>
 
+        <div className="flex gap-8 xl:gap-10">
           <main className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-3 lg:hidden">
               <Suspense fallback={null}>

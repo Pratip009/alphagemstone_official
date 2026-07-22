@@ -2,7 +2,7 @@ import { connectDB } from "@/lib/db";
 import { listProducts, getProductFacets } from "@/services/product.service";
 import { ProductFilterParams } from "@/services/productFilter.service";
 import ProductCard from "@/components/products/ProductCard";
-import FilterSidebar from "@/components/filters/FilterSidebar";
+import FilterBar from "@/components/filters/FilterBar";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import MobileFilterDrawer from "@/components/filters/MobileFilterDrawer";
@@ -142,18 +142,15 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#B8975A] to-transparent" />
 
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
-          <div className="flex gap-8 xl:gap-12">
 
-            {/* ── Sidebar: desktop ── */}
-            <aside className="hidden lg:block w-56 xl:w-60 shrink-0">
-              <div className="sticky top-8">
-                <div className="bg-white rounded-2xl border border-[#EDE3D0] shadow-[0_2px_20px_rgba(184,151,90,0.06)] px-5 py-6">
-                  <Suspense fallback={<SidebarSkeleton />}>
-                    <FilterSidebar productType={productType} facets={facets} />
-                  </Suspense>
-                </div>
-              </div>
-            </aside>
+          {/* ── Filter bar: desktop, horizontal, sticky ── */}
+          <div className="hidden lg:block -mx-4 sm:-mx-8 mb-8">
+            <Suspense fallback={<SidebarSkeleton />}>
+              <FilterBar productType={productType} facets={facets} />
+            </Suspense>
+          </div>
+
+          <div className="flex gap-8 xl:gap-12">
 
             {/* ── Main content ── */}
             <main className="flex-1 min-w-0">

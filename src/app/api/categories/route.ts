@@ -1,12 +1,25 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { listCategories, listSubcategories } from '@/services/category.service';
+import {
+  listCategories,
+  listSubcategories,
+  listCategoriesForProductKind,
+} from '@/services/category.service';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const withSubs = req.nextUrl.searchParams.get('withSubcategories') === 'true';
+    const productKind = req.nextUrl.searchParams.get('productKind');
+
+    // Scoped lookup: only categories/subcategories that actually contain a
+    // product of this kind. Used by the storefront filter bar so the
+    // Gemstones tab doesn't show Diamond or Watch categories, etc.
+    if (withSubs && productKind) {
+      const scoped = await listCategoriesForProductKind(productKind);
+      return successResponse(scoped);
+    }
 
     const categories = await listCategories();
 

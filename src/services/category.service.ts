@@ -44,6 +44,47 @@ export async function reorderCategories(orderedIds: string[]) {
   );
 }
 
+/**
+ * Categories/subcategories that actually contain at least one active
+ * product of the given kind ('diamond' | 'gemstone' | 'watch' | 'jewelry').
+ *
+ * Needed because gemstones (and to a lesser extent diamonds/watches) don't
+ * map 1:1 onto a single category — a gemstone product can sit under
+ * "Precious Gems", "Semi Precious", "Specials", etc. Filtering by the
+ * product's own `productKind` field (rather than by category name/slug) is
+ * the only reliable way to answer "which categories belong under this
+ * tab", so the storefront filter bar doesn't show Diamond categories while
+ * the Gemstones tab is active, and vice versa.
+ */
+export async function listCategoriesForProductKind(productKind: string) {
+  // Lazy import to avoid a circular dependency with Product.ts at module load.
+  const { default: Product } = await import('@/models/Product');
+
+  const [categoryIds, subcategoryIds] = await Promise.all([
+    Product.distinct('category', { productKind, isActive: true }),
+    Product.distinct('subcategory', { productKind, isActive: true }),
+  ]);
+
+  const [categories, subcategories] = await Promise.all([
+    Category.find({ _id: { $in: categoryIds }, isActive: true })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .lean(),
+    Subcategory.find({ _id: { $in: subcategoryIds }, isActive: true })
+      .populate('category', 'name slug')
+      .lean(),
+  ]);
+
+  return categories.map((cat) => {
+    const catId = (cat as Record<string, unknown>)._id?.toString();
+    return {
+      ...cat,
+      subcategories: subcategories.filter(
+        (s) => (s.category as any)?._id?.toString() === catId
+      ),
+    };
+  });
+}
+
 export async function createSubcategory(
   name: string,
   categoryId: string,
