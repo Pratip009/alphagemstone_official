@@ -105,8 +105,13 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
   const [categories, setCategories] = useState<CategoryWithSubs[]>(categoriesProp ?? []);
   const [categoriesLoading, setCategoriesLoading] = useState(!categoriesProp);
 
-  // Which category's subcategory row is expanded — defaults to the active one.
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(activeCategorySlug || null);
+  // Which category's subcategory row is expanded — defaults to the active
+  // one from the URL, or otherwise the first category, so the subcategory
+  // row is visible right away (e.g. on the default Diamonds tab) instead of
+  // requiring a click first.
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(
+    activeCategorySlug || (categoriesProp && categoriesProp.length > 0 ? categoriesProp[0].slug : null)
+  );
 
   useEffect(() => {
     if (categoriesProp) return; // already supplied by the server component
@@ -126,7 +131,15 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
           slug: c.slug,
           subcategories: (c.subcategories ?? []).map((s: any) => ({ _id: s._id, name: s.name, slug: s.slug })),
         }));
-        if (!cancelled) setCategories(list);
+        if (!cancelled) {
+          setCategories(list);
+          // No category selected yet (default state, e.g. the Diamonds tab
+          // on first load) — expand the first one so its subcategories are
+          // visible immediately instead of being hidden until a click.
+          if (!activeCategorySlug) {
+            setExpandedCategory(list.length > 0 ? list[0].slug : null);
+          }
+        }
       } catch {
         if (!cancelled) setCategories([]);
       } finally {
@@ -165,7 +178,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
   // that anymore. We keep one tiny bit of state purely so a person can
   // collapse an individual card if they want a shorter page — but nothing
   // is ever hidden behind a dropdown or a "Filters" button.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    price: true, shape: true, color: true, clarity: true, carat: true,
+    gender: true, brand: true, movement: true, strap: true, caseMaterial: true,
+    dialColor: true, features: true, style: true, caseSize: true, availability: true,
+  });
   const toggleCollapsed = (key: string) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -354,15 +371,15 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
         )}
 
         {/* ── Row 4: every filter, shown inline, all the time ────────────────
-             No popovers, no "Filters" button, no drawer. Every group sits in
-             a single horizontal row that wraps onto more lines as needed —
-             the exact same row on phone, tablet, and desktop; cards just
-             wrap instead of being forced into fixed columns. ─────────────── */}
-        <div className="flex flex-wrap items-start gap-3 pb-4">
+             No popovers, no "Filters" button, no drawer. On phone/tablet,
+             cards sit in a wrapping row (unchanged from before). On desktop
+             (lg+), each card stacks into its own full-width row — Price on
+             its own row, then Shape on its own row, and so on. ─────────── */}
+        <div className="flex flex-wrap items-start gap-3 pb-4 lg:flex-col lg:flex-nowrap lg:items-stretch">
 
           <FilterCard label="Price" collapsed={!!collapsed.price} onToggle={() => toggleCollapsed('price')}
             active={!!(priceMin || priceMax)}>
-            <div className="flex flex-wrap gap-1.5 mb-2 max-w-[19rem]">
+            <div className="flex flex-wrap gap-1.5 mb-2 max-w-[19rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
               {PRICE_BRACKETS.map(({ label, min, max }) => {
                 const isActive = localPriceMin === min && localPriceMax === max
                   && (priceMin === min || priceMax === max);
@@ -392,14 +409,14 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
               <RangeInput placeholder="Min $" value={localPriceMin} onChange={setLocalPriceMin} />
               <RangeInput placeholder="Max $" value={localPriceMax} onChange={setLocalPriceMax} />
             </div>
-            <ApplyButton onClick={applyRanges} />
+            <ApplyButton onClick={applyRanges} small />
           </FilterCard>
 
           {(mode === 'diamond' || mode === 'gemstone') && (
             <>
               <FilterCard label="Shape" collapsed={!!collapsed.shape} onToggle={() => toggleCollapsed('shape')}
                 active={activeShapes.length > 0} count={activeShapes.length}>
-                <div className="flex flex-wrap gap-1.5 max-w-[22rem]">
+                <div className="flex flex-wrap gap-1.5 max-w-[22rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(SHAPES).map((shape) => (
                     <ShapeOption
                       key={shape}
@@ -414,7 +431,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Color" collapsed={!!collapsed.color} onToggle={() => toggleCollapsed('color')}
                 active={activeColors.length > 0} count={activeColors.length}>
-                <div className="flex flex-wrap gap-2 max-w-[16rem]">
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(DISPLAY_COLORS).map((color) => (
                     <SwatchOption
                       key={color}
@@ -430,7 +447,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Clarity" collapsed={!!collapsed.clarity} onToggle={() => toggleCollapsed('clarity')}
                 active={activeClarities.length > 0} count={activeClarities.length}>
-                <div className="flex flex-wrap gap-2 max-w-[16rem]">
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(CLARITIES).map((clarity) => (
                     <CheckItem
                       key={clarity} label={clarity}
@@ -466,7 +483,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
             <>
               <FilterCard label="Gender" collapsed={!!collapsed.gender} onToggle={() => toggleCollapsed('gender')}
                 active={!!activeWatchGender}>
-                <div className="flex flex-wrap gap-2 max-w-[14rem]">
+                <div className="flex flex-wrap gap-2 max-w-[14rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_GENDERS).map((g) => (
                     <CheckItem
                       key={g} label={g}
@@ -480,7 +497,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Brand" collapsed={!!collapsed.brand} onToggle={() => toggleCollapsed('brand')}
                 active={activeWatchBrands.length > 0} count={activeWatchBrands.length}>
-                <div className="flex flex-wrap gap-2 max-w-[20rem] max-h-32 overflow-y-auto pr-1">
+                <div className="flex flex-wrap gap-2 max-w-[20rem] max-h-32 overflow-y-auto pr-1 lg:flex-nowrap lg:max-w-none lg:max-h-none lg:overflow-x-auto lg:overflow-y-visible lg:pr-0 lg:pb-1">
                   {dedupe(WATCH_BRANDS).map((b) => (
                     <CheckItem
                       key={b} label={b}
@@ -494,7 +511,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Movement" collapsed={!!collapsed.movement} onToggle={() => toggleCollapsed('movement')}
                 active={activeWatchMovements.length > 0} count={activeWatchMovements.length}>
-                <div className="flex flex-wrap gap-2 max-w-[16rem]">
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_MOVEMENTS).map((m) => (
                     <CheckItem
                       key={m} label={m}
@@ -508,7 +525,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Strap" collapsed={!!collapsed.strap} onToggle={() => toggleCollapsed('strap')}
                 active={activeWatchStrapTypes.length > 0} count={activeWatchStrapTypes.length}>
-                <div className="flex flex-wrap gap-2 max-w-[16rem]">
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_STRAP_TYPES).map((s) => (
                     <CheckItem
                       key={s} label={s}
@@ -522,7 +539,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Case Material" collapsed={!!collapsed.caseMaterial} onToggle={() => toggleCollapsed('caseMaterial')}
                 active={activeWatchCaseMaterials.length > 0} count={activeWatchCaseMaterials.length}>
-                <div className="flex flex-wrap gap-2 max-w-[16rem]">
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_CASE_MATERIALS).map((m) => (
                     <CheckItem
                       key={m} label={m}
@@ -536,7 +553,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Dial Color" collapsed={!!collapsed.dialColor} onToggle={() => toggleCollapsed('dialColor')}
                 active={activeWatchDialColors.length > 0} count={activeWatchDialColors.length}>
-                <div className="flex flex-wrap gap-2 max-w-[14rem]">
+                <div className="flex flex-wrap gap-2 max-w-[14rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_DIAL_COLORS).map((c) => (
                     <SwatchOption
                       key={c}
@@ -552,7 +569,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Features" collapsed={!!collapsed.features} onToggle={() => toggleCollapsed('features')}
                 active={activeWatchFeatures.length > 0} count={activeWatchFeatures.length}>
-                <div className="flex flex-wrap gap-2 max-w-[18rem]">
+                <div className="flex flex-wrap gap-2 max-w-[18rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_FEATURES).map((f) => (
                     <CheckItem
                       key={f} label={f}
@@ -566,7 +583,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Style" collapsed={!!collapsed.style} onToggle={() => toggleCollapsed('style')}
                 active={activeWatchStyles.length > 0} count={activeWatchStyles.length}>
-                <div className="flex flex-wrap gap-2 max-w-[14rem]">
+                <div className="flex flex-wrap gap-2 max-w-[14rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_STYLES).map((s) => (
                     <CheckItem
                       key={s} label={s}
@@ -580,7 +597,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Case Size" collapsed={!!collapsed.caseSize} onToggle={() => toggleCollapsed('caseSize')}
                 active={!!activeWatchCaseSize}>
-                <div className="flex flex-wrap gap-2 max-w-[14rem]">
+                <div className="flex flex-wrap gap-2 max-w-[14rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_CASE_SIZES).map((sz) => (
                     <CheckItem
                       key={sz} label={sz}
@@ -715,8 +732,8 @@ function FilterCard({
 }) {
   return (
     <div
-      className={`shrink-0 rounded-xl border-2 bg-gradient-to-br ${ACCENT.from} to-white p-2.5 shadow-sm transition-all duration-150 ${
-        active ? `${ACCENT.border} shadow-md` : `border-gray-100 ${ACCENT.borderHover}`
+      className={`shrink-0 rounded-xl border-2 bg-gradient-to-br ${ACCENT.from} to-white p-2.5 shadow-sm transition-all duration-150 lg:w-full lg:shrink ${
+        active ? `${ACCENT.border} shadow-md` : `border-gray-100`
       }`}
     >
       <button
@@ -745,11 +762,15 @@ function FilterCard({
   );
 }
 
-function ApplyButton({ onClick }: { onClick: () => void }) {
+function ApplyButton({ onClick, small }: { onClick: () => void; small?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase rounded-md text-white ${ACCENT.solid} opacity-90 hover:opacity-100 transition-all duration-150`}
+      className={
+        small
+          ? `px-4 py-1 text-[9px] font-bold tracking-[0.15em] uppercase rounded-md text-white ${ACCENT.solid} opacity-90 hover:opacity-100 transition-all duration-150`
+          : `w-full py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase rounded-md text-white ${ACCENT.solid} opacity-90 hover:opacity-100 transition-all duration-150`
+      }
     >
       Apply
     </button>
