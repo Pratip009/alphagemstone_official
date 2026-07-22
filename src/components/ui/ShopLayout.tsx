@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import "./ShopLayout.css";
 
@@ -131,6 +131,13 @@ function LandingHero() {
 }
 
 // ─── Subcategory card (landing) ────────────────────────────────────────────────
+// Every card in the 4-up (desktop) / 2-up (mobile) grid is the same fixed
+// aspect-ratio image + a fixed-height info block, so rows always line up
+// regardless of how long a subcategory's name is. On hover, the card tilts
+// in 3D toward the cursor (a lightweight "parallax" effect) and its border
+// picks up a gold edge + a shadow that shifts with the tilt to fake depth.
+const MAX_TILT_DEG = 8;
+
 function SubcategoryCard({
   sub,
   onSelect,
@@ -139,66 +146,73 @@ function SubcategoryCard({
   onSelect: (sub: ISubcategory) => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
   const fallback =
     "https://images.pexels.com/photos/1458867/pexels-photo-1458867.jpeg?auto=compress&cs=tinysrgb&w=300";
 
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width; // 0 → 1 across the card
+    const py = (e.clientY - rect.top) / rect.height; // 0 → 1 down the card
+    setTilt({
+      rx: (0.5 - py) * MAX_TILT_DEG * 2, // top half tilts back, bottom tilts forward
+      ry: (px - 0.5) * MAX_TILT_DEG * 2, // left half tilts one way, right the other
+    });
+  }
+
+  function handleMouseLeave() {
+    setHovered(false);
+    setTilt({ rx: 0, ry: 0 });
+  }
+
   return (
     <div
+      className="sub-card-perspective"
       onClick={() => onSelect(sub)}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        cursor: "pointer",
-      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       <div
+        ref={cardRef}
+        className="sub-card"
         style={{
-          width: "100%",
-          aspectRatio: "1",
-          overflow: "hidden",
-          background: "#ffffff",
-          // border: "1px solid var(--border)",
+          transform: `perspective(900px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) ${
+            hovered ? "scale3d(1.02,1.02,1.02)" : "scale3d(1,1,1)"
+          }`,
+          borderColor: hovered ? "var(--gold)" : "var(--border)",
+          boxShadow: hovered
+            ? `${(-tilt.ry * 2).toFixed(1)}px ${(12 - tilt.rx).toFixed(
+                1,
+              )}px 26px -6px rgba(20,33,61,0.28)`
+            : "0 1px 2px rgba(20,33,61,0.04)",
         }}
       >
-        <img
-          src={sub.imageUrl ?? fallback}
-          alt={sub.name}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: hovered ? "scale(1.04)" : "scale(1)",
-            transition: "transform 0.5s cubic-bezier(0.22,1,0.36,1)",
-          }}
-        />
-      </div>
-      <div style={{ padding: "14px 2px 0" }}>
-        <p
-          style={{
-            fontFamily: '"Elms Sans", sans-serif',
-            fontSize: 14,
-            fontWeight: 500,
-            color: "var(--navy)",
-            marginBottom: 4,
-          }}
-        >
-          {sub.name}
-        </p>
-        <span
-          style={{
-            fontFamily: '"Elms Sans", sans-serif',
-            fontSize: 10,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: hovered ? "var(--gold)" : "var(--text-muted)",
-            fontWeight: 500,
-            transition: "color 0.25s",
-          }}
-        >
-          Shop now →
-        </span>
+        <div className="sub-card-image">
+          <img
+            src={sub.imageUrl ?? fallback}
+            alt={sub.name}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: hovered ? "scale(1.06)" : "scale(1)",
+              transition: "transform 0.5s cubic-bezier(0.22,1,0.36,1)",
+            }}
+          />
+        </div>
+        <div className="sub-card-info">
+          <p className="sub-card-name">{sub.name}</p>
+          <span
+            className="sub-card-cta"
+            style={{ color: hovered ? "var(--gold)" : "var(--text-muted)" }}
+          >
+            Shop now →
+          </span>
+        </div>
       </div>
     </div>
   );

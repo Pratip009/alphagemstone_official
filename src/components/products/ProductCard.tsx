@@ -208,7 +208,7 @@ function buildParticulars(
         value: product.watchFeatures.slice(0, 2).join(", ") + extra,
       });
     }
-    return rows.slice(0, 6);
+    return rows.slice(0, 4);
   }
   const carat = product.size ? `${product.size} ct` : "";
   if (carat) rows.push({ label: "Carat", value: carat });
@@ -228,25 +228,25 @@ function buildParticulars(
       label: certDisplay(product.certification) ? "Certification" : "Grade",
       value: certValue,
     });
-  return rows.slice(0, 6);
+  return rows.slice(0, 4);
 }
 
-// ── Icons — fine single-stroke linework, echoing engraved hallmark marks ──
+// ── Icons ───────────────────────────────────────────────────────────────────
 
 function WatchIcon() {
   return (
     <svg
-      width="10"
-      height="10"
+      width="11"
+      height="11"
       viewBox="0 0 18 18"
       fill="none"
       aria-hidden="true"
     >
-      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.1" />
+      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
       <path
         d="M9 5.5V9l2 2"
         stroke="currentColor"
-        strokeWidth="1.1"
+        strokeWidth="1.3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -257,7 +257,7 @@ function WatchIcon() {
         height="2.3"
         rx="0.5"
         stroke="currentColor"
-        strokeWidth="0.9"
+        strokeWidth="1"
       />
       <rect
         x="7"
@@ -266,7 +266,7 @@ function WatchIcon() {
         height="2.3"
         rx="0.5"
         stroke="currentColor"
-        strokeWidth="0.9"
+        strokeWidth="1"
       />
     </svg>
   );
@@ -274,8 +274,8 @@ function WatchIcon() {
 function GemIcon() {
   return (
     <svg
-      width="10"
-      height="10"
+      width="11"
+      height="11"
       viewBox="0 0 18 18"
       fill="none"
       aria-hidden="true"
@@ -283,13 +283,13 @@ function GemIcon() {
       <path
         d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z"
         stroke="currentColor"
-        strokeWidth="1.1"
+        strokeWidth="1.3"
         strokeLinejoin="round"
       />
       <path
         d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6"
         stroke="currentColor"
-        strokeWidth="0.7"
+        strokeWidth="0.8"
       />
     </svg>
   );
@@ -297,8 +297,8 @@ function GemIcon() {
 function ArrowIcon() {
   return (
     <svg
-      width="10"
-      height="10"
+      width="12"
+      height="12"
       viewBox="0 0 18 18"
       fill="none"
       aria-hidden="true"
@@ -306,7 +306,7 @@ function ArrowIcon() {
       <path
         d="M4 14L14 4M14 4H6M14 4V12"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -352,148 +352,130 @@ export default function ProductCard({
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
 
         .apc {
           --paper: #ffffff;
-          --paper-deep: #ffffff;
-          --brass: #a9823e;
-          --brass-bright: #8f6c30;
-          --ink: #17140f;
-          --ink-dim: #6f665a;
-          --muted: #9a9081;
-          --line: rgba(20,18,14,0.09);
-          --line-bright: rgba(169,130,62,0.55);
-          --oxblood: #8a2e39;
-          --oxblood-bright: #a8434f;
-          --avail: #3f7a55;
+          --ink: #17171a;
+          --ink-soft: #4b4b52;
+          --muted: #8d8d95;
+          --line: #d9d9dd;
+          --line-strong: #b8b8bf;
+          --accent: #a9823e;
+          --accent-deep: #8f6c30;
+          --oxblood: #9c3b45;
+          --avail: #2f7d53;
 
           display: block;
           text-decoration: none;
           color: inherit;
           font-family: 'Inter', sans-serif;
           outline: none;
+          width: 100%;
         }
 
         .apc-card {
           position: relative;
           background: var(--paper);
-          border: 1px solid var(--line);
-          border-radius: 6px;
+          border: 1.5px solid var(--line);
+          border-radius: 14px;
           display: flex;
           flex-direction: column;
           height: 100%;
           overflow: hidden;
-          box-shadow: 0 1px 2px rgba(27,24,18,0.04), 0 14px 28px -22px rgba(27,24,18,0.16);
-          transition: transform 0.4s cubic-bezier(0.22,0.8,0.24,1), box-shadow 0.4s ease, border-color 0.4s ease;
+          box-shadow: 0 1px 3px rgba(20,20,25,0.07), 0 1px 2px rgba(20,20,25,0.05);
+          transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
         }
         .apc:hover .apc-card, .apc:focus-visible .apc-card {
-          transform: translateY(-4px);
-          border-color: var(--line-bright);
-          box-shadow: 0 30px 48px -20px rgba(27,24,18,0.18), 0 0 0 1px rgba(169,130,62,0.14);
+          transform: translateY(-3px);
+          border-color: var(--line-strong);
+          box-shadow: 0 16px 32px -12px rgba(20,20,25,0.22);
         }
         .apc:focus-visible .apc-card {
-          box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--brass);
+          box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
         }
 
-        /* ── Lot strip — the catalog reference line ─────────────────── */
+        /* ── Lot strip ────────────────────────────────────────────────── */
         .apc-lot-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 10px 14px 9px;
+          padding: 7px 14px;
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 9.5px;
-          letter-spacing: 0.08em;
-          color: var(--brass-bright);
-          border-bottom: 1px solid var(--line);
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          color: var(--muted);
         }
-        .apc-lot-num::before { content: 'LOT № '; color: var(--ink-dim); }
+        .apc-lot-num::before { content: 'LOT № '; color: #c3c3c8; }
         .apc-lot-type {
           display: flex;
           align-items: center;
           gap: 4px;
-          color: var(--ink-dim);
+          color: var(--accent-deep);
           text-transform: uppercase;
         }
 
-        /* ── Plate photograph ────────────────────────────────────────── */
-        .apc-mat-wrap { position: relative; padding: 10px 10px 0; }
+        /* ── Photo — smaller frame, generous white margin ────────────── */
+        .apc-mat-wrap {
+          padding: 0 18px 10px;
+          display: flex;
+          justify-content: center;
+        }
         .apc-mat {
           position: relative;
+          width: 68%;
           aspect-ratio: 1 / 1;
-          border: 1px solid var(--line);
-          border-radius: 4px;
-          background: #ffffff;
+          border-radius: 8px;
+          background: #fbfbfc;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
         }
         .apc-photo {
-          max-width: 100%;
-          max-height: 100%;
+          max-width: 82%;
+          max-height: 82%;
           object-fit: contain;
-         
+          transition: transform 0.35s ease;
         }
-        .apc:hover .apc-photo, .apc:focus-visible .apc-photo { transform: scale(1.045); }
+        .apc:hover .apc-photo, .apc:focus-visible .apc-photo { transform: scale(1.06); }
         .apc-mat.is-out .apc-photo {
-          filter: grayscale(0.6) drop-shadow(0 6px 10px rgba(27,24,18,0.1));
-          opacity: 0.5;
+          filter: grayscale(0.65);
+          opacity: 0.45;
         }
-
-        /* registration / crop marks — the print-plate cue, the card's one
-           deliberate flourish, quiet until the piece is examined */
-        .apc-crop {
-          position: absolute;
-          width: 13px; height: 13px;
-          opacity: 0;
-          transition: opacity 0.35s ease;
-          pointer-events: none;
-        }
-        .apc-crop::before, .apc-crop::after { content: ''; position: absolute; background: var(--brass); }
-        .apc-crop::before { width: 13px; height: 1px; top: 6px; left: 0; }
-        .apc-crop::after { width: 1px; height: 13px; left: 6px; top: 0; }
-        .apc-crop-tl { top: 7px; left: 7px; }
-        .apc-crop-tr { top: 7px; right: 7px; }
-        .apc-crop-bl { bottom: 7px; left: 7px; }
-        .apc-crop-br { bottom: 7px; right: 7px; }
-        .apc:hover .apc-crop, .apc:focus-visible .apc-crop { opacity: 0.85; }
 
         .apc-stock-tag {
           position: absolute;
           top: 8px; left: 8px;
           z-index: 2;
           display: flex; align-items: center; gap: 4px;
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 8.5px;
-          letter-spacing: 0.07em;
-          text-transform: uppercase;
-          color: var(--oxblood-bright);
-          background: rgba(255,255,255,0.94);
-          border: 1px solid rgba(138,53,64,0.35);
+          font-size: 9.5px;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          color: var(--oxblood);
+          background: #ffffff;
+          border: 1px solid rgba(156,59,69,0.28);
           padding: 3px 7px;
-          border-radius: 2px;
+          border-radius: 20px;
         }
         .apc-pulse {
-          width: 4px; height: 4px; border-radius: 50%; background: var(--oxblood-bright);
+          width: 4px; height: 4px; border-radius: 50%; background: var(--oxblood);
           animation: apc-breathe 1.8s ease-in-out infinite;
         }
 
         .apc-ribbon {
           position: absolute;
-          right: -30px; bottom: 14px;
+          top: 10px; left: 10px;
           z-index: 3;
-          transform: rotate(-45deg);
-          background: var(--oxblood);
-          color: var(--paper);
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 8.5px;
-          font-weight: 500;
-          letter-spacing: 0.15em;
+          background: var(--ink);
+          color: #fff;
+          font-size: 9.5px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
           text-transform: uppercase;
-          padding: 3px 34px;
-          box-shadow: 0 2px 8px rgba(27,24,18,0.25);
+          padding: 4px 9px;
+          border-radius: 20px;
         }
 
         .apc-wishlist {
@@ -504,99 +486,98 @@ export default function ProductCard({
 
         .apc-reveal {
           position: absolute;
-          left: 8px; bottom: 8px;
+          left: 50%; bottom: 9px;
+          transform: translate(-50%, 6px);
           z-index: 2;
           display: flex; align-items: center; gap: 5px;
-          font-family: 'Inter', sans-serif;
-          font-size: 9px;
+          font-size: 10.5px;
           font-weight: 600;
-          letter-spacing: 0.07em;
-          text-transform: uppercase;
-          color: var(--paper);
-          background: var(--ink);
-          padding: 5px 9px;
-          border-radius: 2px;
+          letter-spacing: 0.03em;
+          color: var(--ink);
+          background: #ffffff;
+          border: 1px solid var(--line-strong);
+          padding: 6px 11px;
+          border-radius: 20px;
           opacity: 0;
-          transform: translateY(6px);
-          transition: opacity 0.3s ease, transform 0.3s ease;
+          transition: opacity 0.25s ease, transform 0.25s ease;
+          white-space: nowrap;
         }
-        .apc:hover .apc-reveal, .apc:focus-visible .apc-reveal { opacity: 1; transform: translateY(0); }
+        .apc:hover .apc-reveal, .apc:focus-visible .apc-reveal {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
 
         /* ── Body ─────────────────────────────────────────────────────── */
         .apc-body {
           display: flex;
           flex-direction: column;
           flex: 1;
-          padding: 13px 16px 16px;
+          padding: 0 16px 14px;
         }
         .apc-kicker {
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 8.5px;
-          font-weight: 500;
-          letter-spacing: 0.13em;
+          font-size: 10.5px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
-          color: var(--brass-bright);
+          color: var(--accent-deep);
         }
         .apc-name {
-          margin-top: 5px;
+          margin-top: 4px;
           font-family: 'Fraunces', serif;
-          font-weight: 500;
-          font-size: 17px;
+          font-weight: 600;
+          font-size: 19px;
           color: var(--ink);
-          line-height: 1.3;
-          letter-spacing: -0.005em;
+          line-height: 1.28;
+          letter-spacing: -0.01em;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
         .apc-subtitle {
-          margin-top: 3px;
-          font-family: 'Inter', sans-serif;
-          font-style: italic;
-          font-size: 11px;
-          color: var(--ink-dim);
+          margin-top: 2px;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--ink-soft);
         }
 
-        /* condition-report grid — two columns, every field appears once */
+        /* condition-report grid — larger, clearer type */
         .apc-particulars {
-          margin-top: 12px;
-          padding-top: 11px;
+          margin-top: 8px;
+          padding-top: 8px;
           border-top: 1px solid var(--line);
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px 14px;
+          gap: 7px 14px;
         }
         .apc-p-label {
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 7.5px;
-          font-weight: 500;
-          letter-spacing: 0.09em;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.05em;
           text-transform: uppercase;
           color: var(--muted);
         }
         .apc-p-value {
-          margin-top: 3px;
+          margin-top: 2px;
           display: flex;
           align-items: center;
-          gap: 5px;
-          font-family: 'Inter', sans-serif;
-          font-size: 11.5px;
-          font-weight: 500;
+          gap: 6px;
+          font-size: 13.5px;
+          font-weight: 600;
           color: var(--ink);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
         .apc-swatch {
-          width: 7px; height: 7px; border-radius: 50%;
+          width: 9px; height: 9px; border-radius: 50%;
           flex-shrink: 0;
-          border: 1px solid rgba(27,24,18,0.18);
+          border: 1px solid rgba(20,20,25,0.18);
         }
 
         .apc-price-row {
-          margin-top: 14px;
-          padding-top: 13px;
+          margin-top: 10px;
+          padding-top: 10px;
           border-top: 1px solid var(--line);
           display: flex;
           align-items: flex-end;
@@ -605,22 +586,21 @@ export default function ProductCard({
         .apc-price-label {
           display: block;
           margin-bottom: 4px;
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 8px;
-          letter-spacing: 0.12em;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
           text-transform: uppercase;
           color: var(--muted);
         }
         .apc-price {
           font-family: 'Fraunces', serif;
-          font-weight: 600;
-          font-size: 19px;
+          font-weight: 700;
+          font-size: 22px;
           color: var(--ink);
         }
         .apc-price sup {
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 9px;
-          font-weight: 500;
+          font-size: 10px;
+          font-weight: 600;
           color: var(--muted);
           margin-left: 3px;
         }
@@ -628,12 +608,11 @@ export default function ProductCard({
           display: flex;
           align-items: center;
           gap: 5px;
-          font-family: 'Inter', sans-serif;
-          font-size: 10.5px;
-          font-weight: 500;
+          font-size: 11.5px;
+          font-weight: 600;
           color: var(--avail);
         }
-        .apc-avail .apc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--avail); }
+        .apc-avail .apc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--avail); }
         .apc-avail.out { color: var(--muted); }
         .apc-avail.out .apc-dot { background: var(--muted); }
 
@@ -643,7 +622,7 @@ export default function ProductCard({
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .apc-card, .apc-photo, .apc-reveal, .apc-crop { transition: none !important; }
+          .apc-card, .apc-photo, .apc-reveal { transition: none !important; }
           .apc:hover .apc-card, .apc:focus-visible .apc-card { transform: none !important; }
           .apc-pulse { animation: none !important; }
         }
@@ -677,11 +656,6 @@ export default function ProductCard({
                   className="apc-photo"
                 />
               )}
-
-              <span className="apc-crop apc-crop-tl" />
-              <span className="apc-crop apc-crop-tr" />
-              <span className="apc-crop apc-crop-bl" />
-              <span className="apc-crop apc-crop-br" />
 
               {lowStock && (
                 <div className="apc-stock-tag">

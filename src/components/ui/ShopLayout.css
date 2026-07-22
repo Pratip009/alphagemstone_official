@@ -221,6 +221,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px 8px; /* tighter gutter on small phones */
+  align-items: stretch; /* every card in a row stretches to the tallest one */
 }
 @media (min-width: 480px) {
   .landing-sub-grid { gap: 18px 12px; }
@@ -230,6 +231,63 @@
 }
 @media (min-width: 1024px) {
   .landing-sub-grid { gap: 28px 20px; }
+}
+/* Mobile: 2 cards per row (2x2 for a 4-item pick) instead of squeezing 4 in */
+@media (max-width: 639px) {
+  .landing-sub-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Subcategory card (3D parallax tilt) ── */
+.sub-card-perspective {
+  cursor: pointer;
+  perspective: 900px; /* gives the tilt below somewhere to "fall away" into */
+  height: 100%;
+}
+.sub-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.12s ease-out, box-shadow 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
+}
+.sub-card-image {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #ffffff;
+}
+.sub-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 12px;
+  min-height: 58px; /* keeps every card the same overall height */
+}
+.sub-card-name {
+  font-family: "Elms Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.sub-card-cta {
+  font-family: "Elms Sans", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  transition: color 0.25s;
 }
 /* ── Mobile ── */
 .mob-bar {
