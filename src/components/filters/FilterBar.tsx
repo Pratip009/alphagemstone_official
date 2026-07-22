@@ -10,7 +10,7 @@ import {
 
 const DISPLAY_COLORS = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'fancy-yellow', 'fancy-pink', 'fancy-blue'];
 
-// Swatch colors for the Color Grade popover — purely visual, doesn't affect the value sent.
+// Swatch colors for the Color Grade section — purely visual, doesn't affect the value sent.
 const COLOR_SWATCH: Record<string, string> = {
   D: '#fbfbfa', E: '#fbfbfa', F: '#fbfbfa', G: '#f8f6ee', H: '#f5f1e2',
   I: '#f1ead2', J: '#ece2c0', K: '#e6d7a9',
@@ -64,25 +64,24 @@ const PRICE_BRACKETS = [
   { label: 'Over $50,000',      min: '50000', max: ''      },
 ];
 
-// ─── Click-outside helper ──────────────────────────────────────────────────────
-function useClickOutside(onOutside: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onOutside();
-    };
-    const escHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOutside();
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('keydown', escHandler);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('keydown', escHandler);
-    };
-  }, [onOutside]);
-  return ref;
-}
+// ─── Single vibrant accent theme ────────────────────────────────────────────
+// One consistent color story for the whole bar (violet → fuchsia), used
+// everywhere instead of a different hue per filter group.
+const ACCENT = {
+  border:        'border-gray-200',
+  borderHover:   'hover:border-gray-600',
+  from:          'from-gray-50',
+  text:          'text-black',
+  dot:           'bg-gray-600',
+  badge:         'bg-gray-600',
+  solid:         'bg-gray-600',
+  chipActive:    'bg-gray-600 border-gray-600 text-white',
+  ring:          'focus:ring-gray-300',
+  track:         'bg-gray-600/20',
+  handle:        'border-gray-600',
+  checkedBorder: 'border-gray-600',
+  swatchRing:    'ring-gray-400',
+};
 
 export default function FilterBar({ productType = 'diamond', facets, categories: categoriesProp }: FilterBarProps) {
   const router       = useRouter();
@@ -161,9 +160,14 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
   const [localSizeMin,  setLocalSizeMin]  = useState(sizeMin);
   const [localSizeMax,  setLocalSizeMax]  = useState(sizeMax);
 
-  // Which popover is currently open (only one at a time).
-  const [openPanel, setOpenPanel] = useState<string | null>(null);
-  const panelRef = useClickOutside(() => setOpenPanel(null));
+  // NOTE: filters no longer live in popovers — every group renders inline,
+  // all the time, on every screen size. No open/close state is needed for
+  // that anymore. We keep one tiny bit of state purely so a person can
+  // collapse an individual card if they want a shorter page — but nothing
+  // is ever hidden behind a dropdown or a "Filters" button.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleCollapsed = (key: string) =>
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const updateFilter = useCallback(
     (key: string, value: string | null) => {
@@ -193,7 +197,6 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
     localSizeMax  ? params.set('sizeMax',  localSizeMax)  : params.delete('sizeMax');
     params.set('page', '1');
     router.push(`${baseRoute}?${params.toString()}`);
-    setOpenPanel(null);
   };
 
   const applyPriceBracket = (min: string, max: string) => {
@@ -214,7 +217,6 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
   const switchMode = (next: 'watch' | 'diamond' | 'gemstone') => {
     setMode(next);
     setExpandedCategory(null);
-    setOpenPanel(null);
     router.push(
       next === 'watch' ? '/products/watches'
       : next === 'gemstone' ? '/products/gemstones'
@@ -274,24 +276,23 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
   return (
     <div
-      ref={panelRef}
-      className="sticky z-40 w-full bg-white border-b border-gray-100"
+      className="sticky z-40 w-full bg-white shadow-sm"
       // The site nav (Navbar.tsx) is itself `position: sticky; top: 0` and
       // maintains a `--navbar-height` CSS var (its own bottom edge) for
       // exactly this situation. Sticking this bar at top:0 too would pin it
       // to the same spot as the nav, and — since the nav has a higher
-      // z-index — the nav would render on top of it and its popovers.
+      // z-index — the nav would render on top of it.
       style={{ fontFamily: '"Elms Sans", sans-serif', top: 'var(--navbar-height, 64px)' }}
     >
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-6">
 
         {/* ── Row 1: product-kind tabs + clear all ─────────────────────────── */}
-        <div className="flex items-center justify-between gap-4 py-3">
-          <div className="flex rounded-lg overflow-hidden border border-gray-200 bg-white shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+          <div className="flex rounded-xl overflow-hidden border-2 border-gray-200 bg-white shrink-0 shadow-sm">
             <TabButton active={mode === 'diamond'}  onClick={() => switchMode('diamond')}  icon={<DiamondIcon active={mode === 'diamond'} />}  label="Diamonds" />
-            <div className="w-px bg-gray-100" />
+            <div className="w-px bg-gray-200" />
             <TabButton active={mode === 'gemstone'} onClick={() => switchMode('gemstone')} icon={<GemstoneIcon active={mode === 'gemstone'} />} label="Gemstones" />
-            <div className="w-px bg-gray-100" />
+            <div className="w-px bg-gray-200" />
             <TabButton active={mode === 'watch'}    onClick={() => switchMode('watch')}    icon={<WatchIcon active={mode === 'watch'} />}      label="Watches" />
           </div>
 
@@ -299,16 +300,16 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
             {hasActiveFilters ? (
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1.5 text-[10px] font-medium tracking-[0.1em] uppercase text-[#B8975A] hover:text-[#8A6C38] transition-colors"
+                className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.1em] uppercase text-white bg-gradient-to-r from-gray-600 to-gray-600 px-3 py-1.5 rounded-full shadow-sm hover:shadow-md hover:from-gray-700 hover:to-gray-700 transition-all duration-150"
               >
                 Clear all
-                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#B8975A] text-white text-[9px] font-semibold">
+                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-white/25 text-white text-[9px] font-bold">
                   {activeFilterCount}
                 </span>
               </button>
             ) : (
-              <span className="text-[9px] tracking-[0.35em] uppercase font-semibold text-gray-300">
-                Refine
+              <span className="text-[9px] tracking-[0.35em] uppercase font-bold text-violet-400">
+                Refine your search
               </span>
             )}
           </div>
@@ -321,10 +322,10 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
               <button
                 key={cat._id}
                 onClick={() => selectCategory(cat.slug)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-medium tracking-[0.08em] uppercase border transition-all duration-150 ${
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-[0.08em] uppercase border-2 transition-all duration-150 ${
                   activeCategorySlug === cat.slug
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'text-gray-500 border-gray-200 hover:border-[#B8975A] hover:text-[#8A6C38]'
+                    ? `${ACCENT.chipActive} shadow-md`
+                    : `bg-white text-gray-500 border-gray-200 ${ACCENT.borderHover} hover:text-violet-700`
                 }`}
               >
                 {cat.name}
@@ -335,15 +336,15 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
         {/* ── Row 3: subcategories of the expanded category, revealed inline ─ */}
         {expandedCategoryData && expandedCategoryData.subcategories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pb-3 pl-3 border-l-2 border-[#EDE3D0] ml-1 -mt-1 animate-[fadeIn_150ms_ease-out]">
+          <div className="flex flex-wrap items-center gap-2 pb-3 pl-3 border-l-4 border-violet-300 ml-1 -mt-1 animate-[fadeIn_150ms_ease-out]">
             {expandedCategoryData.subcategories.map((sub) => (
               <button
                 key={sub._id}
                 onClick={() => selectSubcategory(expandedCategoryData.slug, sub.slug)}
-                className={`px-2.5 py-1 rounded-full text-[10px] tracking-[0.04em] border transition-all duration-150 ${
+                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-[0.04em] border-2 transition-all duration-150 ${
                   activeSubcategorySlug === sub.slug
-                    ? 'bg-[#B8975A] text-white border-[#B8975A]'
-                    : 'text-gray-400 border-gray-100 bg-gray-50 hover:border-[#B8975A] hover:text-[#8A6C38]'
+                    ? 'bg-violet-500 text-white border-violet-500 shadow-sm'
+                    : 'text-violet-500 border-violet-100 bg-violet-50/60 hover:border-violet-400'
                 }`}
               >
                 {sub.name}
@@ -352,14 +353,16 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
           </div>
         )}
 
-        {/* ── Row 4: attribute filter pills, each opening a popover ──────────
-             flex-wrap, NOT overflow-x-auto: setting overflow-x forces the
-             browser to also clip overflow-y, which would cut off the
-             popover panels that open below each pill. ────────────────── */}
-        <div className="flex flex-wrap items-center gap-2 pb-3">
-          <FilterPill label="Price" isOpen={openPanel === 'price'} isActive={!!(priceMin || priceMax)}
-            onToggle={() => setOpenPanel(openPanel === 'price' ? null : 'price')}>
-            <div className="space-y-0.5 mb-3 w-56">
+        {/* ── Row 4: every filter, shown inline, all the time ────────────────
+             No popovers, no "Filters" button, no drawer. Every group sits in
+             a single horizontal row that wraps onto more lines as needed —
+             the exact same row on phone, tablet, and desktop; cards just
+             wrap instead of being forced into fixed columns. ─────────────── */}
+        <div className="flex flex-wrap items-start gap-3 pb-4">
+
+          <FilterCard label="Price" collapsed={!!collapsed.price} onToggle={() => toggleCollapsed('price')}
+            active={!!(priceMin || priceMax)}>
+            <div className="flex flex-wrap gap-1.5 mb-2 max-w-[19rem]">
               {PRICE_BRACKETS.map(({ label, min, max }) => {
                 const isActive = localPriceMin === min && localPriceMax === max
                   && (priceMin === min || priceMax === max);
@@ -367,10 +370,10 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                   <button
                     key={label}
                     onClick={() => applyPriceBracket(min, max)}
-                    className={`block w-full text-left px-2.5 py-[5px] rounded-md text-[11px] transition-all duration-150 ${
+                    className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[10.5px] border-2 transition-all duration-150 ${
                       isActive
-                        ? 'bg-[#B8975A]/10 text-[#8A6C38] font-semibold'
-                        : 'text-gray-400 hover:bg-gray-50 hover:text-gray-800'
+                        ? `${ACCENT.solid} text-white border-transparent font-semibold`
+                        : 'text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-700'
                     }`}
                   >
                     {label}
@@ -390,13 +393,13 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
               <RangeInput placeholder="Max $" value={localPriceMax} onChange={setLocalPriceMax} />
             </div>
             <ApplyButton onClick={applyRanges} />
-          </FilterPill>
+          </FilterCard>
 
           {(mode === 'diamond' || mode === 'gemstone') && (
             <>
-              <FilterPill label="Shape" isOpen={openPanel === 'shape'} isActive={activeShapes.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'shape' ? null : 'shape')} count={activeShapes.length}>
-                <div className="grid grid-cols-3 gap-1.5 w-64">
+              <FilterCard label="Shape" collapsed={!!collapsed.shape} onToggle={() => toggleCollapsed('shape')}
+                active={activeShapes.length > 0} count={activeShapes.length}>
+                <div className="flex flex-wrap gap-1.5 max-w-[22rem]">
                   {dedupe(SHAPES).map((shape) => (
                     <ShapeOption
                       key={shape}
@@ -407,11 +410,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Color" isOpen={openPanel === 'color'} isActive={activeColors.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'color' ? null : 'color')} count={activeColors.length}>
-                <div className="grid grid-cols-4 gap-2 w-56">
+              <FilterCard label="Color" collapsed={!!collapsed.color} onToggle={() => toggleCollapsed('color')}
+                active={activeColors.length > 0} count={activeColors.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem]">
                   {dedupe(DISPLAY_COLORS).map((color) => (
                     <SwatchOption
                       key={color}
@@ -423,11 +426,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Clarity" isOpen={openPanel === 'clarity'} isActive={activeClarities.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'clarity' ? null : 'clarity')} count={activeClarities.length}>
-                <div className="grid grid-cols-3 gap-1 w-56">
+              <FilterCard label="Clarity" collapsed={!!collapsed.clarity} onToggle={() => toggleCollapsed('clarity')}
+                active={activeClarities.length > 0} count={activeClarities.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem]">
                   {dedupe(CLARITIES).map((clarity) => (
                     <CheckItem
                       key={clarity} label={clarity}
@@ -437,10 +440,10 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Carat" isOpen={openPanel === 'carat'} isActive={!!(sizeMin || sizeMax)}
-                onToggle={() => setOpenPanel(openPanel === 'carat' ? null : 'carat')}>
+              <FilterCard label="Carat" collapsed={!!collapsed.carat} onToggle={() => toggleCollapsed('carat')}
+                active={!!(sizeMin || sizeMax)}>
                 <div className="w-56">
                   <RangeSlider
                     min={0} max={20} step={0.1}
@@ -455,15 +458,15 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                   </div>
                   <ApplyButton onClick={applyRanges} />
                 </div>
-              </FilterPill>
+              </FilterCard>
             </>
           )}
 
           {mode === 'watch' && (
             <>
-              <FilterPill label="Gender" isOpen={openPanel === 'gender'} isActive={!!activeWatchGender}
-                onToggle={() => setOpenPanel(openPanel === 'gender' ? null : 'gender')}>
-                <div className="w-40">
+              <FilterCard label="Gender" collapsed={!!collapsed.gender} onToggle={() => toggleCollapsed('gender')}
+                active={!!activeWatchGender}>
+                <div className="flex flex-wrap gap-2 max-w-[14rem]">
                   {dedupe(WATCH_GENDERS).map((g) => (
                     <CheckItem
                       key={g} label={g}
@@ -473,11 +476,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Brand" isOpen={openPanel === 'brand'} isActive={activeWatchBrands.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'brand' ? null : 'brand')} count={activeWatchBrands.length}>
-                <div className="w-56 max-h-64 overflow-y-auto">
+              <FilterCard label="Brand" collapsed={!!collapsed.brand} onToggle={() => toggleCollapsed('brand')}
+                active={activeWatchBrands.length > 0} count={activeWatchBrands.length}>
+                <div className="flex flex-wrap gap-2 max-w-[20rem] max-h-32 overflow-y-auto pr-1">
                   {dedupe(WATCH_BRANDS).map((b) => (
                     <CheckItem
                       key={b} label={b}
@@ -487,11 +490,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Movement" isOpen={openPanel === 'movement'} isActive={activeWatchMovements.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'movement' ? null : 'movement')} count={activeWatchMovements.length}>
-                <div className="w-48">
+              <FilterCard label="Movement" collapsed={!!collapsed.movement} onToggle={() => toggleCollapsed('movement')}
+                active={activeWatchMovements.length > 0} count={activeWatchMovements.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem]">
                   {dedupe(WATCH_MOVEMENTS).map((m) => (
                     <CheckItem
                       key={m} label={m}
@@ -501,11 +504,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Strap" isOpen={openPanel === 'strap'} isActive={activeWatchStrapTypes.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'strap' ? null : 'strap')} count={activeWatchStrapTypes.length}>
-                <div className="w-48">
+              <FilterCard label="Strap" collapsed={!!collapsed.strap} onToggle={() => toggleCollapsed('strap')}
+                active={activeWatchStrapTypes.length > 0} count={activeWatchStrapTypes.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem]">
                   {dedupe(WATCH_STRAP_TYPES).map((s) => (
                     <CheckItem
                       key={s} label={s}
@@ -515,11 +518,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Case Material" isOpen={openPanel === 'caseMaterial'} isActive={activeWatchCaseMaterials.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'caseMaterial' ? null : 'caseMaterial')} count={activeWatchCaseMaterials.length}>
-                <div className="w-48">
+              <FilterCard label="Case Material" collapsed={!!collapsed.caseMaterial} onToggle={() => toggleCollapsed('caseMaterial')}
+                active={activeWatchCaseMaterials.length > 0} count={activeWatchCaseMaterials.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem]">
                   {dedupe(WATCH_CASE_MATERIALS).map((m) => (
                     <CheckItem
                       key={m} label={m}
@@ -529,11 +532,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Dial Color" isOpen={openPanel === 'dialColor'} isActive={activeWatchDialColors.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'dialColor' ? null : 'dialColor')} count={activeWatchDialColors.length}>
-                <div className="grid grid-cols-3 gap-2 w-48">
+              <FilterCard label="Dial Color" collapsed={!!collapsed.dialColor} onToggle={() => toggleCollapsed('dialColor')}
+                active={activeWatchDialColors.length > 0} count={activeWatchDialColors.length}>
+                <div className="flex flex-wrap gap-2 max-w-[14rem]">
                   {dedupe(WATCH_DIAL_COLORS).map((c) => (
                     <SwatchOption
                       key={c}
@@ -545,11 +548,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Features" isOpen={openPanel === 'features'} isActive={activeWatchFeatures.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'features' ? null : 'features')} count={activeWatchFeatures.length}>
-                <div className="w-52">
+              <FilterCard label="Features" collapsed={!!collapsed.features} onToggle={() => toggleCollapsed('features')}
+                active={activeWatchFeatures.length > 0} count={activeWatchFeatures.length}>
+                <div className="flex flex-wrap gap-2 max-w-[18rem]">
                   {dedupe(WATCH_FEATURES).map((f) => (
                     <CheckItem
                       key={f} label={f}
@@ -559,11 +562,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Style" isOpen={openPanel === 'style'} isActive={activeWatchStyles.length > 0}
-                onToggle={() => setOpenPanel(openPanel === 'style' ? null : 'style')} count={activeWatchStyles.length}>
-                <div className="w-40">
+              <FilterCard label="Style" collapsed={!!collapsed.style} onToggle={() => toggleCollapsed('style')}
+                active={activeWatchStyles.length > 0} count={activeWatchStyles.length}>
+                <div className="flex flex-wrap gap-2 max-w-[14rem]">
                   {dedupe(WATCH_STYLES).map((s) => (
                     <CheckItem
                       key={s} label={s}
@@ -573,11 +576,11 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
 
-              <FilterPill label="Case Size" isOpen={openPanel === 'caseSize'} isActive={!!activeWatchCaseSize}
-                onToggle={() => setOpenPanel(openPanel === 'caseSize' ? null : 'caseSize')}>
-                <div className="w-40">
+              <FilterCard label="Case Size" collapsed={!!collapsed.caseSize} onToggle={() => toggleCollapsed('caseSize')}
+                active={!!activeWatchCaseSize}>
+                <div className="flex flex-wrap gap-2 max-w-[14rem]">
                   {dedupe(WATCH_CASE_SIZES).map((sz) => (
                     <CheckItem
                       key={sz} label={sz}
@@ -587,22 +590,20 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     />
                   ))}
                 </div>
-              </FilterPill>
+              </FilterCard>
             </>
           )}
 
-          <FilterPill label="Availability" isOpen={openPanel === 'availability'} isActive={searchParams.get('inStock') === 'true'}
-            onToggle={() => setOpenPanel(openPanel === 'availability' ? null : 'availability')}>
-            <div className="w-40">
-              <CheckItem
-                label="In Stock Only"
-                checked={searchParams.get('inStock') === 'true'}
-                onChange={() =>
-                  updateFilter('inStock', searchParams.get('inStock') === 'true' ? null : 'true')
-                }
-              />
-            </div>
-          </FilterPill>
+          <FilterCard label="Availability" collapsed={!!collapsed.availability} onToggle={() => toggleCollapsed('availability')}
+            active={searchParams.get('inStock') === 'true'}>
+            <CheckItem
+              label="In Stock Only"
+              checked={searchParams.get('inStock') === 'true'}
+              onChange={() =>
+                updateFilter('inStock', searchParams.get('inStock') === 'true' ? null : 'true')
+              }
+            />
+          </FilterCard>
         </div>
       </div>
     </div>
@@ -673,7 +674,7 @@ function ShapeIcon({ shape }: { shape: string }) {
 
 function dialColorToHex(name: string) {
   const map: Record<string, string> = {
-    black: '#1a1a1a', white: '#f7f7f5', blue: '#3b5a8a', green: '#3d5c45',
+    black: '#373737', white: '#f7f7f5', blue: '#3b5a8a', green: '#3d5c45',
     gold: '#c9a552', silver: '#c8c8c8', brown: '#6b4a33', grey: '#8a8a8a', gray: '#8a8a8a',
   };
   return map[name.toLowerCase()] ?? '#d8d8d8';
@@ -684,10 +685,10 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-1.5 px-3.5 py-2 text-[9px] font-semibold tracking-[0.18em] uppercase transition-all duration-200 ${
+      className={`flex items-center justify-center gap-1.5 px-3.5 py-2 text-[9px] font-bold tracking-[0.18em] uppercase transition-all duration-200 ${
         active
-          ? 'bg-gray-900 text-white rounded-md m-0.5'
-          : 'text-gray-400 hover:text-gray-700'
+          ? 'bg-gray-700 text-white rounded-lg m-0.5 shadow-sm'
+          : 'text-gray-700 hover:text-gray-800'
       }`}
     >
       {icon}
@@ -696,42 +697,50 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
-function FilterPill({
-  label, isOpen, isActive, count, onToggle, children,
+// Always-visible filter card — replaces the old click-to-open popover pill.
+// Cards sit side by side in a single wrapping row (not a fixed-column grid),
+// and every group is fully rendered on the page at all times, on every
+// screen size. The little chevron only collapses *this card's own body* —
+// it never hides the group from the layout, and there's no "Filters"
+// button or drawer gating access to it.
+function FilterCard({
+  label, active, count, collapsed, onToggle, children,
 }: {
   label: string;
-  isOpen: boolean;
-  isActive?: boolean;
+  active?: boolean;
   count?: number;
+  collapsed: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative shrink-0">
+    <div
+      className={`shrink-0 rounded-xl border-2 bg-gradient-to-br ${ACCENT.from} to-white p-2.5 shadow-sm transition-all duration-150 ${
+        active ? `${ACCENT.border} shadow-md` : `border-gray-100 ${ACCENT.borderHover}`
+      }`}
+    >
       <button
         onClick={onToggle}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-medium tracking-[0.08em] uppercase whitespace-nowrap transition-all duration-150 ${
-          isActive
-            ? 'border-[#B8975A] text-[#8A6C38] bg-[#B8975A]/5'
-            : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-800'
-        }`}
+        className="flex items-center gap-1.5 w-full mb-1.5"
       >
-        {label}
+        <span className={`w-2 h-2 rounded-full ${ACCENT.dot} shrink-0`} />
+        <span className={`text-[10px] font-extrabold uppercase tracking-wider ${ACCENT.text} whitespace-nowrap`}>
+          {label}
+        </span>
         {!!count && (
-          <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#B8975A] text-white text-[8px] font-semibold">
+          <span className={`flex items-center justify-center w-4 h-4 rounded-full ${ACCENT.badge} text-white text-[8px] font-bold`}>
             {count}
           </span>
         )}
-        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} className="transition-transform duration-150">
+        <svg
+          width="9" height="9" viewBox="0 0 8 8" fill="none"
+          className={`ml-auto shrink-0 transition-transform duration-150 ${ACCENT.text}`}
+          style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
+        >
           <path d="M1 2.5L4 5.5L7 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 p-3 bg-white border border-gray-100 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.08)] z-50">
-          {children}
-        </div>
-      )}
+      {!collapsed && <div>{children}</div>}
     </div>
   );
 }
@@ -740,7 +749,7 @@ function ApplyButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full py-1.5 text-[10px] font-semibold tracking-[0.2em] uppercase border border-[#B8975A] text-[#B8975A] rounded-md hover:bg-[#B8975A] hover:text-white transition-all duration-200"
+      className={`w-full py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase rounded-md text-white ${ACCENT.solid} opacity-90 hover:opacity-100 transition-all duration-150`}
     >
       Apply
     </button>
@@ -756,12 +765,10 @@ function CheckItem({
   onChange: () => void;
 }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer group py-[3px]">
+    <label className="flex items-center gap-1.5 cursor-pointer group py-[3px] whitespace-nowrap">
       <span
-        className={`w-3.5 h-3.5 flex-shrink-0 rounded-[3px] border flex items-center justify-center transition-all duration-150 ${
-          checked
-            ? 'bg-[#B8975A] border-[#B8975A]'
-            : 'border-gray-200 bg-white group-hover:border-[#B8975A]'
+        className={`w-3.5 h-3.5 flex-shrink-0 rounded-[3px] border-2 flex items-center justify-center transition-all duration-150 ${
+          checked ? `${ACCENT.dot} ${ACCENT.checkedBorder}` : `border-gray-200 bg-white ${ACCENT.borderHover}`
         }`}
       >
         {checked && (
@@ -778,20 +785,20 @@ function CheckItem({
       </span>
       <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
       <span
-        className={`text-[11px] flex-1 transition-colors leading-snug capitalize ${
-          checked ? 'text-gray-900 font-medium' : 'text-gray-400 group-hover:text-gray-800'
+        className={`text-[11px] transition-colors leading-snug capitalize ${
+          checked ? `${ACCENT.text} font-semibold` : 'text-gray-500 group-hover:text-gray-800'
         }`}
       >
         {label}
       </span>
       {count !== undefined && (
-        <span className="text-[10px] text-gray-300 ml-auto">{count}</span>
+        <span className="text-[10px] text-gray-400">{count}</span>
       )}
     </label>
   );
 }
 
-// Icon-based option used in the Shape popover.
+// Icon-based option used in the Shape section.
 function ShapeOption({
   shape, count, checked, onChange,
 }: {
@@ -804,20 +811,20 @@ function ShapeOption({
     <button
       onClick={onChange}
       title={shape}
-      className={`flex flex-col items-center gap-1 py-2 rounded-md border transition-all duration-150 ${
+      className={`flex flex-col items-center gap-1 py-2 px-2 rounded-md border-2 transition-all duration-150 ${
         checked
-          ? 'border-[#B8975A] bg-[#B8975A]/10 text-[#8A6C38]'
-          : 'border-gray-100 text-gray-400 hover:border-[#B8975A] hover:text-[#8A6C38]'
+          ? `border-violet-400 ${ACCENT.from} ${ACCENT.text}`
+          : `border-gray-100 text-gray-400 ${ACCENT.borderHover} hover:text-violet-700`
       }`}
     >
       <ShapeIcon shape={shape} />
-      <span className="text-[8.5px] uppercase tracking-[0.04em] leading-none capitalize">{shape}</span>
-      {count !== undefined && <span className="text-[8px] text-gray-300">{count}</span>}
+      <span className="text-[8.5px] uppercase tracking-[0.04em] leading-none capitalize whitespace-nowrap">{shape}</span>
+      {count !== undefined && <span className="text-[8px] text-gray-400">{count}</span>}
     </button>
   );
 }
 
-// Swatch-based option used for Color Grade / Dial Color popovers.
+// Swatch-based option used for Color Grade / Dial Color sections.
 function SwatchOption({
   label, swatch, count, checked, onChange,
 }: {
@@ -831,16 +838,16 @@ function SwatchOption({
     <button
       onClick={onChange}
       title={label}
-      className={`flex flex-col items-center gap-1 py-1.5 rounded-md border transition-all duration-150 ${
-        checked ? 'border-[#B8975A] bg-[#B8975A]/10' : 'border-transparent hover:border-gray-200'
+      className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-md border-2 transition-all duration-150 ${
+        checked ? `border-violet-400 ${ACCENT.from}` : 'border-transparent hover:border-gray-200'
       }`}
     >
       <span
-        className={`w-5 h-5 rounded-full border ${checked ? 'ring-2 ring-[#B8975A] ring-offset-1' : 'border-gray-200'}`}
+        className={`w-5 h-5 rounded-full border ${checked ? `ring-2 ${ACCENT.swatchRing} ring-offset-1` : 'border-gray-200'}`}
         style={{ backgroundColor: swatch }}
       />
-      <span className="text-[8.5px] uppercase tracking-[0.04em] text-gray-500 leading-none capitalize">{label}</span>
-      {count !== undefined && <span className="text-[8px] text-gray-300">{count}</span>}
+      <span className="text-[8.5px] uppercase tracking-[0.04em] text-gray-500 leading-none capitalize whitespace-nowrap">{label}</span>
+      {count !== undefined && <span className="text-[8px] text-gray-400">{count}</span>}
     </button>
   );
 }
@@ -860,7 +867,7 @@ function RangeInput({
       step={step}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-0 min-w-0 flex-1 px-2 py-1.5 text-[11px] border border-gray-200 rounded-md bg-white text-gray-800 placeholder-gray-300 outline-none focus:border-[#B8975A] focus:ring-1 focus:ring-[#B8975A]/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      className={`w-0 min-w-0 flex-1 px-2 py-1.5 text-[11px] border-2 border-gray-200 rounded-md bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-gray-300 ${ACCENT.ring} focus:ring-2 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
     />
   );
 }
@@ -901,31 +908,44 @@ function RangeSlider({
     const onUp = () => { dragging.current = null; };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+    // Touch support so dragging works the same way on mobile and tablets.
+    const onTouchMove = (e: TouchEvent) => {
+      if (!dragging.current || !e.touches[0]) return;
+      const v = valueFromClientX(e.touches[0].clientX);
+      if (dragging.current === 'lo') onChange(Math.min(v, valueMax), valueMax);
+      else onChange(valueMin, Math.max(v, valueMin));
+    };
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend', onUp);
     return () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onUp);
     };
   }, [valueMin, valueMax, onChange]);
 
   return (
-    <div className="px-1 pt-1 pb-2">
-      <div className="flex justify-between text-[9px] text-gray-400 mb-2">
+    <div className="px-1 pt-1 pb-2 w-56">
+      <div className="flex justify-between text-[9px] text-gray-500 mb-2 font-medium">
         <span>{formatLabel(valueMin)}</span>
         <span>{formatLabel(valueMax)}</span>
       </div>
-      <div ref={trackRef} className="relative h-1 rounded-full bg-gray-100">
+      <div ref={trackRef} className="relative h-1.5 rounded-full bg-gray-200">
         <div
-          className="absolute h-1 rounded-full bg-[#B8975A]"
+          className={`absolute h-1.5 rounded-full ${ACCENT.track}`}
           style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }}
         />
         <div
           onMouseDown={() => { dragging.current = 'lo'; }}
-          className="absolute w-3.5 h-3.5 -mt-[7px] -ml-[7px] top-1/2 rounded-full bg-white border-2 border-[#B8975A] cursor-pointer shadow-sm"
+          onTouchStart={() => { dragging.current = 'lo'; }}
+          className={`absolute w-4 h-4 -mt-[7px] -ml-2 top-1/2 rounded-full bg-white border-2 cursor-pointer shadow ${ACCENT.handle}`}
           style={{ left: `${pct(valueMin)}%` }}
         />
         <div
           onMouseDown={() => { dragging.current = 'hi'; }}
-          className="absolute w-3.5 h-3.5 -mt-[7px] -ml-[7px] top-1/2 rounded-full bg-white border-2 border-[#B8975A] cursor-pointer shadow-sm"
+          onTouchStart={() => { dragging.current = 'hi'; }}
+          className={`absolute w-4 h-4 -mt-[7px] -ml-2 top-1/2 rounded-full bg-white border-2 cursor-pointer shadow ${ACCENT.handle}`}
           style={{ left: `${pct(valueMax)}%` }}
         />
       </div>

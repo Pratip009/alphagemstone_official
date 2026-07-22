@@ -5,7 +5,6 @@ import ProductCard from "@/components/products/ProductCard";
 import FilterBar from "@/components/filters/FilterBar";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
-import MobileFilterDrawer from "@/components/filters/MobileFilterDrawer";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 interface PageProps {
@@ -143,8 +142,8 @@ export default async function ProductsPage({ searchParams }: PageProps) {
 
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
 
-          {/* ── Filter bar: desktop, horizontal, sticky ── */}
-          <div className="hidden lg:block -mx-4 sm:-mx-8 mb-8">
+          {/* ── Filter bar: horizontal, sticky, shown on every screen size ── */}
+          <div className="-mx-4 sm:-mx-8 mb-8">
             <Suspense fallback={<SidebarSkeleton />}>
               <FilterBar productType={productType} facets={facets} />
             </Suspense>
@@ -154,13 +153,6 @@ export default async function ProductsPage({ searchParams }: PageProps) {
 
             {/* ── Main content ── */}
             <main className="flex-1 min-w-0">
-
-              {/* Mobile filter drawer trigger */}
-              <div className="flex items-center gap-3 mb-4 lg:hidden">
-                <Suspense fallback={null}>
-                  <MobileFilterDrawer facets={facets} />
-                </Suspense>
-              </div>
 
               {/* Page heading */}
               <div className="mb-6 pb-5 border-b border-[#EDE3D0] flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">

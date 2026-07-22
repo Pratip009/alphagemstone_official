@@ -5,7 +5,6 @@ import ProductCard from "@/components/products/ProductCard";
 import FilterBar from "@/components/filters/FilterBar";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
-import MobileFilterDrawer from "@/components/filters/MobileFilterDrawer";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -45,7 +44,7 @@ export default async function DiamondsPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-[#ffffff]">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <div className="hidden lg:block -mx-4 sm:-mx-6 mb-6">
+        <div className="-mx-4 sm:-mx-6 mb-6">
           <Suspense fallback={<div className="px-6 py-3 text-[11px] text-gray-400">Loading filters...</div>}>
             <FilterBar productType="diamond" facets={facets} />
           </Suspense>
@@ -53,12 +52,6 @@ export default async function DiamondsPage({ searchParams }: PageProps) {
 
         <div className="flex gap-8 xl:gap-10">
           <main className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-3 lg:hidden">
-              <Suspense fallback={null}>
-                <MobileFilterDrawer facets={facets} />
-              </Suspense>
-            </div>
-
             <SortBar
               total={total}
               currentSort={sp.sortBy} // ✅ fixed
