@@ -11,6 +11,7 @@ import RecentlyViewedProducts from "@/components/products/RecentlyViewedProducts
 import CompareLaunchButton from "@/components/compare/CompareLaunchButton";
 import type { Metadata } from "next";
 import { cache } from "react";
+import { cldUrl } from "@/lib/cloudinary-client";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -1017,7 +1018,18 @@ export default async function ProductDetailPage({
                   >
                     <div className="pd-related-img">
                       {item.img ? (
-                        <img src={item.img} alt={item.name} />
+                        <img
+                          src={cldUrl(item.img, {
+                            // 4-up grid, cards ~280px wide — 360px covers 2x retina.
+                            width: 360,
+                            quality: "auto",
+                            format: "auto",
+                            aiUpscale: true,
+                          })}
+                          alt={item.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <div
                           style={{

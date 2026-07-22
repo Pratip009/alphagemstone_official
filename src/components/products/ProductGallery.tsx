@@ -54,15 +54,8 @@ export default function ProductGallery({
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   // 'ok' | 'placeholder' | 'fallback' | 'dead'
   const [errorStages, setErrorStages] = useState<Record<number, string>>({});
-  // Tracks the REAL pixel width of the currently-loaded main image, so we
-  // know whether zoom would actually add detail or just stretch a small
-  // source. Keyed by activeIdx so switching thumbnails re-checks.
-  const [naturalWidths, setNaturalWidths] = useState<Record<number, number>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Below this, a hover-zoom would just be CSS-stretching a small source —
-  // worse than not zooming at all. Tune if your source photos improve.
-  const MIN_WIDTH_FOR_ZOOM = 1400;
   // Softer magnification than before (220%) — less visible stretching on
   // borderline-resolution images while we wait on better source photos.
   const ZOOM_MAGNIFICATION = "150%";
@@ -92,13 +85,24 @@ export default function ProductGallery({
 
   const activeSrc =
     realImages.length > 0 ? resolvedSrc(activeIdx) : shapePlaceholder;
-  const displaySrc = cldUrl(activeSrc, { width: 900 });
-  const zoomSrc = cldUrl(activeSrc, { width: 2200, quality: 'auto:best' });
-  const activeNaturalWidth = naturalWidths[activeIdx];
-  // Undefined = not measured yet (assume zoomable until proven otherwise,
-  // so the hint doesn't flicker on first paint); once measured, gate on it.
-  const zoomAvailable =
-    activeNaturalWidth === undefined || activeNaturalWidth >= MIN_WIDTH_FOR_ZOOM;
+  const displaySrc = cldUrl(activeSrc, {
+    width: 900,
+    quality: "auto:best",
+    aiUpscale: true,
+    // Single pass only reaches ~400px (4x). For a 100px source, two passes
+    // reach ~1600px, so 900 is a downscale from there, not a blurry stretch.
+    upscalePasses: 2,
+  });
+  const zoomSrc = cldUrl(activeSrc, {
+    width: 2200,
+    quality: "auto:best",
+    aiUpscale: true,
+    upscalePasses: 2,
+  });
+  // zoomSrc is now built with aiUpscale + upscalePasses, so it's a genuinely
+  // higher-detail image regardless of the source's original resolution —
+  // no need to measure and gate on naturalWidth anymore.
+  const zoomAvailable = true;
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = containerRef.current;
     if (!el) return;
@@ -198,12 +202,6 @@ export default function ProductGallery({
               src={displaySrc}
               alt={name}
               onError={() => handleImgError(activeIdx)}
-              onLoad={(e) => {
-                const w = e.currentTarget.naturalWidth;
-                setNaturalWidths((prev) =>
-                  prev[activeIdx] === w ? prev : { ...prev, [activeIdx]: w }
-                );
-              }}
               draggable={false}
               style={{
                 width: "100%",
