@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface HeroSlide {
@@ -342,7 +343,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
 
                   {b.buttonText && b.buttonLink && (
                     <div style={{ opacity: 0, animation: "hc-rise 0.8s cubic-bezier(.16,1,.3,1) 0.4s forwards" }}>
-                      <a
+                      <Link
                         href={b.buttonLink}
                         target={b.openInNewTab ? "_blank" : undefined}
                         rel={b.openInNewTab ? "noopener noreferrer" : undefined}
@@ -366,7 +367,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
                       >
                         {b.buttonText}
                         <ChevronRight size={14} strokeWidth={2} className="transition-transform duration-300 group-hover:translate-x-1" />
-                      </a>
+                      </Link>
                     </div>
                   )}
                 </div>
