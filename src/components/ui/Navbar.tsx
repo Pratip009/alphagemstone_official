@@ -42,7 +42,7 @@ function useNavCategories(initialCategories: NavCategory[]) {
     if (hasInitial) return;
 
     let cancelled = false;
-    fetch("/api/categories?withSubcategories=true", { cache: "no-store" })
+    fetch("/api/categories?withSubcategories=true")
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -194,7 +194,7 @@ export default function Navbar({
   const profileRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const HOVER_OPEN_DELAY = 500;
+  const HOVER_OPEN_DELAY = 200;
   useEffect(() => {
     const update = () => {
       if (navRef.current) {

@@ -1,10 +1,13 @@
 import Footer from '@/components/ui/Footer';
 import Navbar from '@/components/ui/Navbar';
+import { getNavCategories } from '@/lib/getNavCategories';
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+  const initialCategories = await getNavCategories();
+
   return (
     <>
-     <Navbar/>
+     <Navbar initialCategories={initialCategories} />
       <main>{children}</main>
       <Footer/>
     </>

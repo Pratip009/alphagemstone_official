@@ -9,6 +9,13 @@ export interface ProductFilterParams {
   category?: string;
   subcategory?: string;
 
+  // Product kind — 'diamond' | 'gemstone' | 'watch' | 'jewelry'. Independent
+  // of category: gemstones are filed under several categories ("Precious
+  // Gems", "Semi Precious", "Specials", …) with a subcategory per gem
+  // (Emerald, Amethyst, …), so productKind is the reliable way to select
+  // "all gemstones" regardless of which category/subcategory they sit in.
+  productKind?: string;
+
   // Diamond / gemstone multi-select filters
   shape?: string | string[];
   color?: string | string[];
@@ -111,6 +118,7 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
   // ── Category ───────────────────────────────────────────────────────────────
   if (params.category)    filter.category    = params.category;
   if (params.subcategory) filter.subcategory = params.subcategory;
+  if (params.productKind) filter.productKind = params.productKind;
 
   // ── Diamond / gemstone multi-select filters ────────────────────────────────
   const shapes = toArray(params.shape);

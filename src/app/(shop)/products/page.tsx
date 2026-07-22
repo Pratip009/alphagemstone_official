@@ -23,35 +23,35 @@ const WATCH_FILTER_PARAMS = [
 ] as const;
 
 /**
- * Determine whether the current page should show the Watch or Diamond view.
+ * Determine whether the current page should show the Watch, Diamond, or
+ * Gemstone view.
+ *
+ * Gemstones don't live under one category slug — they're spread across
+ * "Precious Gems", "Semi Precious", "Specials", etc, each with a
+ * per-gem subcategory (Emerald, Amethyst, …). So the category slug alone
+ * can't tell us "this is a gemstone". Instead we trust the actual
+ * `productKind` field on the fetched product, which every product
+ * carries regardless of which category/subcategory it's filed under.
+ *
  * Priority order:
- *  1. Explicit category param ("watches" slug = watch, anything else = diamond)
- *  2. Any watch-specific filter param present in the URL
- *  3. Fallback: look at the first product's category
+ *  1. The real productKind on the first matched product (ground truth)
+ *  2. No results to inspect yet — fall back to URL signals (watch only,
+ *     since that's the one category we can identify by slug alone)
  */
 function resolveProductType(
   sp: Record<string, string>,
   firstProduct: Record<string, unknown> | undefined,
-): "watch" | "diamond" {
-  // 1. Explicit category slug
-  if (sp.category) {
-    return sp.category === "watches" ? "watch" : "diamond";
-  }
+): "watch" | "diamond" | "gemstone" {
+  const kind = firstProduct?.productKind as string | undefined;
+  if (kind === "watch")    return "watch";
+  if (kind === "gemstone") return "gemstone";
+  if (kind === "diamond")  return "diamond";
 
-  // 2. Watch-specific filter param in URL
-  if (WATCH_FILTER_PARAMS.some((k) => sp[k])) {
-    return "watch";
-  }
+  // No product to inspect (e.g. empty result set) — fall back to the URL.
+  if (sp.category === "watches") return "watch";
+  if (WATCH_FILTER_PARAMS.some((k) => sp[k])) return "watch";
 
-  // 3. Fallback to first product's category
-  const catSlug =
-    firstProduct &&
-    typeof firstProduct.category === "object" &&
-    firstProduct.category !== null
-      ? (firstProduct.category as { slug?: string }).slug
-      : firstProduct?.category;
-
-  return catSlug === "watches" ? "watch" : "diamond";
+  return "diamond";
 }
 export async function generateMetadata({
   searchParams,
@@ -64,8 +64,11 @@ export async function generateMetadata({
   const isWatch =
     sp.category === "watches" ||
     (!sp.category && WATCH_FILTER_PARAMS.some((k) => sp[k]));
+  // Metadata runs before any DB query, so there's no product to check
+  // productKind on yet — approximate off the category slug instead.
+  const isGemstone = /gem|precious|special/i.test(sp.category || "");
 
-  const label = isWatch ? "Timepieces" : "Diamonds";
+  const label = isWatch ? "Timepieces" : isGemstone ? "Gemstones" : "Diamonds";
 
   const filterBits = [sp.shape, sp.subcategory, sp.q ?? sp.search].filter(Boolean);
   const title = filterBits.length
@@ -76,7 +79,9 @@ export async function generateMetadata({
     title,
     description: isWatch
       ? "Shop luxury timepieces at Alpha Imports — exceptional horological craftsmanship."
-      : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Imports.",
+      : isGemstone
+        ? "Shop certified natural and lab-grown gemstones at Alpha Imports."
+        : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Imports.",
   };
 }
 export default async function ProductsPage({ searchParams }: PageProps) {
@@ -167,12 +172,14 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                     className="text-3xl sm:text-4xl font-normal text-[#1A1612] leading-tight"
                     style={{ fontFamily: '"Elms Sans", sans-serif' }}
                   >
-                    {productType === "watch" ? "Timepieces" : "Diamonds"}
+                    {productType === "watch" ? "Timepieces" : productType === "gemstone" ? "Gemstones" : "Diamonds"}
                   </h1>
                   <p className="mt-1.5 text-[10px] tracking-[0.25em] uppercase text-[#B8975A] font-medium">
                     {productType === "watch"
                       ? "Exceptional horological craftsmanship"
-                      : "Ethically sourced · GIA & IGI certified"}
+                      : productType === "gemstone"
+                        ? "Certified natural & lab-grown gemstones"
+                        : "Ethically sourced · GIA & IGI certified"}
                   </p>
                 </div>
 

@@ -6,7 +6,7 @@ import { cldUrl } from "@/lib/cloudinary-client";
 import { WishlistIconButton } from "@/components/wishlist/WishlistButton";
 
 interface ProductCardProps {
-  productType?: "watch" | "diamond";
+  productType?: "watch" | "diamond" | "gemstone";
   product: {
     _id: string;
     name: string;

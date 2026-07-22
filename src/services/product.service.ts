@@ -118,6 +118,7 @@ export async function getProductFacets(params: ProductFilterParams) {
   const resolved = await resolveSlugFilters({
     category: params.category,
     subcategory: params.subcategory,
+    productKind: params.productKind,
   });
 
   const { query } = buildProductFilterQuery(resolved);

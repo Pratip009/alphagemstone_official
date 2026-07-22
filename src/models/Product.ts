@@ -571,6 +571,16 @@ ProductSchema.index({ createdAt: -1 });
 ProductSchema.index({ category: 1, subcategory: 1 });
 ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ category: 1, price: 1 });
+
+// Covers the storefront's default subcategory-browse query — filter on
+// {category, subcategory, isActive} sorted by createdAt (the "newest" default
+// sort). Without this, Mongo can only use {category:1, subcategory:1} for the
+// filter and then has to sort the matched set in memory on every request,
+// which is exactly the "click a subcategory → wait" symptom.
+ProductSchema.index({ category: 1, subcategory: 1, isActive: 1, createdAt: -1 });
+// Category-only browse (no subcategory selected) needs the same treatment.
+ProductSchema.index({ category: 1, isActive: 1, createdAt: -1 });
+
 ProductSchema.index({ shape: 1, size: 1 });
 ProductSchema.index({ name: 'text', description: 'text' });
 

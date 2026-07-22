@@ -17,7 +17,7 @@ const dedupe = <T,>(arr: readonly T[]): T[] => Array.from(new Set(arr));
 interface FacetCount { _id: string; count: number }
 
 interface FilterSidebarProps {
-  productType?: 'diamond' | 'watch';
+  productType?: 'diamond' | 'watch' | 'gemstone';
   facets?: {
     shapes?: FacetCount[];
     colors?: FacetCount[];
@@ -51,11 +51,13 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
 
   const baseRoute = pathname.includes('/watches')
     ? '/products/watches'
-    : pathname.includes('/diamonds')
-      ? '/products/diamonds'
-      : '/products';
+    : pathname.includes('/gemstones')
+      ? '/products/gemstones'
+      : pathname.includes('/diamonds')
+        ? '/products/diamonds'
+        : '/products';
 
-  const [mode, setMode] = useState<'watch' | 'diamond'>(productType);
+  const [mode, setMode] = useState<'watch' | 'diamond' | 'gemstone'>(productType);
 
   const activeShapes    = searchParams.get('shape')?.split(',').filter(Boolean)   || [];
   const activeColors    = searchParams.get('color')?.split(',').filter(Boolean)   || [];
@@ -122,9 +124,13 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
 
   const clearAll = () => router.push(baseRoute);
 
-  const switchMode = (next: 'watch' | 'diamond') => {
+  const switchMode = (next: 'watch' | 'diamond' | 'gemstone') => {
     setMode(next);
-    router.push(next === 'watch' ? '/products/watches' : '/products/diamonds');
+    router.push(
+      next === 'watch' ? '/products/watches'
+      : next === 'gemstone' ? '/products/gemstones'
+      : '/products/diamonds'
+    );
   };
 
   const hasActiveFilters =
@@ -157,6 +163,18 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
         >
           <DiamondIcon active={mode === 'diamond'} />
           Diamonds
+        </button>
+        <div className="w-px bg-gray-100" />
+        <button
+          onClick={() => switchMode('gemstone')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[9px] font-semibold tracking-[0.18em] uppercase transition-all duration-200 ${
+            mode === 'gemstone'
+              ? 'bg-gray-900 text-white rounded-md m-0.5'
+              : 'text-gray-400 hover:text-gray-700'
+          }`}
+        >
+          <GemstoneIcon active={mode === 'gemstone'} />
+          Gemstones
         </button>
         <div className="w-px bg-gray-100" />
         <button
@@ -345,9 +363,10 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          DIAMOND FILTERS
+          DIAMOND / GEMSTONE FILTERS — gemstones share the same shape, color,
+          clarity, and carat fields as diamonds, so both modes reuse this block.
          ══════════════════════════════════════════════════════════════════════ */}
-      {mode === 'diamond' && (
+      {(mode === 'diamond' || mode === 'gemstone') && (
         <>
           <FilterGroup label="Shape">
             {dedupe(SHAPES).map((shape) => (
@@ -424,6 +443,16 @@ function DiamondIcon({ active }: { active: boolean }) {
       style={{ color: active ? 'white' : 'currentColor' }}>
       <path d="M9 16L2 7l2.5-5h9L16 7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
       <path d="M2 7h14M9 16L5 7l4-5 4 5z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function GemstoneIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 18 18" fill="none"
+      style={{ color: active ? 'white' : 'currentColor' }}>
+      <path d="M5 3h8l3 4-7 8-7-8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M2 7h14M9 15V7M6.5 7 5 3M11.5 7 13 3" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
     </svg>
   );
 }
