@@ -1,11 +1,12 @@
-'use client'
-import Link from 'next/link';
-import { useState } from 'react';
+"use client";
+import Link from "next/link";
+import { useState } from "react";
+import { cldUrl } from "@/lib/cloudinary-client";
 
-import { WishlistIconButton } from '@/components/wishlist/WishlistButton';
+import { WishlistIconButton } from "@/components/wishlist/WishlistButton";
 
 interface ProductCardProps {
-  productType?: 'watch' | 'diamond';
+  productType?: "watch" | "diamond";
   product: {
     _id: string;
     name: string;
@@ -40,51 +41,90 @@ interface ProductCardProps {
 // ── Data helpers ────────────────────────────────────────────────────────────
 
 function first(val?: string | string[]): string {
-  if (!val) return '';
-  return Array.isArray(val) ? (val[0] ?? '') : val;
+  if (!val) return "";
+  return Array.isArray(val) ? (val[0] ?? "") : val;
 }
 function display(val?: string | string[]): string {
-  if (!val) return '';
-  return Array.isArray(val) ? val.join(', ') : val;
+  if (!val) return "";
+  return Array.isArray(val) ? val.join(", ") : val;
 }
 function certDisplay(val?: string | string[]): string {
-  if (!val) return '';
+  if (!val) return "";
   const arr = Array.isArray(val) ? val : [val];
-  return arr.filter((c) => c !== 'none').join(' · ');
+  return arr.filter((c) => c !== "none").join(" · ");
 }
-function isWatch(p: ProductCardProps['product']): boolean {
+function isWatch(p: ProductCardProps["product"]): boolean {
   return !!(
-    p.watchBrand || p.watchMovement || p.watchGender ||
-    p.watchStyle || p.watchCaseMaterial || p.watchDialColor ||
-    p.watchStrapType || p.watchCaseSize
+    p.watchBrand ||
+    p.watchMovement ||
+    p.watchGender ||
+    p.watchStyle ||
+    p.watchCaseMaterial ||
+    p.watchDialColor ||
+    p.watchStrapType ||
+    p.watchCaseSize
   );
 }
 function cap(s?: string): string {
-  if (!s) return '';
+  if (!s) return "";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 function possessive(g?: string): string {
-  if (!g) return '';
+  if (!g) return "";
   const map: Record<string, string> = {
-    Men: "Men's", Women: "Women's", Unisex: 'Unisex', Boys: "Boys'", Girls: "Girls'", Kids: "Kids'",
+    Men: "Men's",
+    Women: "Women's",
+    Unisex: "Unisex",
+    Boys: "Boys'",
+    Girls: "Girls'",
+    Kids: "Kids'",
   };
   return map[g] || g;
 }
 
-const WATCH_PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80&fit=crop';
-const DIAMOND_PLACEHOLDER = 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80&fit=crop';
+const WATCH_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80&fit=crop";
+const DIAMOND_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80&fit=crop";
 
 // Best-effort word -> hex map so a stated color renders as an inspection swatch.
 const COLOR_HEX: Record<string, string> = {
-  black: '#1C1C1E', white: '#F5F5F7', ivory: '#F2EAD9', cream: '#F3E9D2',
-  silver: '#C8C9CC', gold: '#CBA658', 'rose gold': '#E0B3A1', 'two-tone': '#C9B37E',
-  champagne: '#E8D6B3', blue: '#2F5FA8', navy: '#1F3A5F', green: '#2F6F4E',
-  red: '#A4302F', brown: '#6B4A34', grey: '#8A8A8F', gray: '#8A8A8F',
-  gunmetal: '#3A3D42', pink: '#D99AA6', purple: '#6B4C8A', salmon: '#E0917C',
-  'mother of pearl': '#E9E6E1', bronze: '#8C6B3F', orange: '#D97A3D', yellow: '#E0C14A',
-  ruby: '#A4192F', emerald: '#2F6F4E', sapphire: '#2B4C8C', amethyst: '#6B4C8A',
-  topaz: '#D9A441', aquamarine: '#7FC7C6', peridot: '#A3C150', citrine: '#E0A83D',
-  tanzanite: '#4A5FA5', morganite: '#E3A9A1', opal: '#E7E2DE', garnet: '#7A2530',
+  black: "#1C1C1E",
+  white: "#F5F5F7",
+  ivory: "#F2EAD9",
+  cream: "#F3E9D2",
+  silver: "#C8C9CC",
+  gold: "#CBA658",
+  "rose gold": "#E0B3A1",
+  "two-tone": "#C9B37E",
+  champagne: "#E8D6B3",
+  blue: "#2F5FA8",
+  navy: "#1F3A5F",
+  green: "#2F6F4E",
+  red: "#A4302F",
+  brown: "#6B4A34",
+  grey: "#8A8A8F",
+  gray: "#8A8A8F",
+  gunmetal: "#3A3D42",
+  pink: "#D99AA6",
+  purple: "#6B4C8A",
+  salmon: "#E0917C",
+  "mother of pearl": "#E9E6E1",
+  bronze: "#8C6B3F",
+  orange: "#D97A3D",
+  yellow: "#E0C14A",
+  ruby: "#A4192F",
+  emerald: "#2F6F4E",
+  sapphire: "#2B4C8C",
+  amethyst: "#6B4C8A",
+  topaz: "#D9A441",
+  aquamarine: "#7FC7C6",
+  peridot: "#A3C150",
+  citrine: "#E0A83D",
+  tanzanite: "#4A5FA5",
+  morganite: "#E3A9A1",
+  opal: "#E7E2DE",
+  garnet: "#7A2530",
 };
 function swatchHex(text?: string): string | null {
   if (!text) return null;
@@ -97,58 +137,97 @@ function swatchHex(text?: string): string | null {
 // Lot reference — the last four hex characters of the real Mongo _id, so the
 // number printed on the card is an actual stable identifier, not decoration.
 function lotNumber(id: string): string {
-  const clean = (id || '').replace(/[^a-fA-F0-9]/g, '');
+  const clean = (id || "").replace(/[^a-fA-F0-9]/g, "");
   const tail = clean.slice(-4).toUpperCase();
-  return tail || '0000';
+  return tail || "0000";
 }
 
 // Headline descriptor — "Round-Cut Sapphire" / "Men's Sport Watch" — the
 // catalog's classification line, built from the piece's own attributes.
-function buildKicker(product: ProductCardProps['product'], watch: boolean): string {
+function buildKicker(
+  product: ProductCardProps["product"],
+  watch: boolean,
+): string {
   if (watch) {
-    const parts = [possessive(product.watchGender), product.watchStyle].filter(Boolean);
-    return `${parts.join(' ')} Watch`.replace(/^\s+/, '');
+    const parts = [possessive(product.watchGender), product.watchStyle].filter(
+      Boolean,
+    );
+    return `${parts.join(" ")} Watch`.replace(/^\s+/, "");
   }
   const shape = first(product.shape) || product.shapeRaw;
-  const stone = product.gemstoneName || 'Diamond';
-  const shapePart = shape ? `${cap(shape)}-Cut` : '';
-  return [shapePart, stone].filter(Boolean).join(' ');
+  const stone = product.gemstoneName || "Diamond";
+  const shapePart = shape ? `${cap(shape)}-Cut` : "";
+  return [shapePart, stone].filter(Boolean).join(" ");
 }
 
-function buildSubtitle(product: ProductCardProps['product'], watch: boolean): string | undefined {
+function buildSubtitle(
+  product: ProductCardProps["product"],
+  watch: boolean,
+): string | undefined {
   if (!watch) return undefined;
   const parts = [product.watchBrand, product.watchModel].filter(Boolean);
-  return parts.length ? parts.join(' — ') : undefined;
+  return parts.length ? parts.join(" — ") : undefined;
 }
 
-interface Particular { label: string; value: string; swatch?: string | null; }
+interface Particular {
+  label: string;
+  value: string;
+  swatch?: string | null;
+}
 
 // The condition-report grid — every field shown here appears nowhere else on
 // the card, so nothing is repeated twice.
-function buildParticulars(product: ProductCardProps['product'], watch: boolean): Particular[] {
+function buildParticulars(
+  product: ProductCardProps["product"],
+  watch: boolean,
+): Particular[] {
   const rows: Particular[] = [];
   if (watch) {
-    if (product.watchMovement) rows.push({ label: 'Movement', value: product.watchMovement });
-    if (product.watchCaseSize) rows.push({ label: 'Case Size', value: product.watchCaseSize });
-    if (product.watchCaseMaterial) rows.push({ label: 'Case', value: product.watchCaseMaterial });
+    if (product.watchMovement)
+      rows.push({ label: "Movement", value: product.watchMovement });
+    if (product.watchCaseSize)
+      rows.push({ label: "Case Size", value: product.watchCaseSize });
+    if (product.watchCaseMaterial)
+      rows.push({ label: "Case", value: product.watchCaseMaterial });
     if (product.watchDialColor) {
-      rows.push({ label: 'Dial', value: product.watchDialColor, swatch: swatchHex(product.watchDialColor) });
+      rows.push({
+        label: "Dial",
+        value: product.watchDialColor,
+        swatch: swatchHex(product.watchDialColor),
+      });
     }
-    if (product.watchStrapType) rows.push({ label: 'Strap', value: product.watchStrapType });
+    if (product.watchStrapType)
+      rows.push({ label: "Strap", value: product.watchStrapType });
     if (product.watchFeatures && product.watchFeatures.length > 0) {
-      const extra = product.watchFeatures.length > 2 ? ` +${product.watchFeatures.length - 2}` : '';
-      rows.push({ label: 'Features', value: product.watchFeatures.slice(0, 2).join(', ') + extra });
+      const extra =
+        product.watchFeatures.length > 2
+          ? ` +${product.watchFeatures.length - 2}`
+          : "";
+      rows.push({
+        label: "Features",
+        value: product.watchFeatures.slice(0, 2).join(", ") + extra,
+      });
     }
     return rows.slice(0, 6);
   }
-  const carat = product.size ? `${product.size} ct` : '';
-  if (carat) rows.push({ label: 'Carat', value: carat });
-  const color = display(product.color) || product.colorRaw || '';
-  if (color) rows.push({ label: 'Color', value: color, swatch: swatchHex(product.colorRaw || first(product.color)) });
-  const clarity = display(product.clarity) || product.clarityRaw || '';
-  if (clarity) rows.push({ label: 'Clarity', value: clarity });
-  const certValue = certDisplay(product.certification) || product.gradeRaw || '';
-  if (certValue) rows.push({ label: certDisplay(product.certification) ? 'Certification' : 'Grade', value: certValue });
+  const carat = product.size ? `${product.size} ct` : "";
+  if (carat) rows.push({ label: "Carat", value: carat });
+  const color = display(product.color) || product.colorRaw || "";
+  if (color)
+    rows.push({
+      label: "Color",
+      value: color,
+      swatch: swatchHex(product.colorRaw || first(product.color)),
+    });
+  const clarity = display(product.clarity) || product.clarityRaw || "";
+  if (clarity) rows.push({ label: "Clarity", value: clarity });
+  const certValue =
+    certDisplay(product.certification) || product.gradeRaw || "";
+  if (certValue)
+    rows.push({
+      label: certDisplay(product.certification) ? "Certification" : "Grade",
+      value: certValue,
+    });
   return rows.slice(0, 6);
 }
 
@@ -156,31 +235,94 @@ function buildParticulars(product: ProductCardProps['product'], watch: boolean):
 
 function WatchIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
       <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.1" />
-      <path d="M9 5.5V9l2 2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="7" y="1" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="0.9" />
-      <rect x="7" y="14.7" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="0.9" />
+      <path
+        d="M9 5.5V9l2 2"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="7"
+        y="1"
+        width="4"
+        height="2.3"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth="0.9"
+      />
+      <rect
+        x="7"
+        y="14.7"
+        width="4"
+        height="2.3"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth="0.9"
+      />
     </svg>
   );
 }
 function GemIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-      <path d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6" stroke="currentColor" strokeWidth="0.7" />
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6"
+        stroke="currentColor"
+        strokeWidth="0.7"
+      />
     </svg>
   );
 }
 function ArrowIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M4 14L14 4M14 4H6M14 4V12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4 14L14 4M14 4H6M14 4V12"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function ProductImage({ src, alt, fallback }: { src: string; alt: string; fallback: string }) {
+function ProductImage({
+  src,
+  alt,
+  fallback,
+}: {
+  src: string;
+  alt: string;
+  fallback: string;
+}) {
   const [imgSrc, setImgSrc] = useState(src);
   return (
     <img
@@ -193,8 +335,11 @@ function ProductImage({ src, alt, fallback }: { src: string; alt: string; fallba
   );
 }
 
-export default function ProductCard({ product, productType }: ProductCardProps) {
-  const watch = productType ? productType === 'watch' : isWatch(product);
+export default function ProductCard({
+  product,
+  productType,
+}: ProductCardProps) {
+  const watch = productType ? productType === "watch" : isWatch(product);
   const isAvailable = product.stock > 0;
   const lowStock = isAvailable && product.stock <= 3;
   const placeholder = watch ? WATCH_PLACEHOLDER : DIAMOND_PLACEHOLDER;
@@ -506,21 +651,31 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
 
       <Link href={`/products/${product._id}`} className="apc">
         <div className="apc-card">
-
           <div className="apc-lot-row">
             <span className="apc-lot-num">{lot}</span>
             <span className="apc-lot-type">
               {watch ? <WatchIcon /> : <GemIcon />}
-              {watch ? 'Watch' : 'Gem'}
+              {watch ? "Watch" : "Gem"}
             </span>
           </div>
 
           <div className="apc-mat-wrap">
-            <div className={`apc-mat ${isAvailable ? '' : 'is-out'}`}>
+            <div className={`apc-mat ${isAvailable ? "" : "is-out"}`}>
               {product.images[0] ? (
-                <ProductImage src={product.images[0]} alt={product.name} fallback={placeholder} />
+                <ProductImage
+                  src={cldUrl(product.images[0], {
+                    width: 400,
+                    aiUpscale: true,
+                  })}
+                  alt={product.name}
+                  fallback={placeholder}
+                />
               ) : (
-                <img src={placeholder} alt={product.name} className="apc-photo" />
+                <img
+                  src={placeholder}
+                  alt={product.name}
+                  className="apc-photo"
+                />
               )}
 
               <span className="apc-crop apc-crop-tl" />
@@ -560,7 +715,12 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
                   <div key={i}>
                     <div className="apc-p-label">{row.label}</div>
                     <div className="apc-p-value">
-                      {row.swatch && <span className="apc-swatch" style={{ background: row.swatch }} />}
+                      {row.swatch && (
+                        <span
+                          className="apc-swatch"
+                          style={{ background: row.swatch }}
+                        />
+                      )}
                       {row.value}
                     </div>
                   </div>
@@ -572,16 +732,16 @@ export default function ProductCard({ product, productType }: ProductCardProps) 
               <div>
                 <span className="apc-price-label">Price</span>
                 <span className="apc-price">
-                  ${product.price.toLocaleString()}<sup>USD</sup>
+                  ${product.price.toLocaleString()}
+                  <sup>USD</sup>
                 </span>
               </div>
-              <span className={`apc-avail ${isAvailable ? '' : 'out'}`}>
+              <span className={`apc-avail ${isAvailable ? "" : "out"}`}>
                 <span className="apc-dot" />
-                {isAvailable ? `${product.stock} available` : 'Sold out'}
+                {isAvailable ? `${product.stock} available` : "Sold out"}
               </span>
             </div>
           </div>
-
         </div>
       </Link>
     </>

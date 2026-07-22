@@ -7,8 +7,8 @@ export function cldUrl(
     format?: 'auto';
     /**
      * When true, allows Cloudinary to enlarge PAST the original resolution
-     * using their Generative Upscale AI add-on, instead of c_limit (which
-     * never upscales and just returns the original size). Requires the
+     * using their Upscale AI effect, instead of c_limit (which never
+     * upscales and just returns the original size). Requires the
      * add-on to be enabled on the Cloudinary plan — if it isn't, Cloudinary
      * returns an error image, so test on one product first.
      */
@@ -24,7 +24,7 @@ export function cldUrl(
 
   const { width, quality = 'auto', format = 'auto', aiUpscale = false } = opts;
   const parts: string[] = [];
-  if (aiUpscale) parts.push('e_gen_upscale');
+  if (aiUpscale) parts.push('e_upscale');
   if (width) parts.push(`w_${width}`, aiUpscale ? 'c_scale' : 'c_limit');
   parts.push(`q_${quality}`, `f_${format}`);
   const transform = parts.join(',');
