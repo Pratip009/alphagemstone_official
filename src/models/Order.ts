@@ -137,7 +137,7 @@ OrderSchema.index({ user: 1, createdAt: -1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ paypalOrderId: 1 });
 OrderSchema.index({ createdAt: -1 });
-OrderSchema.index({ trackingNumber: 1 });
+
 
 const Order = (() => {
   if (mongoose.models && mongoose.models.Order) {
