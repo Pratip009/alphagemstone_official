@@ -56,7 +56,7 @@ const page = () => {
         </h3>
 
         <p className="leading-8 text-[#4d463f]">
-          Alpha Imports NY Inc. reserves the right to update or modify
+          Alpha Gemstone NY Inc. reserves the right to update or modify
           these terms at any time without prior notice. Continued use
           of the website constitutes acceptance of any revised terms.
         </p>

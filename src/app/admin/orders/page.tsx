@@ -220,7 +220,7 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
             </div>
           </div>
           <div style={{ marginTop: 52, textAlign: 'center', borderTop: '1px solid #f0ece6', paddingTop: 22 }}>
-            <div style={{ fontFamily: '"Elms Sans", sans-serif', fontSize: 15, color: '#c9a84c', fontStyle: 'italic', marginBottom: 6 }}>Alpha Imports — Fine Gemstones & Jewellery</div>
+            <div style={{ fontFamily: '"Elms Sans", sans-serif', fontSize: 15, color: '#c9a84c', fontStyle: 'italic', marginBottom: 6 }}>Alpha Gemstone — Fine Gemstones & Jewellery</div>
             <div style={{ fontSize: 10, color: '#c4bdb2', letterSpacing: '0.12em' }}>www.alphaimports.com · support@alphaimports.com</div>
           </div>
         </div>

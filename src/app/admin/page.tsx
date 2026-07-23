@@ -157,7 +157,7 @@ export default function AdminDashboard() {
       <div className="mb-8">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[0.68rem] tracking-[0.22em] uppercase text-[#c9a84c] font-semibold mb-2">◆ Alpha Imports</p>
+            <p className="text-[0.68rem] tracking-[0.22em] uppercase text-[#c9a84c] font-semibold mb-2">◆ Alpha Gemstone</p>
             <h1 className="font-['Cormorant_Garamond',serif] text-[2.6rem] font-medium text-[#1a1714] tracking-tight leading-none">
               Dashboard
             </h1>

@@ -20,7 +20,7 @@ const page = () => {
           {/* Company */}
           <div className="rounded-2xl border border-[#e8e2d9] bg-[#fffdf9] p-6">
             <h3 className="text-lg font-semibold text-[#1a1714] mb-2">
-              Alpha Imports NY Inc.
+              Alpha Gemstone NY Inc.
             </h3>
 
             <p className="text-[#4d463f] leading-7">

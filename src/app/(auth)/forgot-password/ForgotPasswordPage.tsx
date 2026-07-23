@@ -203,7 +203,7 @@ export default function ForgotPasswordPage() {
               </svg>
             </div>
             <div>
-              <span className="auth-left-logo-text">Alpha Imports</span>
+              <span className="auth-left-logo-text">Alpha Gemstone</span>
               <span className="auth-left-logo-sub">Fine Gemstones</span>
             </div>
           </div>
@@ -225,7 +225,7 @@ export default function ForgotPasswordPage() {
                   <polygon points="16,3 29,12 16,29 3,12" stroke="#ffffff" strokeWidth="1.8" fill="none"/>
                 </svg>
               </div>
-              <span className="auth-mobile-brand-text">Alpha Imports</span>
+              <span className="auth-mobile-brand-text">Alpha Gemstone</span>
             </div>
 
             {step !== 'done' && (

@@ -71,16 +71,16 @@ export async function generateMetadata({
 
   const filterBits = [sp.shape, sp.subcategory, sp.q ?? sp.search].filter(Boolean);
   const title = filterBits.length
-    ? `${filterBits.join(" ")} ${label} | Alpha Imports`
-    : `${label} | Alpha Imports`;
+    ? `${filterBits.join(" ")} ${label} | Alpha Gemstone`
+    : `${label} | Alpha Gemstone`;
 
   return {
     title,
     description: isWatch
-      ? "Shop luxury timepieces at Alpha Imports — exceptional horological craftsmanship."
+      ? "Shop luxury timepieces at Alpha Gemstone — exceptional horological craftsmanship."
       : isGemstone
-        ? "Shop certified natural and lab-grown gemstones at Alpha Imports."
-        : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Imports.",
+        ? "Shop certified natural and lab-grown gemstones at Alpha Gemstone."
+        : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Gemstone.",
   };
 }
 export default async function ProductsPage({ searchParams }: PageProps) {
@@ -246,7 +246,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
               className="text-[11px] tracking-[0.2em] uppercase text-[#8A7F72]"
               style={{ fontFamily: '"Elms Sans", sans-serif' }}
             >
-              Alpha Imports
+              Alpha Gemstone
             </span>
           </div>
           <p className="text-[10px] tracking-[0.15em] uppercase text-[#C4B8A8]">

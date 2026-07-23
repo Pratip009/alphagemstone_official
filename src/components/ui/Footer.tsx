@@ -393,7 +393,7 @@ export default function Footer() {
             className="text-[0.65rem] font-semibold"
             style={{ color: "#1a1714" }}
           >
-            © {new Date().getFullYear()} Alpha Imports NY Inc. All Rights
+            © {new Date().getFullYear()} Alpha Gemstone NY Inc. All Rights
             Reserved.
           </p>
 

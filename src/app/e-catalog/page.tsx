@@ -7,7 +7,7 @@ const page = () => {
       <p>
         Explore our digital product catalogs featuring the latest
         jewelry, diamonds, and gemstone collections from
-        Alpha Imports NY Inc.
+        Alpha Gemstone NY Inc.
       </p>
 
       {/* Catalog Features */}

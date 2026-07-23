@@ -10,7 +10,7 @@
 import type { ShippingAddress, PackageDimensions } from '@/types/shipping';
 
 export const STORE_ORIGIN: ShippingAddress = {
-  fullName:   'Alpha Imports Fulfilment',
+  fullName:   'Alpha Gemstone Fulfilment',
   street1:    process.env.STORE_STREET1  ?? '123 Diamond Way',
   city:       process.env.STORE_CITY     ?? 'New York',
   state:      process.env.STORE_STATE    ?? 'NY',

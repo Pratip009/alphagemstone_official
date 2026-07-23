@@ -188,7 +188,7 @@ export default function BlogsPage() {
             The Alpha Blog
           </h1>
           <p className="text-[0.9rem] text-[#8a8278] max-w-xl mx-auto leading-relaxed">
-            Expert insights on gemstones, diamonds, watches, and fine jewellery from the Alpha Imports team.
+            Expert insights on gemstones, diamonds, watches, and fine jewellery from the Alpha Gemstone team.
           </p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#c9a84c]/50" />

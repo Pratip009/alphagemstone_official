@@ -35,7 +35,7 @@ const page = () => {
       {/* Additional Info */}
       <div className="rounded-2xl border border-[#e8e2d9] bg-[#fffdf9] p-6">
         <h3 className="text-xl font-semibold text-[#1a1714] mb-3">
-          Partner With Alpha Imports
+          Partner With Alpha Gemstone
         </h3>
 
         <p className="leading-8 text-[#4d463f]">

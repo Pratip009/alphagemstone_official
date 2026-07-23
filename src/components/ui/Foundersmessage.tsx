@@ -121,7 +121,7 @@ export default function FoundersMessage() {
                       zIndex: 1,
                     }}
                   >
-                    Welcome to Alpha Imports NY Inc.
+                    Welcome to Alpha Gemstone NY Inc.
 Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fine jewelry with exceptional value, honesty, and personal service. What began as a family passion has grown into a trusted international business serving jewelers, designers, collectors, wholesalers, and jewelry lovers around the world.
                   </p>
                 </div>
@@ -138,7 +138,7 @@ Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fin
                   letterSpacing: "0.01em",
                 }}
               >
-                At Alpha Imports, we believe luxury should be exciting, affordable, and accessible. Our new website combines modern technology, faster browsing, advanced search tools, and secure ordering while maintaining the personal attention and trust our customers have valued for decades.
+                At Alpha Gemstone, we believe luxury should be exciting, affordable, and accessible. Our new website combines modern technology, faster browsing, advanced search tools, and secure ordering while maintaining the personal attention and trust our customers have valued for decades.
               </p>
 
               <p
@@ -163,7 +163,7 @@ Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fin
                   letterSpacing: "0.01em",
                 }}
               >
-                Thank you for visiting Alpha Imports. We truly appreciate your trust and look forward to serving you for many years to come.
+                Thank you for visiting Alpha Gemstone. We truly appreciate your trust and look forward to serving you for many years to come.
               </p>
 
               {/* Signature block */}
@@ -198,7 +198,7 @@ Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fin
                       marginTop: "3px",
                     }}
                   >
-                    Founder &amp; CEO, Alpha Imports
+                    Founder &amp; CEO, Alpha Gemstone
                   </p>
                 </div>
               </div>
@@ -236,7 +236,7 @@ Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fin
               >
                 <Image
                   src="/images/founder.JPG"
-                  alt="Balu Khatod, Founder of Alpha Imports"
+                  alt="Balu Khatod, Founder of Alpha Gemstone"
                   fill
                   className="object-cover object-top"
                   style={{ zIndex: 1 }}

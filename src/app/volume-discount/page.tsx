@@ -5,7 +5,7 @@ const page = () => {
     <FooterPageLayout title="Volume Discount Program">
 
       <p>
-        Alpha Imports NY Inc. offers special pricing programs for
+        Alpha Gemstone NY Inc. offers special pricing programs for
         wholesale customers and large quantity purchases.
       </p>
 

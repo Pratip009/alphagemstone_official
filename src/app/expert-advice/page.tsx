@@ -5,7 +5,7 @@ const page = () => {
     <FooterPageLayout title="Expert Advice">
 
       <p>
-        Alpha Imports NY Inc. provides professional guidance and
+        Alpha Gemstone NY Inc. provides professional guidance and
         personalized assistance for customers, jewelers, designers,
         and wholesale buyers worldwide.
       </p>

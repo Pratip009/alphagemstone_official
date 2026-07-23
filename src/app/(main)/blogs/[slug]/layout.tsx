@@ -17,7 +17,7 @@ export async function generateMetadata(
     const url         = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/blogs/${slug}`;
 
     return {
-      title:       `${title} | Alpha Imports Blog`,
+      title:       `${title} | Alpha Gemstone Blog`,
       description,
       alternates:  { canonical: url },
       openGraph: {
@@ -38,7 +38,7 @@ export async function generateMetadata(
       },
     };
   } catch {
-    return { title: 'Alpha Imports Blog' };
+    return { title: 'Alpha Gemstone Blog' };
   }
 }
 

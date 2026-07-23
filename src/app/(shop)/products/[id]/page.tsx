@@ -89,7 +89,7 @@ export async function generateMetadata({
   const raw = await getCachedProduct(id);
 
   if (!raw) {
-    return { title: "Product Not Found | Alpha Imports" };
+    return { title: "Product Not Found | Alpha Gemstone" };
   }
 
   const p = raw as unknown as ProductDoc;
@@ -98,10 +98,10 @@ export async function generateMetadata({
     ? p.description.trim().slice(0, 160)
     : `Shop ${p.name}${
         p.category?.name ? ` — ${p.category.name}` : ""
-      } at Alpha Imports, offering fine diamonds, gemstones & jewelry.`;
+      } at Alpha Gemstone, offering fine diamonds, gemstones & jewelry.`;
 
   return {
-    title: `${p.name} | Alpha Imports`,
+    title: `${p.name} | Alpha Gemstone`,
     description,
   };
 }

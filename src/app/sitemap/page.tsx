@@ -23,7 +23,7 @@ export default function SitemapPage() {
     <FooterPageLayout title="Sitemap">
 
       <p>
-        Browse all public pages available on Alpha Imports NY Inc.
+        Browse all public pages available on Alpha Gemstone NY Inc.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -82,7 +82,7 @@ export default function AlphaImportsSection() {
                   color: "#B4912C",
                 }}
               >
-                Alpha Imports
+                Alpha Gemstone
               </span>
             </span>
 
@@ -131,7 +131,7 @@ export default function AlphaImportsSection() {
               Available in more than{" "}
               <span style={{ color: "#8A6820", fontWeight: 500 }}>15 luminous shades</span>{" "}
               — a stunning diamond ring, necklace, bracelet, or pair of earrings from
-              Alpha Imports is certain to leave any special person in your life speechless.
+              Alpha Gemstone is certain to leave any special person in your life speechless.
             </p>
 
             {/* CTA row */}

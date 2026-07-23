@@ -40,8 +40,8 @@ async function sendOtpEmail(
 ): Promise<void> {
   const subject =
     purpose === 'signup'
-      ? 'Your Alpha Imports verification code'
-      : 'Reset your Alpha Imports password';
+      ? 'Your Alpha Gemstone verification code'
+      : 'Reset your Alpha Gemstone password';
 
   // console.log('[sendOtpEmail] Preparing to send:', { to: email, from: FROM, subject });
   // console.log('[sendOtpEmail] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
@@ -160,7 +160,7 @@ export async function verifySignupOtp(
   void resend.emails.send({
     from: FROM,
     to: normalizedEmail,
-    subject: `Welcome to Alpha Imports`,
+    subject: `Welcome to Alpha Gemstone`,
     html: welcomeEmailHtml(record.pendingName),
   });
 

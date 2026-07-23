@@ -16,7 +16,7 @@ import { Analytics } from "@vercel/analytics/next"
 export const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
 
-const SITE_NAME = "Alpha Imports";
+const SITE_NAME = "Alpha Gemstone";
 const OG_IMAGE = `${BASE_URL}/og-image.png`;
 
 const FALLBACK_DESCRIPTION =
@@ -31,7 +31,7 @@ const BASE_KEYWORDS = [
   "sapphires",
   "rubies",
   "emeralds",
-  "Alpha Imports",
+  "Alpha Gemstone",
 ];
 
 /**

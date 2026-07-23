@@ -6,7 +6,7 @@ const page = () => {
 
       <p>
         Join our mailing list to receive exclusive offers, new product
-        announcements, and the latest updates from Alpha Imports NY Inc.
+        announcements, and the latest updates from Alpha Gemstone NY Inc.
       </p>
 
       {/* Benefits */}

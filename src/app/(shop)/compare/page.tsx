@@ -12,7 +12,7 @@ export default function ComparePage() {
     <div className="page-container">
       <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 40px' }}>
         <p className="section-subtitle" style={{ marginBottom: 10 }}>
-          Alpha Imports Tools
+          Alpha Gemstone Tools
         </p>
         <h1 className="font-display" style={{ fontSize: '2rem', marginBottom: 14 }}>
           Compare Stones

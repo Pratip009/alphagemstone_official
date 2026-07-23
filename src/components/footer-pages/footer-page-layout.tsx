@@ -38,7 +38,7 @@ export default function FooterPageLayout({
           <div className="relative max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
 
             <p className="uppercase tracking-[0.35em] text-[11px] font-bold text-[#c9a84c] mb-5">
-              Alpha Imports NY Inc.
+              Alpha Gemstone NY Inc.
             </p>
 
             <h1 className="font-serif text-4xl md:text-6xl text-[#1a1714] leading-tight mb-6">

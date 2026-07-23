@@ -5,7 +5,7 @@ export default function PrivacyPolicyPage() {
     <FooterPageLayout title="Privacy Policy">
 
       <p>
-        At Alpha Imports NY Inc., we respect your privacy and are committed
+        At Alpha Gemstone NY Inc., we respect your privacy and are committed
         to protecting your personal information.
       </p>
 

@@ -460,7 +460,7 @@ function ContactPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
         <InfoCard icon={MapPin} title="Our Location">
-          <p className="text-[0.82rem] font-semibold text-ink-dark mb-0.5">Alpha Imports NY Inc.</p>
+          <p className="text-[0.82rem] font-semibold text-ink-dark mb-0.5">Alpha Gemstone NY Inc.</p>
           <p className="text-[0.74rem] text-ink-muted">Raleigh, North Carolina, USA</p>
         </InfoCard>
 
@@ -568,7 +568,7 @@ export default function InfoPage() {
         <div className="relative flex items-center justify-center gap-2.5 mb-4">
           <Gem size={16} strokeWidth={1.5} className="text-gold" />
           <span className="font-serif text-xl tracking-wide text-cream-warm font-semibold">
-            Alpha Imports
+            Alpha Gemstone
           </span>
         </div>
         <h1 className="relative font-serif text-[clamp(1.8rem,4vw,2.6rem)] font-bold text-cream-warm tracking-tight mb-2">
@@ -614,7 +614,7 @@ export default function InfoPage() {
       {/* ── Footer Strip ── */}
       <footer className="bg-ink-dark py-5 text-center">
         <p className="text-[0.62rem] text-ink-soft">
-          © {new Date().getFullYear()} Alpha Imports NY Inc. All Rights Reserved. ·{' '}
+          © {new Date().getFullYear()} Alpha Gemstone NY Inc. All Rights Reserved. ·{' '}
           <a href="https://www.alphaimports.com" className="hover:text-gold transition-colors">
             alphaimports.com
           </a>

@@ -7,7 +7,7 @@ const page = () => {
       <p>
         Explore educational resources and expert information about
         diamonds, gemstones, jewelry care, and industry knowledge
-        through the Alpha Imports Learning Center.
+        through the Alpha Gemstone Learning Center.
       </p>
 
       {/* Educational Topics */}

@@ -184,7 +184,7 @@ export default function CookieConsent() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    Alpha Imports · Cookie Preferences
+                    Alpha Gemstone · Cookie Preferences
                   </p>
                 </div>
               </div>

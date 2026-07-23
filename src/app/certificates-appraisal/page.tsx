@@ -5,7 +5,7 @@ const page = () => {
     <FooterPageLayout title="Certificates & Appraisal">
 
       <p>
-        Selected products from Alpha Imports NY Inc. may include
+        Selected products from Alpha Gemstone NY Inc. may include
         professional certification and appraisal documentation
         for added confidence and authenticity.
       </p>

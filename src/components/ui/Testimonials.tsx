@@ -10,7 +10,7 @@ const testimonials = [
     gemBg: "rgba(120,30,30,0.55)",
     gemText: "#ffb5b5",
     quote:
-      "The 4.2ct Burmese ruby I acquired through Alpha Imports is nothing short of extraordinary. Their gemologists provided certification that matched every facet of the stone's provenance — a truly rare find from a house that understands rarity.",
+      "The 4.2ct Burmese ruby I acquired through Alpha Gemstone is nothing short of extraordinary. Their gemologists provided certification that matched every facet of the stone's provenance — a truly rare find from a house that understands rarity.",
     photo: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=1200&q=85&fit=crop",
     avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=160&q=80&fit=crop&crop=face",
   },
@@ -22,7 +22,7 @@ const testimonials = [
     gemBg: "rgba(25,50,110,0.55)",
     gemText: "#a8c0f5",
     quote:
-      "I have sourced stones from dealers across four continents. Alpha Imports consistently delivers what others only promise — transparency, impeccable grading, and stones that stop you mid-breath. Their Kashmir sapphires are beyond compare.",
+      "I have sourced stones from dealers across four continents. Alpha Gemstone consistently delivers what others only promise — transparency, impeccable grading, and stones that stop you mid-breath. Their Kashmir sapphires are beyond compare.",
     photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=85&fit=crop",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&q=80&fit=crop&crop=face",
   },
@@ -34,7 +34,7 @@ const testimonials = [
     gemBg: "rgba(12,55,32,0.55)",
     gemText: "#7de0aa",
     quote:
-      "When designing our haute joaillerie collection, only the finest emeralds would suffice. Alpha Imports sourced seven matched Colombian emeralds with identical saturation — something I thought impossible. They made our entire season.",
+      "When designing our haute joaillerie collection, only the finest emeralds would suffice. Alpha Gemstone sourced seven matched Colombian emeralds with identical saturation — something I thought impossible. They made our entire season.",
     photo: "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=1200&q=85&fit=crop",
     avatar: "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=160&q=80&fit=crop&crop=face",
   },
@@ -46,7 +46,7 @@ const testimonials = [
     gemBg: "rgba(80,56,0,0.55)",
     gemText: "#f5d97a",
     quote:
-      "For our Geneva auction we required a 3ct+ Fancy Vivid Yellow — flawless provenance, GIA certified. Alpha Imports delivered within a week. The stone achieved 340% of its reserve. Their network is unparalleled in the trade.",
+      "For our Geneva auction we required a 3ct+ Fancy Vivid Yellow — flawless provenance, GIA certified. Alpha Gemstone delivered within a week. The stone achieved 340% of its reserve. Their network is unparalleled in the trade.",
     photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&q=85&fit=crop",
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&q=80&fit=crop&crop=face",
   },
@@ -58,7 +58,7 @@ const testimonials = [
     gemBg: "rgba(80,22,55,0.55)",
     gemText: "#f5a8d0",
     quote:
-      "My engagement ring features a 1.8ct Argyle pink diamond from Alpha Imports. The team walked me through every aspect — origin, grading, setting possibilities. It is the most beautiful object I have ever owned.",
+      "My engagement ring features a 1.8ct Argyle pink diamond from Alpha Gemstone. The team walked me through every aspect — origin, grading, setting possibilities. It is the most beautiful object I have ever owned.",
     photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&q=85&fit=crop",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&q=80&fit=crop&crop=face",
   },

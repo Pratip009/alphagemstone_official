@@ -769,7 +769,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <span className="auth-left-logo-text">Alpha Imports</span>
+              <span className="auth-left-logo-text">Alpha Gemstone</span>
               <span className="auth-left-logo-sub">Fine Gemstones</span>
             </div>
           </div>
@@ -830,7 +830,7 @@ export default function LoginPage() {
                   />
                 </svg>
               </div>
-              <span className="auth-mobile-brand-text">Alpha Imports</span>
+              <span className="auth-mobile-brand-text">Alpha Gemstone</span>
             </div>
 
             <h1 className="auth-heading">Welcome back</h1>

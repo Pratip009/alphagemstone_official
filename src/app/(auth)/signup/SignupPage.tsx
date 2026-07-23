@@ -312,7 +312,7 @@ export default function SignupPage() {
               </svg>
             </div>
             <div>
-              <span className="auth-left-logo-text">Alpha Imports</span>
+              <span className="auth-left-logo-text">Alpha Gemstone</span>
               <span className="auth-left-logo-sub">Fine Gemstones</span>
             </div>
           </div>
@@ -359,14 +359,14 @@ export default function SignupPage() {
                   />
                 </svg>
               </div>
-              <span className="auth-mobile-brand-text">Alpha Imports</span>
+              <span className="auth-mobile-brand-text">Alpha Gemstone</span>
             </div>
 
             {step === "form" ? (
               <>
                 <h1 className="auth-heading">Create account</h1>
                 <p className="auth-subheading">
-                  Join Alpha Imports — we'll verify your email
+                  Join Alpha Gemstone — we'll verify your email
                 </p>
 
                 <form onSubmit={handleFormSubmit}>

@@ -1132,7 +1132,7 @@ useEffect(() => {
               letterSpacing: "0.01em",
             }}
           >
-            Alpha Imports
+            Alpha Gemstone
           </span>
         </div>
 
