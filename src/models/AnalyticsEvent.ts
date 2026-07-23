@@ -102,7 +102,7 @@ const AnalyticsEventSchema = new Schema<IAnalyticsEvent>(
 
     metadata: { type: Schema.Types.Mixed, default: {} },
 
-    timestamp: { type: Date, default: Date.now, index: true },
+    timestamp: { type: Date, default: Date.now,},
   },
   { timestamps: true }
 );
