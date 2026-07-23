@@ -6,7 +6,7 @@ import "./global.css";
 import CookieConsent from "@/components/ui/Cookieconsent";
 import HomeOnlyWidgets from "./HomeOnlyWidgets";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-
+import { Analytics } from "@vercel/analytics/next"
 // Every other data-facing module in this codebase (newsletter service, email
 // templates, blog metadata) resolves the canonical origin from
 // NEXT_PUBLIC_SITE_URL and falls back to https://alphagemstone-official-two.vercel.app/. The old
@@ -239,6 +239,7 @@ export default async function RootLayout({
         </Providers>
         <CookieConsent />
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
