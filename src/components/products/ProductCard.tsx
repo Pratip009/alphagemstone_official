@@ -620,7 +620,61 @@ export default function ProductCard({
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(0.7); }
         }
+/* ── Tablets ──────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .apc-mat { width: 74%; }
+  .apc-name { font-size: 17px; }
+  .apc-particulars { gap: 6px 10px; }
+  .apc-price { font-size: 20px; }
+}
 
+/* ── Phones ───────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .apc-card { border-radius: 10px; }
+
+  .apc-lot-row { padding: 6px 10px; font-size: 9px; }
+
+  .apc-mat-wrap { padding: 0 10px 8px; }
+  .apc-mat { width: 82%; border-radius: 6px; }
+
+  .apc-stock-tag { top: 6px; left: 6px; font-size: 8.5px; padding: 2px 6px; }
+  .apc-ribbon { top: 8px; left: 8px; font-size: 8.5px; padding: 3px 7px; }
+  .apc-wishlist { top: 6px; right: 6px; }
+  /* Hover-only affordance — there's no hover on touch, so it can
+     never be reached here. Keeping it in the DOM but hidden avoids
+     wasting layout/paint on something that will never be seen. */
+  .apc-reveal { display: none; }
+
+  .apc-body { padding: 0 10px 10px; }
+  .apc-kicker { font-size: 9px; }
+  .apc-name { font-size: 15px; margin-top: 3px; -webkit-line-clamp: 2; }
+  .apc-subtitle { font-size: 11.5px; }
+
+  /* Two label/value columns get uncomfortably tight once the card
+     itself is only ~150-180px wide in a 2-up mobile grid — stack
+     them instead of shrinking text past a readable size. */
+  .apc-particulars {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+  .apc-p-label { font-size: 9px; }
+  .apc-p-value { font-size: 12px; }
+
+  /* Price + availability no longer fit on one line at this width
+     without truncating one of them — stack instead of squeezing. */
+  .apc-price-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  .apc-price { font-size: 18px; }
+  .apc-price sup { font-size: 9px; }
+  .apc-avail { font-size: 10.5px; }
+}
         @media (prefers-reduced-motion: reduce) {
           .apc-card, .apc-photo, .apc-reveal { transition: none !important; }
           .apc:hover .apc-card, .apc:focus-visible .apc-card { transform: none !important; }
