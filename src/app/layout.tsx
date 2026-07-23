@@ -9,12 +9,12 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next"
 // Every other data-facing module in this codebase (newsletter service, email
 // templates, blog metadata) resolves the canonical origin from
-// NEXT_PUBLIC_SITE_URL and falls back to https://alphagemstone-official-two.vercel.app/. The old
+// NEXT_PUBLIC_SITE_URL and falls back to https://www.alphagemstone.com/. The old
 // hardcoded gmstone-new-2026.vercel.app preview URL here meant canonical
 // links, Open Graph tags, and JSON-LD were all pointing search engines at a
 // staging deployment instead of the real production domain — fixed below.
 export const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://alphagemstone-official-two.vercel.app/";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
 
 const SITE_NAME = "Alpha Imports";
 const OG_IMAGE = `${BASE_URL}/og-image.png`;
