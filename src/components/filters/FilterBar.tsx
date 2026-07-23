@@ -24,7 +24,7 @@ interface CategoryWithSubs {
   _id: string;
   name: string;
   slug: string;
-  subcategories: { _id: string; name: string; slug: string }[];
+  subcategories: { _id: string; name: string; slug: string; image?: string }[];
 }
 
 interface FilterBarProps {
@@ -56,20 +56,21 @@ const PRICE_BRACKETS = [
   { label: 'Over $50,000', min: '50000', max: '' },
 ];
 
-const ACCENT = {
-  border: 'border-[#0f3460]/25',
-  borderHover: 'hover:border-[#7c3aed]/60',
-  from: 'from-[#f5f3ff]',
-  text: 'text-[#1a1a2e]',
-  dot: 'bg-[#0f3460]',
-  badge: 'bg-[#0f3460]',
-  solid: 'bg-[#0f3460]',
-  chipActive: 'bg-[#0f3460] border-[#0f3460] text-white',
-  ring: 'focus:ring-[#c4b5fd]',
-  track: 'bg-[#7c3aed]/25',
-  handle: 'border-[#0f3460]',
-  checkedBorder: 'border-[#0f3460]',
-  swatchRing: 'ring-[#7c3aed]',
+/* ---------------------------------------------------------------------- */
+/*  Design tokens — quiet ink + brushed-brass palette, tuned for a fine    */
+/*  jewelry / watch marketplace instead of a generic purple admin theme.  */
+/* ---------------------------------------------------------------------- */
+const T = {
+  ink: '#161513',
+  inkSoft: '#57534e',
+  paper: '#ffffff',
+  line: '#e7e3db',
+  lineStrong: '#d8d2c4',
+  gold: '#9c7a3c',
+  goldDeep: '#7c5f2c',
+  goldSoft: '#f3ead3',
+  goldFaint: '#faf6ea',
+  clear: '#8a3b32',
 };
 
 export default function FilterBar({ productType = 'diamond', facets, categories: categoriesProp }: FilterBarProps) {
@@ -110,7 +111,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
           _id: c._id,
           name: c.name,
           slug: c.slug,
-          subcategories: (c.subcategories ?? []).map((s: any) => ({ _id: s._id, name: s.name, slug: s.slug })),
+          subcategories: (c.subcategories ?? []).map((s: any) => ({ _id: s._id, name: s.name, slug: s.slug, image: s.imageUrl ?? s.image })),
         }));
         if (!cancelled) {
           setCategories(list);
@@ -253,67 +254,110 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
   const expandedCategoryData = categories.find((c) => c.slug === expandedCategory);
 
+  const modeIndex = mode === 'diamond' ? 0 : mode === 'gemstone' ? 1 : 2;
+
   return (
-    <div className="sticky z-40 w-full bg-white shadow-sm" style={{ fontFamily: '"Elms Sans", sans-serif', top: 'var(--navbar-height, 64px)' }}>
+    <div
+      className="sticky z-40 w-full border-b"
+      style={{ fontFamily: '"Elms Sans", sans-serif', top: 'var(--navbar-height, 64px)', backgroundColor: T.paper, borderColor: T.line }}
+    >
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-6">
         {/* Tabs + Clear All */}
-        <div className="flex flex-wrap items-center justify-between gap-3 py-3">
-          <div className="flex rounded-xl overflow-hidden border-2 border-gray-200 bg-white shrink-0 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 pb-3">
+          <div className="relative flex w-full max-w-[22rem] rounded-full p-1 shrink-0" style={{ backgroundColor: T.goldFaint, border: `1px solid ${T.line}` }}>
+            <div
+              className="absolute top-1 bottom-1 rounded-full shadow-sm transition-transform duration-300 ease-out"
+              style={{ width: 'calc(33.333% - 4px)', left: '2px', backgroundColor: T.ink, transform: `translateX(${modeIndex * 100}%)` }}
+            />
             <TabButton active={mode === 'diamond'} onClick={() => switchMode('diamond')} icon={<DiamondIcon active={mode === 'diamond'} />} label="Diamonds" />
-            <div className="w-px bg-gray-200" />
             <TabButton active={mode === 'gemstone'} onClick={() => switchMode('gemstone')} icon={<GemstoneIcon active={mode === 'gemstone'} />} label="Gemstones" />
-            <div className="w-px bg-gray-200" />
             <TabButton active={mode === 'watch'} onClick={() => switchMode('watch')} icon={<WatchIcon active={mode === 'watch'} />} label="Watches" />
           </div>
 
           <div className="flex items-center gap-3 ml-auto shrink-0">
             {hasActiveFilters ? (
-              <button onClick={clearAll} className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.1em] uppercase text-white bg-[#e11d48] px-3 py-1.5 rounded-full shadow-sm hover:bg-[#be123c] hover:shadow-md transition-all duration-150">
+              <button
+                onClick={clearAll}
+                className="flex items-center gap-2 text-[10px] font-bold tracking-[0.14em] uppercase text-white px-3.5 py-2 rounded-full shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-px"
+                style={{ backgroundColor: T.clear }}
+              >
                 Clear all
-                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-white text-[#e11d48] text-[9px] font-bold">{activeFilterCount}</span>
+                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-white text-[9px] font-bold" style={{ color: T.clear }}>{activeFilterCount}</span>
               </button>
             ) : (
-              <span className="text-[9px] tracking-[0.35em] uppercase font-bold text-[#7c3aed]">Refine your search</span>
+              <span className="text-[9px] tracking-[0.32em] uppercase font-semibold" style={{ color: T.gold }}>Refine your search</span>
             )}
           </div>
         </div>
 
         {/* Categories */}
         {!categoriesLoading && categories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pb-3 -mt-1">
-            {categories.map((cat) => (
-              <button
-                key={cat._id}
-                onClick={() => selectCategory(cat.slug)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-[0.08em] uppercase border-2 transition-all duration-150 ${
-                  activeCategorySlug === cat.slug ? `${ACCENT.chipActive} shadow-md` : `bg-white text-gray-500 border-gray-200 ${ACCENT.borderHover} hover:text-[#7c3aed]}`
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 pb-3">
+            {categories.map((cat) => {
+              const active = activeCategorySlug === cat.slug;
+              return (
+                <button
+                  key={cat._id}
+                  onClick={() => selectCategory(cat.slug)}
+                  className="relative px-4 py-1.5 rounded-full text-[10.5px] font-bold tracking-[0.06em] uppercase border transition-all duration-200"
+                  style={active
+                    ? { backgroundColor: T.ink, borderColor: T.ink, color: '#fff' }
+                    : { backgroundColor: '#fff', borderColor: T.line, color: T.inkSoft }}
+                >
+                  {cat.name}
+                  {active && (
+                    <span className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rotate-45" style={{ backgroundColor: T.gold }} />
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {/* Subcategories */}
+        {/* Subcategories — shown as image roundels, boutique lookbook style */}
         {expandedCategoryData && expandedCategoryData.subcategories.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pb-3 pl-3 border-l-4 border-[#c4b5fd] ml-1 -mt-1 animate-[fadeIn_150ms_ease-out]">
-            {expandedCategoryData.subcategories.map((sub) => (
-              <button
-                key={sub._id}
-                onClick={() => selectSubcategory(expandedCategoryData.slug, sub.slug)}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-[0.04em] border-2 transition-all duration-150 ${
-                  activeSubcategorySlug === sub.slug ? 'bg-[#7c3aed] text-white border-[#7c3aed] shadow-sm' : 'text-[#7c3aed] border-[#ede9fe] bg-[#f5f3ff]/60 hover:border-[#c4b5fd]'
-                }`}
-              >
-                {sub.name}
-              </button>
-            ))}
+         <div className="flex flex-wrap items-start gap-x-6 gap-y-4 pb-4 pt-1" style={{ borderTop: `1px dashed ${T.line}` }}>
+            {expandedCategoryData.subcategories.map((sub) => {
+              const active = activeSubcategorySlug === sub.slug;
+              return (
+                <button
+                  key={sub._id}
+                  onClick={() => selectSubcategory(expandedCategoryData.slug, sub.slug)}
+                  className="flex flex-col items-center gap-1.5 shrink-0 group mt-2"
+                >
+                  <span
+                    className="relative w-16 h-16 rounded-full overflow-hidden transition-all duration-200"
+                    style={{
+                      padding: active ? 2 : 0,
+                      border: active ? `2px solid ${T.gold}` : `1px solid ${T.line}`,
+                      boxShadow: active ? '0 4px 14px rgba(156,122,60,0.28)' : 'none',
+                    }}
+                  >
+                    {sub.image ? (
+                      <img src={sub.image} alt={sub.name} className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                      <span
+                        className="w-full h-full flex items-center justify-center rounded-full text-sm font-bold"
+                        style={{ background: `linear-gradient(135deg, ${T.goldSoft}, ${T.line})`, color: T.ink }}
+                      >
+                        {sub.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold whitespace-nowrap max-w-[4.5rem] truncate transition-colors"
+                    style={{ color: active ? T.ink : T.inkSoft }}
+                  >
+                    {sub.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
         {/* Filters Container */}
-        <div className="flex flex-wrap items-start gap-3 pb-4 lg:flex-col lg:flex-nowrap lg:items-stretch">
+        <div className="flex flex-wrap items-start gap-3 pb-5 lg:flex-col lg:flex-nowrap lg:items-stretch">
           {/* === Price + Carat + Availability in ONE ROW === */}
           <div className="flex flex-wrap items-start gap-3 lg:flex-row lg:flex-nowrap lg:w-full">
             <FilterCard label="Price" collapsed={!!collapsed.price} onToggle={() => toggleCollapsed('price')} active={!!(priceMin || priceMax)}>
@@ -324,9 +368,10 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                     <button
                       key={label}
                       onClick={() => applyPriceBracket(min, max)}
-                      className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[10.5px] border-2 transition-all duration-150 ${
-                        isActive ? `${ACCENT.solid} text-white border-transparent font-semibold` : 'text-gray-500 border-gray-200 hover:border-[#c4b5fd] hover:text-[#7c3aed]'
-                      }`}
+                      className="whitespace-nowrap px-2.5 py-1 rounded-full text-[10.5px] border transition-all duration-150"
+                      style={isActive
+                        ? { backgroundColor: T.ink, borderColor: T.ink, color: '#fff', fontWeight: 600 }
+                        : { color: T.inkSoft, borderColor: T.line }}
                     >
                       {label}
                     </button>
@@ -425,7 +470,6 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
           {mode === 'watch' && (
             <>
-              {/* Watch filters remain unchanged */}
               <FilterCard label="Gender" collapsed={!!collapsed.gender} onToggle={() => toggleCollapsed('gender')} active={!!activeWatchGender}>
                 <div className="flex flex-wrap gap-2 max-w-[14rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                   {dedupe(WATCH_GENDERS).map((g) => (
@@ -465,7 +509,31 @@ function WatchIcon({ active }: { active: boolean }) {
   return <svg width="11" height="11" viewBox="0 0 18 18" fill="none" style={{ color: active ? 'white' : 'currentColor' }}><circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.4" /><path d="M9 6v3l2 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /><rect x="7" y="1.5" width="4" height="2" rx="0.5" stroke="currentColor" strokeWidth="1" /><rect x="7" y="14.5" width="4" height="2" rx="0.5" stroke="currentColor" strokeWidth="1" /></svg>;
 }
 
-const SHAPE_PATHS: Record<string, string> = { /* ... your shape paths ... */ };
+const SHAPE_PATHS: Record<string, string> = {
+  round:            'M9 2.2a6.8 6.8 0 1 0 0 13.6 6.8 6.8 0 0 0 0-13.6zM9 4.2v9.6M4.2 9h9.6M5.6 5.6l6.8 6.8M12.4 5.6l-6.8 6.8',
+  oval:             'M9 1.8c3.6 0 5.6 3.2 5.6 7.2s-2 7.2-5.6 7.2S3.4 13 3.4 9 5.4 1.8 9 1.8z M9 1.8v14.4M3.4 9h11.2',
+  princess:         'M2.5 2.5h13v13h-13z M2.5 2.5l6.5 6.5 6.5-6.5 M2.5 15.5l6.5-6.5 6.5 6.5',
+  cushion:          'M9 2.3c3.9 0 6.7 2.8 6.7 6.7s-2.8 6.7-6.7 6.7-6.7-2.8-6.7-6.7 2.8-6.7 6.7-6.7z M9 4.6v8.8M4.6 9h8.8',
+  emerald:          'M4 2.5h10l2.5 2.5v8l-2.5 2.5H4L1.5 13V5z M1.5 5h15M1.5 13h15M4 2.5v13M14 2.5v13',
+  pear:             'M9 1.6c1.8 2.2 4.6 4.9 4.6 8.2a4.6 4.6 0 1 1-9.2 0c0-3.3 2.8-6 4.6-8.2z',
+  marquise:         'M9 1.5C11.5 4 15 6.3 15 9s-3.5 5-6 7.5C6.5 14 3 11.7 3 9s3.5-5 6-7.5z M9 1.5v15',
+  radiant:          'M3.2 2.5h11.6l1.7 1.7v9.6l-1.7 1.7H3.2l-1.7-1.7V4.2z M9 2.5v13M1.5 9h15',
+  asscher:          'M3.6 2.5h10.8l2.1 2.1v8.8l-2.1 2.1H3.6l-2.1-2.1V4.6z M9 2.5v13M2.5 9h13',
+  heart:            'M9 15.5S2 10.8 2 6.4A3.6 3.6 0 0 1 9 5a3.6 3.6 0 0 1 7 1.4c0 4.4-7 9.1-7 9.1z',
+
+  trillion:         'M9 1.8c3 3 6.5 6.4 6.5 12.3H2.5C2.5 8.2 6 4.8 9 1.8z M9 1.8v12.3M2.5 14.1h13',
+  triangle:         'M9 2L16 15.5H2z M9 2v13.5M4.7 15.5l4.3-6.7 4.3 6.7',
+  baguette:         'M4 5h10v8H4z M4 9h10',
+  'tapered-baguette': 'M6.2 5h5.6l1.8 8H4.4z M4.4 13h9.2',
+  bullet:           'M4 5h4.5a3.5 4 0 0 1 3.5 4 3.5 4 0 0 1-3.5 4H4z M4 9h4.5',
+  kite:             'M9 1.5L15 9L9 16.5L3 9Z M9 1.5v15M3 9h12',
+  hexagon:          'M6.2 2h5.6l3.7 7-3.7 7H6.2l-3.7-7z M2.5 9h13',
+  octagon:          'M6.5 2h5l3.5 3.5v7l-3.5 3.5h-5L3 12.5v-7z M3 9h12M9 2v14',
+  shield:           'M9 1.5c3 0 6 1 6 1v6c0 4-3 7-6 8-3-1-6-4-6-8v-6s3-1 6-1z',
+  'rose-cut':       'M9 2a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M9 2v14M2 9h14M4.5 4.5l9 9M13.5 4.5l-9 9',
+  cabochon:         'M2 9a7 5 0 1 0 14 0 7 5 0 1 0-14 0z',
+  other:            'M9 16L2 7l2.5-5h9L16 7z M2 7h14M9 16L5 7l4-5 4 5z',
+};
 
 function ShapeIcon({ shape }: { shape: string }) {
   const d = SHAPE_PATHS[shape];
@@ -487,7 +555,11 @@ function dialColorToHex(name: string) {
 /* Sub-components */
 function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button onClick={onClick} className={`flex items-center justify-center gap-1.5 px-3.5 py-2 text-[9px] font-bold tracking-[0.18em] uppercase transition-all duration-200 ${active ? 'bg-gray-700 text-white rounded-lg m-0.5 shadow-sm' : 'text-gray-700 hover:text-gray-800'}`}>
+    <button
+      onClick={onClick}
+      className="relative z-10 flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-[9.5px] font-bold tracking-[0.14em] uppercase transition-colors duration-200"
+      style={{ color: active ? '#fff' : T.inkSoft }}
+    >
       {icon}{label}
     </button>
   );
@@ -495,12 +567,22 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
 
 function FilterCard({ label, active, count, collapsed, onToggle, children }: { label: string; active?: boolean; count?: number; collapsed: boolean; onToggle: () => void; children: React.ReactNode }) {
   return (
-    <div className={`shrink-0 rounded-xl border-2 bg-white p-2.5 shadow-sm transition-all duration-150 lg:w-full lg:shrink ${active ? `${ACCENT.border} shadow-md` : `border-gray-100`}`}>
+    <div
+      className="shrink-0 rounded-2xl p-3 transition-all duration-150 lg:w-full lg:shrink"
+      style={{
+        backgroundColor: '#fff',
+        border: `1px solid ${active ? T.gold : T.line}`,
+        boxShadow: active ? '0 2px 10px rgba(156,122,60,0.14)' : '0 1px 2px rgba(22,21,19,0.03)',
+      }}
+    >
       <button onClick={onToggle} className="flex items-center gap-1.5 w-full mb-1.5">
-        <span className={`w-2 h-2 rounded-full ${ACCENT.dot} shrink-0`} />
-        <span className={`text-[10px] font-extrabold uppercase tracking-wider ${ACCENT.text} whitespace-nowrap`}>{label}</span>
-        {!!count && <span className={`flex items-center justify-center w-4 h-4 rounded-full ${ACCENT.badge} text-white text-[8px] font-bold`}>{count}</span>}
-        <svg width="9" height="9" viewBox="0 0 8 8" fill="none" className={`ml-auto shrink-0 transition-transform duration-150 ${ACCENT.text}`} style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}>
+        <span className="text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap" style={{ color: T.ink }}>{label}</span>
+        {!!count && (
+          <span className="flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-white text-[8px] font-bold" style={{ backgroundColor: T.gold }}>
+            {count}
+          </span>
+        )}
+        <svg width="9" height="9" viewBox="0 0 8 8" fill="none" className="ml-auto shrink-0 transition-transform duration-150" style={{ transform: collapsed ? 'rotate(-90deg)' : 'none', color: T.inkSoft }}>
           <path d="M1 2.5L4 5.5L7 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -511,7 +593,11 @@ function FilterCard({ label, active, count, collapsed, onToggle, children }: { l
 
 function ApplyButton({ onClick, small }: { onClick: () => void; small?: boolean }) {
   return (
-    <button onClick={onClick} className={small ? `px-4 py-1 text-[9px] font-bold tracking-[0.15em] uppercase rounded-md text-white ${ACCENT.solid} opacity-90 hover:opacity-100 transition-all duration-150` : `w-full py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase rounded-md text-white ${ACCENT.solid} opacity-90 hover:opacity-100 transition-all duration-150`}>
+    <button
+      onClick={onClick}
+      className={small ? 'px-4 py-1 text-[9px] font-bold tracking-[0.15em] uppercase rounded-full text-white transition-all duration-150 hover:opacity-90' : 'w-full py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase rounded-full text-white transition-all duration-150 hover:opacity-90'}
+      style={{ backgroundColor: T.ink }}
+    >
       Apply
     </button>
   );
@@ -520,39 +606,63 @@ function ApplyButton({ onClick, small }: { onClick: () => void; small?: boolean 
 function CheckItem({ label, count, checked, onChange }: { label: string; count?: number; checked: boolean; onChange: () => void }) {
   return (
     <label className="flex items-center gap-1.5 cursor-pointer group py-[3px] whitespace-nowrap">
-      <span className={`w-3.5 h-3.5 flex-shrink-0 rounded-[3px] border-2 flex items-center justify-center transition-all duration-150 ${checked ? `${ACCENT.dot} ${ACCENT.checkedBorder}` : `border-gray-200 bg-white ${ACCENT.borderHover}`}`}>
+      <span
+        className="w-3.5 h-3.5 flex-shrink-0 rounded-[4px] border flex items-center justify-center transition-all duration-150"
+        style={checked ? { backgroundColor: T.ink, borderColor: T.ink } : { borderColor: T.line, backgroundColor: '#fff' }}
+      >
         {checked && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><polyline points="1.5,4 3.2,5.8 6.5,2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
       </span>
       <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-      <span className={`text-[11px] transition-colors leading-snug capitalize ${checked ? `${ACCENT.text} font-semibold` : 'text-gray-500 group-hover:text-gray-800'}`}>{label}</span>
-      {count !== undefined && <span className="text-[10px] text-gray-400">{count}</span>}
+      <span className="text-[11px] transition-colors leading-snug capitalize" style={{ color: checked ? T.ink : T.inkSoft, fontWeight: checked ? 600 : 400 }}>{label}</span>
+      {count !== undefined && <span className="text-[10px]" style={{ color: T.inkSoft, opacity: 0.6 }}>{count}</span>}
     </label>
   );
 }
 
 function ShapeOption({ shape, count, checked, onChange }: { shape: string; count?: number; checked: boolean; onChange: () => void }) {
   return (
-    <button onClick={onChange} title={shape} className={`flex flex-col items-center gap-1 py-2 px-2 rounded-md border-2 transition-all duration-150 ${checked ? `border-[#7c3aed] ${ACCENT.from} ${ACCENT.text}` : `border-gray-100 text-gray-400 ${ACCENT.borderHover} hover:text-[#7c3aed]`}`}>
+    <button
+      onClick={onChange}
+      title={shape}
+      className="flex flex-col items-center gap-1 py-2 px-2 rounded-xl border transition-all duration-150"
+      style={checked ? { borderColor: T.gold, backgroundColor: T.goldFaint, color: T.ink } : { borderColor: T.line, color: T.inkSoft }}
+    >
       <ShapeIcon shape={shape} />
       <span className="text-[8.5px] uppercase tracking-[0.04em] leading-none capitalize whitespace-nowrap">{shape}</span>
-      {count !== undefined && <span className="text-[8px] text-gray-400">{count}</span>}
+      {count !== undefined && <span className="text-[8px]" style={{ opacity: 0.6 }}>{count}</span>}
     </button>
   );
 }
 
 function SwatchOption({ label, swatch, count, checked, onChange }: { label: string; swatch: string; count?: number; checked: boolean; onChange: () => void }) {
   return (
-    <button onClick={onChange} title={label} className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-md border-2 transition-all duration-150 ${checked ? `border-[#7c3aed] ${ACCENT.from}` : 'border-transparent hover:border-gray-200'}`}>
-      <span className={`w-5 h-5 rounded-full border ${checked ? `ring-2 ${ACCENT.swatchRing} ring-offset-1` : 'border-gray-200'}`} style={{ backgroundColor: swatch }} />
-      <span className="text-[8.5px] uppercase tracking-[0.04em] text-gray-500 leading-none capitalize whitespace-nowrap">{label}</span>
-      {count !== undefined && <span className="text-[8px] text-gray-400">{count}</span>}
+    <button
+      onClick={onChange}
+      title={label}
+      className="flex flex-col items-center gap-1 py-1.5 px-1 rounded-xl border transition-all duration-150"
+      style={checked ? { borderColor: T.gold, backgroundColor: T.goldFaint } : { borderColor: 'transparent' }}
+    >
+      <span
+        className="w-5 h-5 rounded-full border"
+        style={{ backgroundColor: swatch, borderColor: checked ? T.gold : T.line, boxShadow: checked ? `0 0 0 2px ${T.goldFaint}` : 'none' }}
+      />
+      <span className="text-[8.5px] uppercase tracking-[0.04em] leading-none capitalize whitespace-nowrap" style={{ color: T.inkSoft }}>{label}</span>
+      {count !== undefined && <span className="text-[8px]" style={{ color: T.inkSoft, opacity: 0.6 }}>{count}</span>}
     </button>
   );
 }
 
 function RangeInput({ placeholder, value, onChange, step = '1' }: { placeholder: string; value: string; onChange: (v: string) => void; step?: string }) {
   return (
-    <input type="number" placeholder={placeholder} step={step} value={value} onChange={(e) => onChange(e.target.value)} className={`w-0 min-w-0 flex-1 px-2 py-1.5 text-[11px] border-2 border-gray-200 rounded-md bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-gray-300 ${ACCENT.ring} focus:ring-2 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`} />
+    <input
+      type="number"
+      placeholder={placeholder}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-0 min-w-0 flex-1 px-2 py-1.5 text-[11px] rounded-lg outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      style={{ border: `1px solid ${T.line}`, backgroundColor: '#fff', color: T.ink }}
+    />
   );
 }
 
@@ -601,14 +711,14 @@ function RangeSlider({ min, max, step, valueMin, valueMax, onChange, formatLabel
 
   return (
     <div className="px-1 pt-1 pb-2 w-56">
-      <div className="flex justify-between text-[9px] text-gray-500 mb-2 font-medium">
+      <div className="flex justify-between text-[9px] mb-2 font-medium" style={{ color: T.inkSoft }}>
         <span>{formatLabel(valueMin)}</span>
         <span>{formatLabel(valueMax)}</span>
       </div>
-      <div ref={trackRef} className="relative h-1.5 rounded-full bg-gray-200">
-        <div className={`absolute h-1.5 rounded-full ${ACCENT.track}`} style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }} />
-        <div onMouseDown={() => { dragging.current = 'lo'; }} onTouchStart={() => { dragging.current = 'lo'; }} className={`absolute w-4 h-4 -mt-[7px] -ml-2 top-1/2 rounded-full bg-white border-2 cursor-pointer shadow ${ACCENT.handle}`} style={{ left: `${pct(valueMin)}%` }} />
-        <div onMouseDown={() => { dragging.current = 'hi'; }} onTouchStart={() => { dragging.current = 'hi'; }} className={`absolute w-4 h-4 -mt-[7px] -ml-2 top-1/2 rounded-full bg-white border-2 cursor-pointer shadow ${ACCENT.handle}`} style={{ left: `${pct(valueMax)}%` }} />
+      <div ref={trackRef} className="relative h-1.5 rounded-full" style={{ backgroundColor: T.line }}>
+        <div className="absolute h-1.5 rounded-full" style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%`, backgroundColor: T.gold, opacity: 0.5 }} />
+        <div onMouseDown={() => { dragging.current = 'lo'; }} onTouchStart={() => { dragging.current = 'lo'; }} className="absolute w-4 h-4 -mt-[7px] -ml-2 top-1/2 rounded-full bg-white border-2 cursor-pointer shadow" style={{ left: `${pct(valueMin)}%`, borderColor: T.gold }} />
+        <div onMouseDown={() => { dragging.current = 'hi'; }} onTouchStart={() => { dragging.current = 'hi'; }} className="absolute w-4 h-4 -mt-[7px] -ml-2 top-1/2 rounded-full bg-white border-2 cursor-pointer shadow" style={{ left: `${pct(valueMax)}%`, borderColor: T.gold }} />
       </div>
     </div>
   );
