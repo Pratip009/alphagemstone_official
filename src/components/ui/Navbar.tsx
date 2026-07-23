@@ -1830,27 +1830,27 @@ export default function Navbar({
              the dropdown never actually closed it. Now it schedules a
              close (same as leaving the tab) and also closes on click. */}
         <div
-          className={`mega-backdrop${openDropdown ? " visible" : ""}`}
-          onMouseEnter={schedulClose}
-          onClick={() => {
-            cancelOpen();
-            setOpenDropdown(null);
-          }}
-        />
-        {!loading &&
-          categories.map((cat, i) => {
-            if ((cat.subcategories?.length ?? 0) === 0) return null;
-            const isOpen = openDropdown === cat.slug;
-            return (
-              <div
-                key={cat._id}
-                className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
-                onMouseEnter={cancelClose}
-                onMouseLeave={() => {
-                  cancelOpen();
-                  schedulClose();
-                }}
-              >
+        className={`mega-backdrop${openDropdown ? " visible" : ""}`}
+        onMouseEnter={schedulClose}
+        onClick={() => {
+          cancelOpen();
+          setOpenDropdown(null);
+        }}
+      />
+      {!loading &&
+        categories.map((cat, i) => {
+          if ((cat.subcategories?.length ?? 0) === 0) return null;
+          const isOpen = openDropdown === cat.slug;
+          return (
+            <div
+              key={cat._id}
+              className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
+              onMouseEnter={cancelClose}
+              onMouseLeave={() => {
+                cancelOpen();
+                schedulClose();
+              }}
+            >
                 <div className="mega-inner">
                   <div className="mega-feature">
                     <FacetPattern seed={i} />

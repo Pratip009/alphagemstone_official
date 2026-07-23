@@ -29,11 +29,25 @@ interface HeroCarouselProps {
 const AUTO_ROTATE_MS = 6000;
 
 // ── Cloudinary URL optimiser ─────────────────────────────────────────────────
-function optimiseCloudinaryUrl(src: string): string {
+// q_auto:good lets Cloudinary pick the smallest byte size that still looks
+// sharp (previously this was hardcoded to q_100 — near-lossless, maximum
+// file size, which was the actual cause of the slow loads). w_<width> stops
+// mobile from downloading the same multi-megapixel image as desktop.
+const DESKTOP_IMG_WIDTH = 1400;
+const MOBILE_IMG_WIDTH = 900;
+
+function optimiseCloudinaryUrl(src: string, width: number): string {
   if (!src) return src;
   if (!src.includes("res.cloudinary.com")) return src;
-  if (src.includes("/upload/q_")) return src;
-  return src.replace("/upload/", "/upload/q_100,f_auto/");
+  return src.replace("/upload/", `/upload/f_auto,q_auto:good,w_${width},dpr_auto/`);
+}
+
+// Tiny, heavily-compressed, blurred version — a few KB, paints almost
+// instantly, and gives the user something to look at while the real
+// image is still downloading on a slow connection.
+function cloudinaryBlurUrl(src: string): string {
+  if (!src || !src.includes("res.cloudinary.com")) return src;
+  return src.replace("/upload/", "/upload/f_auto,q_1,w_32,e_blur:1500/");
 }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
@@ -84,6 +98,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -150,10 +165,17 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
     const nextIndex = (current + 1) % slides.length;
     const nextSlide = slides[nextIndex];
     if (!nextSlide) return;
-    const url = optimiseCloudinaryUrl(nextSlide.desktopImage);
+    const width = isMobile ? MOBILE_IMG_WIDTH : DESKTOP_IMG_WIDTH;
+    const raw = isMobile && nextSlide.mobileImage ? nextSlide.mobileImage : nextSlide.desktopImage;
     const img = new Image();
-    img.src = url;
-  }, [current, slides]);
+    img.src = optimiseCloudinaryUrl(raw, width);
+  }, [current, slides, isMobile]);
+
+  // Reset the "loaded" flag whenever the visible slide/breakpoint changes,
+  // so the blur placeholder shows again until the new image finishes.
+  useEffect(() => {
+    setImgLoaded(false);
+  }, [current, isMobile]);
 
   // Gentle parallax drift on the product image — a soft, controlled pan,
   // not a gimmick. Skipped on touch devices.
@@ -200,12 +222,27 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   const signal = b.accent || "#2F5DFF";
   const sand = b.accentGlow || "#F1EFE8";
 
-  const desktopSrc = optimiseCloudinaryUrl(b.desktopImage);
-  const mobileSrc = b.mobileImage ? optimiseCloudinaryUrl(b.mobileImage) : desktopSrc;
+  const desktopSrc = optimiseCloudinaryUrl(b.desktopImage, DESKTOP_IMG_WIDTH);
+  const mobileSrc = b.mobileImage
+    ? optimiseCloudinaryUrl(b.mobileImage, MOBILE_IMG_WIDTH)
+    : optimiseCloudinaryUrl(b.desktopImage, MOBILE_IMG_WIDTH);
   const bgImage = isMobile ? mobileSrc : desktopSrc;
+  const blurImage = cloudinaryBlurUrl(isMobile ? (b.mobileImage ?? b.desktopImage) : b.desktopImage);
 
   return (
     <>
+      {initialSlides?.[0] && (
+        <link
+          rel="preload"
+          as="image"
+          href={optimiseCloudinaryUrl(
+            isMobile && initialSlides[0].mobileImage
+              ? initialSlides[0].mobileImage
+              : initialSlides[0].desktopImage,
+            isMobile ? MOBILE_IMG_WIDTH : DESKTOP_IMG_WIDTH,
+          )}
+        />
+      )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
         .hc-display, .hc-body, .hc-mono { font-family: "Elms Sans", sans-serif; }
@@ -375,6 +412,20 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
 
               {/* ── Product image ── */}
               <div className="relative w-full sm:w-[56%] h-[46vh] sm:h-full order-1 sm:order-2 overflow-hidden" style={{ background: sand }}>
+                {/* Blurred placeholder — a few KB, paints instantly so slow
+                    connections see a soft preview instead of flat color. */}
+                <div
+                  className="absolute inset-0"
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(${blurImage})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    transform: "scale(1.1)",
+                    opacity: imgLoaded ? 0 : 1,
+                    transition: "opacity 0.4s ease",
+                  }}
+                />
                 <div
                   ref={imageRef}
                   className="absolute inset-0"
@@ -383,11 +434,23 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     transform: "scale(1.03)",
-                    transition: "transform 0.6s cubic-bezier(.16,1,.3,1)",
+                    opacity: imgLoaded ? 1 : 0,
+                    transition: "transform 0.6s cubic-bezier(.16,1,.3,1), opacity 0.4s ease",
                   }}
                 />
-
-                
+                {/* Off-screen <img> purely to get a real onLoad signal and
+                    let the browser prioritize this fetch — CSS backgrounds
+                    support neither. */}
+                <img
+                  src={bgImage}
+                  alt=""
+                  aria-hidden="true"
+                  fetchPriority={current === 0 ? "high" : "auto"}
+                  loading="eager"
+                  decoding="async"
+                  onLoad={() => setImgLoaded(true)}
+                  style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+                />
               </div>
             </motion.div>
           </AnimatePresence>

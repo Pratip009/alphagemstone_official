@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import "./ShopLayout.css";
 
@@ -141,9 +141,11 @@ const MAX_TILT_DEG = 8;
 function SubcategoryCard({
   sub,
   onSelect,
+  onHoverPrefetch,
 }: {
   sub: ISubcategory;
   onSelect: (sub: ISubcategory) => void;
+  onHoverPrefetch?: (sub: ISubcategory) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
@@ -169,10 +171,13 @@ function SubcategoryCard({
   }
 
   return (
-    <div
+     <div
       className="sub-card-perspective"
       onClick={() => onSelect(sub)}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => {
+        setHovered(true);
+        onHoverPrefetch?.(sub);
+      }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
@@ -383,12 +388,14 @@ function SidebarGroup({
   activeSubSlug,
   onSelectSub,
   onSelectCat,
+  onHoverPrefetch,
 }: {
   category: ICategory;
   subcategories: ISubcategory[];
   activeSubSlug: string;
   onSelectSub: (sub: ISubcategory) => void;
   onSelectCat: (cat: ICategory) => void;
+  onHoverPrefetch?: (sub: ISubcategory) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -488,6 +495,7 @@ function SidebarGroup({
                   if (!isActive)
                     (e.currentTarget as HTMLElement).style.background =
                       "rgba(20,33,61,0.03)";
+                  onHoverPrefetch?.(sub);
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive)
@@ -577,12 +585,14 @@ function LandingView({
   subcategories,
   onSelectSub,
   onSelectCat,
+  onHoverPrefetch,
   showHero,
 }: {
   categories: ICategory[];
   subcategories: ISubcategory[];
   onSelectSub: (sub: ISubcategory) => void;
   onSelectCat: (cat: ICategory) => void;
+  onHoverPrefetch?: (sub: ISubcategory) => void;
   showHero: boolean;
 }) {
   const RANDOM_PICK = 4;
@@ -677,6 +687,7 @@ function LandingView({
                   key={sub._id}
                   sub={sub}
                   onSelect={onSelectSub}
+                  onHoverPrefetch={onHoverPrefetch}
                 />
               ))}
             </div>
@@ -954,6 +965,7 @@ export default function ShopLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [catError, setCatError] = useState("");
   const [prodError, setProdError] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   // ── Categories + subcategories ───────────────────────────────────────────────
   useEffect(() => {
@@ -1041,16 +1053,30 @@ export default function ShopLayout() {
     );
   }
 
-  function handleSelectSub(sub: ISubcategory) {
+   function handleSelectSub(sub: ISubcategory) {
     setMobileOpen(false);
-    router.push(
+    startTransition(() => {
+      router.push(
+        `/products?category=${sub.category.slug}&subcategory=${sub.slug}`,
+      );
+    });
+  }
+
+  function prefetchSub(sub: ISubcategory) {
+    router.prefetch(
       `/products?category=${sub.category.slug}&subcategory=${sub.slug}`,
     );
   }
 
   function handleSelectCat(cat: ICategory) {
     setMobileOpen(false);
-    router.push(`/category/${cat.slug}`);
+    startTransition(() => {
+      router.push(`/category/${cat.slug}`);
+    });
+  }
+
+  function prefetchCat(cat: ICategory) {
+    router.prefetch(`/category/${cat.slug}`);
   }
 
   function handleSelectCatLocal(cat: ICategory) {
@@ -1160,6 +1186,7 @@ export default function ShopLayout() {
                   activeSubSlug={activeSub?.slug ?? ""}
                   onSelectSub={handleSelectSub}
                   onSelectCat={handleSelectCat}
+                  onHoverPrefetch={prefetchSub}
                 />
               ))
             )}
@@ -1302,6 +1329,7 @@ export default function ShopLayout() {
                     subcategories={subcategories}
                     onSelectSub={handleSelectSub}
                     onSelectCat={handleSelectCat}
+                    onHoverPrefetch={prefetchSub}
                     showHero={!activeCat}
                   />
                 ))}
@@ -1400,6 +1428,41 @@ export default function ShopLayout() {
           </div>
         </div>
       </div>
+      {isPending && (
+        <div className="nav-loading-overlay" role="status" aria-live="polite">
+          <div className="nav-loading-spinner" />
+        </div>
+      )}
+
+      <style>{`
+        .nav-loading-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.45);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          animation: navOverlayFade 0.15s ease;
+        }
+        @keyframes navOverlayFade {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .nav-loading-spinner {
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          border: 3px solid rgba(20, 33, 61, 0.15);
+          border-top-color: var(--navy);
+          animation: navSpin 0.7s linear infinite;
+        }
+        @keyframes navSpin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }
