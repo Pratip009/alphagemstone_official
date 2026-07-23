@@ -1,4 +1,5 @@
 import { FilterQuery } from 'mongoose';
+import { cache } from 'react';
 import { IProduct } from '@/models/Product';
 import Category from '@/models/Category';
 import Subcategory from '@/models/Subcategory';
@@ -86,26 +87,49 @@ function toNumber(val: string | number | undefined): number | undefined {
 }
 
 // ─── Slug resolver ────────────────────────────────────────────────────────────
+// ─── Slug resolver ────────────────────────────────────────────────────────────
+const isObjectId = (val: string) => /^[a-f\d]{24}$/i.test(val);
+
+// listProducts() and getProductFacets() are both called (in parallel) from
+// every /products-style page, and both independently need the same
+// category/subcategory slug resolved to an ObjectId. Without this, that's
+// two extra DB round trips duplicated into four. React's cache() dedupes
+// calls with identical arguments within a single request/render pass, so
+// as long as both call sites ask for the same slug, only one of them
+// actually hits Mongo — the other gets the already-in-flight/resolved
+// result for free.
+const lookupCategoryId = cache(async (slug: string) => {
+  const cat = await Category.findOne({ slug, isActive: true })
+    .select('_id')
+    .lean();
+  return cat ? cat._id.toString() : '000000000000000000000000';
+});
+
+const lookupSubcategoryId = cache(async (slug: string) => {
+  const sub = await Subcategory.findOne({ slug, isActive: true })
+    .select('_id')
+    .lean();
+  return sub ? sub._id.toString() : '000000000000000000000000';
+});
+
 export async function resolveSlugFilters(
   params: ProductFilterParams
 ): Promise<ProductFilterParams> {
   const resolved = { ...params };
 
-  const isObjectId = (val: string) => /^[a-f\d]{24}$/i.test(val);
+  const needsCategory =
+    !!resolved.category && !isObjectId(resolved.category);
+  const needsSubcategory =
+    !!resolved.subcategory && !isObjectId(resolved.subcategory);
 
-  if (resolved.category && !isObjectId(resolved.category)) {
-    const cat = await Category.findOne({ slug: resolved.category, isActive: true })
-      .select('_id')
-      .lean();
-    resolved.category = cat ? cat._id.toString() : '000000000000000000000000';
-  }
+  // Independent lookups — run concurrently instead of one after another.
+  const [catId, subId] = await Promise.all([
+    needsCategory ? lookupCategoryId(resolved.category as string) : null,
+    needsSubcategory ? lookupSubcategoryId(resolved.subcategory as string) : null,
+  ]);
 
-  if (resolved.subcategory && !isObjectId(resolved.subcategory)) {
-    const sub = await Subcategory.findOne({ slug: resolved.subcategory, isActive: true })
-      .select('_id')
-      .lean();
-    resolved.subcategory = sub ? sub._id.toString() : '000000000000000000000000';
-  }
+  if (needsCategory) resolved.category = catId as string;
+  if (needsSubcategory) resolved.subcategory = subId as string;
 
   return resolved;
 }
