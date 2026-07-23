@@ -357,9 +357,9 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
         )}
 
         {/* Filters Container */}
-        <div className="flex flex-wrap items-start gap-3 pb-5 lg:flex-col lg:flex-nowrap lg:items-stretch">
+        <div className="flex flex-col items-stretch gap-3 pb-5 lg:flex-col lg:flex-nowrap lg:items-stretch">
           {/* === Price + Carat + Availability in ONE ROW === */}
-          <div className="flex flex-wrap items-start gap-3 lg:flex-row lg:flex-nowrap lg:w-full">
+          <div className="flex flex-col items-stretch gap-3 w-full lg:flex-row lg:flex-nowrap lg:items-start">
             <FilterCard label="Price" collapsed={!!collapsed.price} onToggle={() => toggleCollapsed('price')} active={!!(priceMin || priceMax)}>
               <div className="flex flex-wrap gap-1.5 mb-2 max-w-[19rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
                 {PRICE_BRACKETS.map(({ label, min, max }) => {
@@ -568,7 +568,7 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
 function FilterCard({ label, active, count, collapsed, onToggle, children }: { label: string; active?: boolean; count?: number; collapsed: boolean; onToggle: () => void; children: React.ReactNode }) {
   return (
     <div
-      className="shrink-0 rounded-2xl p-3 transition-all duration-150 lg:w-full lg:shrink"
+      className="w-full rounded-2xl p-3 transition-all duration-150 lg:w-full lg:shrink"
       style={{
         backgroundColor: '#fff',
         border: `1px solid ${active ? T.gold : T.line}`,
