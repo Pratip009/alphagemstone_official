@@ -10,6 +10,7 @@
     "seed": "node --experimental-specifier-resolution=node scripts/seed.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/elms-sans": "^5.3.0",
     "@paypal/react-paypal-js": "^8.5.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",

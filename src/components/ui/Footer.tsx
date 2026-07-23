@@ -242,7 +242,7 @@ export default function Footer() {
             >
               <p
                 className="text-[0.6rem] tracking-[0.25em] uppercase font-bold mb-1"
-                style={{ color: "#c9a84c" }}
+                style={{ color: "#8a6e2a" }}
               >
                 Alpha Club &amp; Newsletter
               </p>

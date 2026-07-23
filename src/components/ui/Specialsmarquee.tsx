@@ -154,7 +154,7 @@ function ProductCard({
             fontWeight: 600,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
-            color: "#94a3b8",
+            color: "#64748b",
             margin: "0 0 5px",
             display: "flex",
             alignItems: "center",
@@ -205,7 +205,7 @@ function ProductCard({
               style={{
                 fontSize: 11,
                 fontWeight: 400,
-                color: "#94a3b8",
+                color: "#64748b",
                 marginLeft: 3,
               }}
             >
@@ -435,7 +435,7 @@ export default function SpecialsMarquee() {
                   fontWeight: 600,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
-                  color: "#94a3b8",
+                  color: "#64748b",
                   margin: "0 0 8px",
                 }}
               >
@@ -506,7 +506,7 @@ export default function SpecialsMarquee() {
               style={{
                 textAlign: "center",
                 padding: "64px 0",
-                color: "#94a3b8",
+                color: "#64748b",
                 fontSize: 13,
               }}
             >
@@ -536,7 +536,7 @@ export default function SpecialsMarquee() {
               style={{
                 textAlign: "center",
                 padding: "64px 0",
-                color: "#94a3b8",
+                color: "#64748b",
                 fontSize: 13,
               }}
             >
@@ -557,7 +557,7 @@ export default function SpecialsMarquee() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
+                gap: 0,
                 marginTop: 48,
               }}
             >
@@ -572,8 +572,10 @@ export default function SpecialsMarquee() {
                     borderRadius: 3,
                     border: "none",
                     cursor: "pointer",
-                    padding: 0,
-                    background: i === page ? "#0f172a" : "#e2e8f0",
+                    padding: 9,
+                    boxSizing: "content-box",
+                    backgroundClip: "content-box",
+                     backgroundColor: i === page ? "#0f172a" : "#e2e8f0",
                     transition: "all 0.3s ease",
                   }}
                 />

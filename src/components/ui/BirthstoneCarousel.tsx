@@ -341,7 +341,7 @@ export default function BirthstoneCarousel() {
         .bsc-dots {
           display: flex;
           justify-content: center;
-          gap: 8px;
+          gap: 4px;
           margin-top: 28px;
         }
         .bsc-dot {
@@ -350,8 +350,10 @@ export default function BirthstoneCarousel() {
           border-radius: 50%;
           border: none;
           background: #d8dbe0;
+          background-clip: content-box;
+          box-sizing: content-box;
           cursor: pointer;
-          padding: 0;
+          padding: 8.5px;
           transition: background 0.2s ease, transform 0.2s ease;
         }
         .bsc-dot-active {

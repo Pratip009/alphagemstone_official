@@ -99,7 +99,7 @@ function LandingHero() {
           fontSize: 11,
           letterSpacing: "0.28em",
           textTransform: "uppercase",
-          color: "var(--gold)",
+          color: "var(--gold-text)",
           fontWeight: 600,
           marginBottom: 16,
         }}
@@ -206,7 +206,7 @@ function SubcategoryCard({
           <p className="sub-card-name">{sub.name}</p>
           <span
             className="sub-card-cta"
-            style={{ color: hovered ? "var(--gold)" : "var(--text-muted)" }}
+            style={{ color: hovered ? "var(--gold-text)" : "var(--text-muted)" }}
           >
             Shop now →
           </span>
@@ -327,7 +327,7 @@ function ProductCard({ product }: { product: IProduct }) {
               fontSize: 9.5,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: "var(--gold)",
+              color: "var(--gold-text)",
               fontFamily: '"Elms Sans", sans-serif',
               marginBottom: 6,
               fontWeight: 500,
@@ -424,6 +424,8 @@ function SidebarGroup({
         {subcategories.length > 0 && (
           <button
             onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? `Collapse ${category.name}` : `Expand ${category.name}`}
             style={{
               padding: "10px 12px",
               background: "transparent",
@@ -500,7 +502,7 @@ function SidebarGroup({
                   style={{
                     fontSize: 12,
                     fontFamily: '"Elms Sans", sans-serif',
-                    color: isActive ? "var(--gold)" : "var(--text-muted)",
+                    color: isActive ? "var(--gold-text)" : "var(--text-muted)",
                     fontWeight: isActive ? 600 : 400,
                     letterSpacing: "0.01em",
                   }}
@@ -519,7 +521,7 @@ function SidebarGroup({
                 border: "none",
                 cursor: "pointer",
                 fontSize: 10.5,
-                color: "var(--gold)",
+                color: "var(--gold-text)",
                 fontFamily: '"Elms Sans", sans-serif',
                 letterSpacing: "0.06em",
                 fontWeight: 500,
@@ -662,7 +664,7 @@ function LandingView({
                     cursor: "pointer",
                     padding: 0,
                     fontSize: 10.5,
-                    color: "var(--gold)",
+                    color: "var(--gold-text)",
                     fontFamily: '"Elms Sans", sans-serif',
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
@@ -1101,7 +1103,7 @@ useEffect(() => {
       <div className="shop-root">
         {/* Mobile top bar */}
         <div className="mob-bar">
-          <button className="mob-menu-btn" onClick={() => setMobileOpen(true)}>
+          <button className="mob-menu-btn" onClick={() => setMobileOpen(true)} aria-label="Open collections menu">
             <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
               <rect width="12" height="1.5" rx="0.75" fill="currentColor" />
               <rect
@@ -1148,6 +1150,7 @@ useEffect(() => {
                 <button
                   className="mob-close"
                   onClick={() => setMobileOpen(false)}
+                  aria-label="Close sidebar"
                 >
                   ✕
                 </button>

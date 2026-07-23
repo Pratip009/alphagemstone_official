@@ -707,7 +707,7 @@ export default function SearchBar({
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-owns={listboxId}
+        aria-owns={open ? listboxId : undefined}
         style={{
           flex: isDesktop ? "1 1 auto" : undefined,
           maxWidth: isDesktop ? "340px" : undefined,
@@ -737,7 +737,7 @@ export default function SearchBar({
             spellCheck={false}
             role="searchbox"
             aria-autocomplete="list"
-            aria-controls={listboxId}
+            aria-controls={open ? listboxId : undefined}
             aria-activedescendant={activeIdx >= 0 ? `${listboxId}-opt-${activeIdx}` : undefined}
           />
 

@@ -350,13 +350,15 @@ export default function Testimonials() {
           background: rgba(90,130,210,0.10);
         }
 
-        .tr-dots { display: flex; align-items: center; gap: 8px; }
+        .tr-dots { display: flex; align-items: center; gap: 4px; }
         .tr-dot {
           height: 5px; border-radius: 3px;
           border: none; cursor: pointer;
           transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
           background: rgba(90,130,210,0.22);
-          width: 5px; padding: 0;
+          background-clip: content-box;
+          box-sizing: content-box;
+          width: 5px; padding: 9.5px 6px;
         }
         .tr-dot.on { background: #6b9ef0; width: 22px; }
         .tr-dot:hover:not(.on) { background: rgba(90,130,210,0.45); }

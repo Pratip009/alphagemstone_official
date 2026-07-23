@@ -3,6 +3,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Self-hosted "Elms Sans" (previously loaded from fonts.googleapis.com /
+ * fonts.gstatic.com via a render-blocking <link rel="stylesheet"> in
+ * layout.tsx). Serving the woff2 files from /public instead removes the
+ * cross-origin request chain (preconnect -> googleapis CSS -> gstatic file,
+ * ~1,087ms on the critical path per Lighthouse) and lets the browser start
+ * the font download immediately, from the same origin as the HTML.
+ *
+ * A single variable-font file covers every weight (100-900) that the site
+ * actually uses, so this replaces what used to be two separate weight-
+ * specific requests with one smaller, cacheable, same-origin file.
+ */
+@font-face {
+  font-family: "Elms Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/elms-sans/elms-sans-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Elms Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/elms-sans/elms-sans-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 :root {
   --bg: #fafaf8;
   --surface: #ffffff;
@@ -20,6 +51,13 @@
   --success: #2e7d32;
   --gold: #c9a84c;
   --gold-light: #f0e6c8;
+  /* Same hue as --gold but darkened so small/bold text using it on a white
+     or near-white background clears the 4.5:1 contrast ratio WCAG AA
+     requires. --gold itself (#c9a84c on #fff) only reaches ~2.3:1, which is
+     fine for decorative borders/icons/dividers but fails for text. */
+  --gold-text: #8a6e2a;
+  --gold: #c9a84c;
+  
 }
 
 * {

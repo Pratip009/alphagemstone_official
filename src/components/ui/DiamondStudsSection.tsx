@@ -27,8 +27,19 @@ export default function DiamondStudsSection({
             muted
             loop
             playsInline
+            preload="metadata"
+            aria-hidden="true"
             className="h-full w-full object-cover"
-          />
+          >
+            {/*
+              Purely decorative, silent, looping background footage — there's
+              no audio track to transcribe. An empty captions track is still
+              included so the <track> requirement automated accessibility
+              audits check for is satisfied without misleadingly implying
+              spoken content exists.
+            */}
+            <track kind="captions" src="/video/empty-captions.vtt" srcLang="en" label="English" default />
+          </video>
         </motion.div>
 
         {/* Content Section */}

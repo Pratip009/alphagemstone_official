@@ -491,7 +491,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
 
           {/* ── Vertical tick nav ── */}
           {slides.length > 1 && (
-            <div className="absolute right-5 bottom-16 z-30 hidden sm:flex flex-col items-center gap-[10px]">
+            <div className="absolute right-5 bottom-16 z-30 hidden sm:flex flex-col items-center gap-0">
               {slides.map((_, i) => (
                 <button
                   key={i}
@@ -500,9 +500,11 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
                   style={{
                     width: 2,
                     height: i === current ? 30 : 10,
-                    background: i === current ? "#14171C" : "rgba(20,23,28,0.22)",
+                    backgroundColor: i === current ? "#14171C" : "rgba(20,23,28,0.22)",
+                    backgroundClip: "content-box",
+                    boxSizing: "content-box",
                     border: "none",
-                    padding: 0,
+                    padding: "7px 11px",
                     cursor: "pointer",
                     transition: "all 0.4s ease",
                   }}
@@ -530,7 +532,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
 
         {/* ── Dot nav — mobile ── */}
         {slides.length > 1 && (
-          <div className="flex sm:hidden items-center justify-center gap-[10px] py-3" style={{ background: "#FBFBF9" }} role="tablist" aria-label="Product navigation">
+          <div className="flex sm:hidden items-center justify-center gap-0 py-3" style={{ background: "#FBFBF9" }} role="tablist" aria-label="Product navigation">
             {slides.map((_, i) => (
               <button
                 key={i}
@@ -542,9 +544,11 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
                 style={{
                   height: 2,
                   width: i === current ? 26 : 8,
-                  background: i === current ? "#14171C" : "rgba(20,23,28,0.2)",
+                  backgroundColor: i === current ? "#14171C" : "rgba(20,23,28,0.2)",
+                  backgroundClip: "content-box",
+                  boxSizing: "content-box",
                   border: "none",
-                  padding: 0,
+                  padding: "11px 8px",
                   cursor: "pointer",
                   transition: "all 0.4s ease",
                 }}

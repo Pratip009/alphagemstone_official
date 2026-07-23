@@ -206,17 +206,19 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-       <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link
-  rel="preconnect"
-  href="https://fonts.gstatic.com"
-  crossOrigin="anonymous"
-/>
-
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap"
-/>
+       {/* "Elms Sans" is self-hosted from /public/fonts (see global.css)
+           instead of fetched from fonts.googleapis.com / fonts.gstatic.com.
+           That removes the render-blocking preconnect -> stylesheet -> font
+           request chain Lighthouse flagged. Preloading the primary (latin)
+           file lets the browser start fetching it immediately, in parallel
+           with everything else. */}
+       <link
+         rel="preload"
+         href="/fonts/elms-sans/elms-sans-latin-wght-normal.woff2"
+         as="font"
+         type="font/woff2"
+         crossOrigin="anonymous"
+       />
 
 <script
   type="application/ld+json"
