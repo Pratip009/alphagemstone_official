@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
         :root{--navy:#1a1a2e;--deep:#0f3460;--violet:#7c3aed;--petal:#c4b5fd;--silver:#9f9fc0;--border:#e8e4f8;--display:'Gilda Display', serif;--label:'Gilda Display', serif;}
         *{box-sizing:border-box;margin:0;padding:0;}
         .auth-root{min-height:100vh;display:flex;font-family:var(--display);background:#faf9f7;overflow:hidden;}

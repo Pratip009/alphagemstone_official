@@ -115,7 +115,7 @@ export default function SignupPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+       
 
         :root {
           --navy:#1a1a2e;--deep:#0f3460;--violet:#7c3aed;--gold:#b8922a;

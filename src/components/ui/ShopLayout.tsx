@@ -42,13 +42,6 @@ interface IPickProduct {
   price: number;
 }
 
-// ─── Module-level cache (survives remounts within the same session) ───────────
-// Cached data is shown immediately on mount (avoids a loading flash), but is
-// time-boxed: once CACHE_TTL_MS has elapsed since the last successful fetch,
-// the next mount silently revalidates in the background (stale-while-
-// revalidate) instead of trusting the cached value forever. Without this,
-// a tab left open across an admin edit (new category, updated best-sellers,
-// etc.) would show stale data indefinitely, until a hard refresh.
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 function isFresh(fetchedAt: number): boolean {
@@ -1004,6 +997,15 @@ export default function ShopLayout() {
       .catch(() => setCatError("Failed to load categories."))
       .finally(() => setLoadingCats(false));
   }, []);
+
+useEffect(() => {
+  if (subcategories.length === 0) return;
+  subcategories.forEach((sub) => {
+    router.prefetch(
+      `/products?category=${sub.category.slug}&subcategory=${sub.slug}`,
+    );
+  });
+}, [subcategories, router]);
 
   // ── Products ─────────────────────────────────────────────────────────────────
   useEffect(() => {

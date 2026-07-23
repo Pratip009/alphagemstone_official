@@ -244,7 +244,7 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
         />
       )}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+       
         .hc-display, .hc-body, .hc-mono { font-family: "Elms Sans", sans-serif; }
         /* Mobile stacks image + text vertically (flex-col), so the stage
            must size to its content -- forcing a fixed svh height here (as

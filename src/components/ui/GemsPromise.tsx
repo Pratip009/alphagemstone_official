@@ -216,7 +216,7 @@ export default function GemsPromise() {
   return (
     <>
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+        
       `}</style>
 
       <section className="relative w-full" style={{ background: paper }}>

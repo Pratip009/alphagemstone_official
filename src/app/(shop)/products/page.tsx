@@ -128,7 +128,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+        
 
         body, .products-page *:not(.pc6, .pc6 *) { font-family: 'Gilda Display', serif !important; }
       `}</style>

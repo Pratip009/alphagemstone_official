@@ -13,7 +13,7 @@ export default function AlphaImportsSection() {
   return (
     <>
       <style>{`
-       @import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+       
 
         .ai-root { font-family: 'Gilda Display', serif; }
         .ai-gem-card { transition: border-color 0.3s, box-shadow 0.3s; }
