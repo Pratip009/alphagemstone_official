@@ -200,7 +200,7 @@ export default function Footer() {
           <div>
             <Link href="/" className="nav-logo mb-3">
               <Image
-                src="/logo/applogo.png"
+                src="/logo/new3.png"
                 alt="Alpha Gemstones Logo"
                 width={150}
                 height={50}

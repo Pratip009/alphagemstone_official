@@ -545,7 +545,7 @@ export default function Navbar({
           justify-content: space-between;
           gap: 24px;
           height: 72px;
-          padding: 0 24px;
+          padding: 0 12px;
         }
         @media (min-width: 768px) {
           .nav-top-row { height: 80px; padding: 0 40px; }
@@ -1505,10 +1505,10 @@ export default function Navbar({
             className="nav-logo"
           >
             <Image
-              src="/logo/applogo.png"
+              src="/logo/new3.png"
               alt="Alpha Gemstones Logo"
-              width={150}
-              height={50}
+              width={180}
+              height={70}
               priority
             />
           </Link>
