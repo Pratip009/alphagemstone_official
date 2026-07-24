@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import FloatingSocialIcons from '@/components/ui/FloatingSocialIcons';
+// import FloatingSocialIcons from '@/components/ui/FloatingSocialIcons';
 import GemConsultant from '@/components/GemConsultant/GemConsultant';
 
 export default function HomeOnlyWidgets() {
@@ -12,7 +12,7 @@ export default function HomeOnlyWidgets() {
 
   return (
     <>
-      <FloatingSocialIcons />
+      {/* <FloatingSocialIcons /> */}
       <GemConsultant />
     </>
   );
