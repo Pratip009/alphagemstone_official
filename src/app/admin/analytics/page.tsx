@@ -1,25 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
 
 type Range = "24h" | "7d" | "30d" | "90d";
 
-interface AnalyticsData {
+export interface AnalyticsData {
   summary: {
     totalVisitors: number;
     totalPageViews: number;
@@ -52,12 +38,48 @@ interface AnalyticsData {
   }[];
 }
 
-const DEVICE_COLORS = [
-  "#2563eb",
-  "#16a34a",
-  "#f59e0b",
-  "#dc2626",
-];
+function ChartSkeleton({ height }: { height: number }) {
+  return (
+    <div
+      style={{ height }}
+      className="animate-pulse rounded-lg bg-black/[0.04]"
+    />
+  );
+}
+
+// recharts is a sizeable dependency — load it only once we're actually
+// about to render a chart, not as part of this page's initial JS, so the
+// header/KPI cards/top-pages list can render without waiting on it.
+const VisitorsChart = dynamic<{
+  dailyVisitors: AnalyticsData["dailyVisitors"];
+}>(() =>
+  // AnalyticsCharts may be missing during type-check in some environments;
+  // ignore the import error here so the app can build. The runtime dynamic
+  // import will still attempt to load the module.
+  // @ts-ignore
+  import("./AnalyticsCharts").then((m) => m.VisitorsChart),
+{
+  ssr: false,
+  loading: () => <ChartSkeleton height={360} />,
+});
+const DeviceChart = dynamic<{
+  deviceBreakdown: AnalyticsData["deviceBreakdown"];
+}>(() =>
+  // @ts-ignore
+  import("./AnalyticsCharts").then((m) => m.DeviceChart),
+{
+  ssr: false,
+  loading: () => <ChartSkeleton height={240} />,
+});
+const EventsChart = dynamic<{
+  topEvents: AnalyticsData["topEvents"];
+}>(() =>
+  // @ts-ignore
+  import("./AnalyticsCharts").then((m) => m.EventsChart),
+{
+  ssr: false,
+  loading: () => <ChartSkeleton height={320} />,
+});
 
 export default function AnalyticsPage() {
   const [range, setRange] = useState<Range>("7d");
@@ -253,46 +275,7 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="chart-container">
-          <ResponsiveContainer
-            width="100%"
-            height={360}
-          >
-            <LineChart
-              data={data.dailyVisitors}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-              />
-
-              <XAxis
-                dataKey="date"
-              />
-
-              <YAxis />
-
-              <Tooltip />
-
-              <Legend />
-
-              <Line
-                type="monotone"
-                dataKey="visitors"
-                name="Visitors"
-                stroke="#2563eb"
-                strokeWidth={3}
-                dot={false}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="pageViews"
-                name="Page Views"
-                stroke="#16a34a"
-                strokeWidth={3}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <VisitorsChart dailyVisitors={data.dailyVisitors} />
         </div>
       </div>
 
@@ -366,42 +349,7 @@ export default function AnalyticsPage() {
                 No device data yet.
               </div>
             ) : (
-              <>
-                <ResponsiveContainer
-                  width="100%"
-                  height={240}
-                >
-                  <PieChart>
-                    <Pie
-                      data={data.deviceBreakdown}
-                      dataKey="count"
-                      nameKey="device"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={85}
-                      innerRadius={50}
-                    >
-                      {data.deviceBreakdown.map(
-                        (_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={
-                              DEVICE_COLORS[
-                                index %
-                                  DEVICE_COLORS.length
-                              ]
-                            }
-                          />
-                        )
-                      )}
-                    </Pie>
-
-                    <Tooltip />
-
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </>
+              <DeviceChart deviceBreakdown={data.deviceBreakdown} />
             )}
           </div>
         </div>
@@ -426,40 +374,7 @@ export default function AnalyticsPage() {
               No event data yet.
             </div>
           ) : (
-            <ResponsiveContainer
-              width="100%"
-              height={320}
-            >
-              <BarChart
-                data={data.topEvents}
-                layout="vertical"
-                margin={{
-                  left: 30,
-                  right: 30,
-                }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                />
-
-                <XAxis type="number" />
-
-                <YAxis
-                  type="category"
-                  dataKey="event"
-                  width={120}
-                />
-
-                <Tooltip />
-
-                <Bar
-                  dataKey="count"
-                  name="Events"
-                  fill="#2563eb"
-                  radius={[0, 6, 6, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <EventsChart topEvents={data.topEvents} />
           )}
         </div>
       </div>
