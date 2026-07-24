@@ -106,9 +106,35 @@ export async function searchProducts(args: SearchArgs): Promise<ProductCard[]> {
   if (args.clarity)       filter.clarity       = args.clarity;
   if (args.certification) filter.certification = args.certification;
 
-  // Prefer subcategoryId over categoryName for precision
+  // BUGFIX: subcategoryId must filter on the `subcategory` field, not
+  // `category`. Product.category points at the top-level Category doc;
+  // Product.subcategory points at the Subcategory doc. Filtering
+  // subcategoryId against `category` never matched anything, so every
+  // search that followed the category->subcategory browse flow silently
+  // returned zero products.
   if (args.subcategoryId) {
-    filter.category = args.subcategoryId;
+    filter.subcategory = args.subcategoryId;
+  }
+
+  // BUGFIX (perf + correctness): resolve categoryName to an actual
+  // Category _id and filter on the indexed `category` field directly,
+  // instead of pulling an arbitrary unsorted window of documents and
+  // regex-filtering in memory (which could miss matches entirely once
+  // the catalog grew past `limit * 3` docs).
+  if (args.categoryName && !args.subcategoryId) {
+    const matchedCategory = await Category.findOne({
+      name: new RegExp(args.categoryName, "i"),
+      isActive: true,
+    })
+      .select("_id")
+      .lean();
+    if (matchedCategory) {
+      filter.category = matchedCategory._id;
+    } else {
+      // No such category exists - return no results rather than an
+      // unfiltered (misleading) product list.
+      return [];
+    }
   }
 
   if (args.priceMin !== undefined || args.priceMax !== undefined) {
@@ -123,23 +149,15 @@ export async function searchProducts(args: SearchArgs): Promise<ProductCard[]> {
     if (args.sizeMax !== undefined) filter.size.$lte = args.sizeMax;
   }
 
-  const limit = args.limit ?? 6;
+  const limit = Math.min(args.limit ?? 6, 12);
 
   const results = await Product.find(filter)
     .populate("category", "name slug")
-    .limit(args.categoryName && !args.subcategoryId ? limit * 3 : limit) // fetch more for in-memory category filter
+    .sort({ createdAt: -1 })
+    .limit(limit)
     .lean();
 
-  // In-memory category name filter (only when no subcategoryId)
-  const filtered =
-    args.categoryName && !args.subcategoryId
-      ? results.filter((p) => {
-          const cat = p.category as { name?: string } | null;
-          return cat?.name?.match(new RegExp(args.categoryName!, "i"));
-        })
-      : results;
-
-  return filtered.slice(0, limit).map((p) => {
+  return results.map((p) => {
     const s = serialise(p);
     return {
       ...s,
@@ -309,29 +327,34 @@ export async function getInventorySummary(): Promise<InventorySummary[]> {
    7. getCategories  ← NEW
    Returns all top-level categories (no parent).
 ───────────────────────────────────────────── */
+// Categories rarely change; a short in-memory cache avoids re-hitting the
+// DB (Category find + full Product aggregate) on nearly every chat turn,
+// since the system prompt calls get_categories on almost every query.
+let categoriesCache: { data: CategoryCard[]; expiresAt: number } | null = null;
+const CATEGORIES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function getCategories(): Promise<CategoryCard[]> {
-  await dbConnect();
-
-  // Top-level categories have no `category` field (subcategories have category: parentId)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const filter: Record<string, any> = {
-    $or: [{ category: null }, { category: { $exists: false } }],
-  };
-
-  const cats = await Category.find(filter).lean();
-  console.log(`[getCategories] raw DB result count: ${cats.length}`);
-  if (cats.length > 0) {
-    console.log(`[getCategories] sample:`, JSON.stringify(cats[0]));
+  if (categoriesCache && categoriesCache.expiresAt > Date.now()) {
+    return categoriesCache.data;
   }
 
-  // Count products per category
+  await dbConnect();
+
+  // The Category collection only ever holds top-level categories
+  // (Subcategory is a separate collection/model), so we just need the
+  // active ones, sorted for stable display order.
+  const cats = await Category.find({ isActive: true })
+    .sort({ sortOrder: 1, name: 1 })
+    .lean();
+
+  // Count products per category (Product.category references Category)
   const counts = await Product.aggregate([
     { $match: { isActive: true } },
     { $group: { _id: "$category", count: { $sum: 1 } } },
   ]);
   const countMap = new Map(counts.map((c) => [c._id.toString(), c.count]));
 
-  return cats.map((c) => {
+  const result = cats.map((c) => {
     const s = serialise(c);
     return {
       _id: s._id,
@@ -342,6 +365,9 @@ export async function getCategories(): Promise<CategoryCard[]> {
       productCount: countMap.get(s._id) ?? 0,
     } as CategoryCard;
   });
+
+  categoriesCache = { data: result, expiresAt: Date.now() + CATEGORIES_CACHE_TTL_MS };
+  return result;
 }
 
 /* ─────────────────────────────────────────────
@@ -358,7 +384,7 @@ export async function getSubcategories(parentId: string): Promise<CategoryCard[]
   const parentObjectId = new mongoose.Types.ObjectId(parentId);
 
   // Subcategories store their parent's _id in the `category` field
-  const cats = await Subcategory.find({ category: parentObjectId }).lean();
+  const cats = await Subcategory.find({ category: parentObjectId, isActive: true }).lean();
   console.log(`[getSubcategories] raw DB result count: ${cats.length}`);
   if (cats.length > 0) {
     console.log(`[getSubcategories] sample:`, JSON.stringify(cats[0]));
@@ -368,10 +394,13 @@ export async function getSubcategories(parentId: string): Promise<CategoryCard[]
   const parentDoc = await Category.findById(parentId).lean();
   const parentName = (parentDoc as { name?: string } | null)?.name ?? undefined;
 
-  // Count products per subcategory
+  // BUGFIX: this must count products by `$subcategory`, not `$category`.
+  // Product.category always points at the top-level Category, so grouping
+  // by it here meant every subcategory tile showed a bogus/0 count
+  // (the ids being compared were from two different collections).
   const counts = await Product.aggregate([
-    { $match: { isActive: true } },
-    { $group: { _id: "$category", count: { $sum: 1 } } },
+    { $match: { isActive: true, subcategory: { $ne: null } } },
+    { $group: { _id: "$subcategory", count: { $sum: 1 } } },
   ]);
   const countMap = new Map(counts.map((c) => [c._id.toString(), c.count]));
 

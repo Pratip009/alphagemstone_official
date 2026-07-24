@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import dbConnect from "@/lib/db";
 import ChatSession, { IMemory } from "@/models/ChatSession";
-import { dispatchTool } from "@/services/gemAI.service";
+import { dispatchTool, getCategories } from "@/services/gemAI.service";
 import { VICTORIA_SYSTEM_PROMPT, GEM_TOOLS } from "@/lib/gemAI.config";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -18,22 +18,6 @@ interface OpenAIMessage {
   }>;
   tool_call_id?: string;
   name?: string;
-}
-
-interface OpenAIResponse {
-  choices: Array<{
-    message: {
-      role: string;
-      content: string | null;
-      tool_calls?: Array<{
-        id: string;
-        type: "function";
-        function: { name: string; arguments: string };
-      }>;
-    };
-    finish_reason: string;
-  }>;
-  error?: { message: string; type: string };
 }
 
 /* ─────────────────────────────────────────────
@@ -77,6 +61,130 @@ function extractMemoryUpdates(text: string): Partial<IMemory> {
 ───────────────────────────────────────────── */
 function sseEvent(data: Record<string, unknown>): string {
   return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+/* ─────────────────────────────────────────────
+   Streaming OpenAI turn
+   Streams the completion instead of waiting for the full response, so
+   the client can start rendering text (or see a tool call fire) as soon
+   as the model starts producing it, rather than waiting for up to 5
+   sequential blocking round trips before anything appears.
+───────────────────────────────────────────── */
+interface StreamedToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+interface StreamTurnResult {
+  content: string | null;
+  tool_calls?: StreamedToolCall[];
+  finish_reason: string;
+}
+
+async function streamOpenAITurn(
+  openAIMessages: OpenAIMessage[],
+  enqueue: (data: Record<string, unknown>) => void
+): Promise<StreamTurnResult> {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      messages: openAIMessages,
+      tools: GEM_TOOLS,
+      tool_choice: "auto",
+      temperature: 0.7,
+      max_tokens: 1024,
+      stream: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`OpenAI HTTP ${res.status}: ${errText.slice(0, 300)}`);
+  }
+  if (!res.body) throw new Error("OpenAI returned no response body.");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  let content = "";
+  const toolCallsByIndex: Record<number, { id: string; name: string; arguments: string }> = {};
+  let finishReason = "stop";
+
+  const processLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data: ")) return;
+    const payload = trimmed.slice(6).trim();
+    if (payload === "[DONE]") return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let parsed: any;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      return;
+    }
+
+    if (parsed.error) {
+      throw new Error(parsed.error.message || "OpenAI streaming error");
+    }
+
+    const choice = parsed.choices?.[0];
+    if (!choice) return;
+    if (choice.finish_reason) finishReason = choice.finish_reason;
+
+    const delta = choice.delta;
+    if (!delta) return;
+
+    if (delta.content) {
+      content += delta.content;
+      enqueue({ type: "delta", text: delta.content });
+    }
+
+    if (delta.tool_calls) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const tc of delta.tool_calls as any[]) {
+        const idx = tc.index ?? 0;
+        if (!toolCallsByIndex[idx]) {
+          toolCallsByIndex[idx] = { id: tc.id ?? "", name: tc.function?.name ?? "", arguments: "" };
+        }
+        if (tc.id) toolCallsByIndex[idx].id = tc.id;
+        if (tc.function?.name) toolCallsByIndex[idx].name = tc.function.name;
+        if (tc.function?.arguments) toolCallsByIndex[idx].arguments += tc.function.arguments;
+      }
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      if (buffer.trim()) buffer.split("\n").forEach(processLine);
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) part.split("\n").forEach(processLine);
+  }
+
+  const toolCalls = Object.values(toolCallsByIndex);
+  return {
+    content: content || null,
+    tool_calls: toolCalls.length
+      ? toolCalls.map((tc) => ({
+          id: tc.id,
+          type: "function" as const,
+          function: { name: tc.name, arguments: tc.arguments },
+        }))
+      : undefined,
+    finish_reason: finishReason,
+  };
 }
 
 /* ─────────────────────────────────────────────
@@ -174,7 +282,27 @@ export async function POST(req: NextRequest) {
         const recentMessages = session.messages.slice(-MAX_HISTORY);
 
         const memoryStr = JSON.stringify(session.memory, null, 2);
-        const systemPrompt = VICTORIA_SYSTEM_PROMPT.replace("{MEMORY_PLACEHOLDER}", memoryStr);
+
+        // Categories are cached server-side (see getCategories in
+        // gemAI.service.ts) and rarely change, so we fetch them once here
+        // and inline them into the system prompt. This removes an entire
+        // model round trip (get_categories) that would otherwise fire on
+        // almost every message per the category-first navigation logic.
+        let categoriesBlock = "(unavailable — call get_categories if needed)";
+        try {
+          const categories = await getCategories();
+          categoriesBlock = categories.length
+            ? categories
+                .map((c) => `- ${c.name} (id: ${c._id}, ${c.productCount ?? 0} items)`)
+                .join("\n")
+            : "(no categories currently active — call get_categories to double-check)";
+        } catch (catErr) {
+          console.error("[GemAI] Failed to preload categories for system prompt", catErr);
+        }
+
+        const systemPrompt = VICTORIA_SYSTEM_PROMPT
+          .replace("{MEMORY_PLACEHOLDER}", memoryStr)
+          .replace("{CATEGORIES_PLACEHOLDER}", categoriesBlock);
 
         const openAIMessages: OpenAIMessage[] = [
           { role: "system", content: systemPrompt },
@@ -202,114 +330,76 @@ export async function POST(req: NextRequest) {
           iteration++;
           console.log(`\n[GemAI] ── Iteration ${iteration} ──`);
 
-          let openAIRes: Response;
+          let turn: StreamTurnResult;
           try {
-            openAIRes = await fetch("https://api.openai.com/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-              },
-              body: JSON.stringify({
-                model: "gpt-4o",
-                messages: openAIMessages,
-                tools: GEM_TOOLS,
-                tool_choice: "auto",
-                temperature: 0.7,
-                max_tokens: 1024,
-              }),
-            });
-          } catch (fetchErr) {
-            console.error("[OpenAI Fetch Error]", fetchErr);
-            enqueue({ type: "error", message: "Failed to reach OpenAI. Please check your connection." });
-            controller.close();
-            return;
-          }
-
-          if (!openAIRes.ok) {
-            const errText = await openAIRes.text();
-            console.error("[OpenAI HTTP Error]", openAIRes.status, errText);
+            turn = await streamOpenAITurn(openAIMessages, enqueue);
+          } catch (streamErr) {
+            console.error("[OpenAI Stream Error]", streamErr);
             enqueue({
               type: "error",
-              message: `OpenAI returned an error (${openAIRes.status}). Please try again shortly.`,
+              message: "Failed to reach OpenAI. Please try again shortly.",
             });
             controller.close();
             return;
           }
 
-          let openAIData: OpenAIResponse;
-          try {
-            openAIData = await openAIRes.json();
-          } catch (parseErr) {
-            console.error("[OpenAI Parse Error]", parseErr);
-            enqueue({ type: "error", message: "Failed to parse OpenAI response." });
-            controller.close();
-            return;
-          }
-
-          if (openAIData.error) {
-            console.error("[OpenAI API Error]", openAIData.error);
-            enqueue({ type: "error", message: `OpenAI error: ${openAIData.error.message}` });
-            controller.close();
-            return;
-          }
-
-          if (!openAIData.choices || openAIData.choices.length === 0) {
-            console.error("[OpenAI] No choices in response", openAIData);
-            enqueue({ type: "error", message: "OpenAI returned an empty response." });
-            controller.close();
-            return;
-          }
-
-          const choice = openAIData.choices[0];
-          const assistantMsg = choice.message;
-
-          console.log(`[GemAI] finish_reason: ${choice.finish_reason}`);
-          console.log(`[GemAI] tool_calls: ${assistantMsg.tool_calls?.length ?? 0}`);
-          console.log(`[GemAI] content snippet: ${assistantMsg.content?.slice(0, 120) ?? "(none)"}`);
+          console.log(`[GemAI] finish_reason: ${turn.finish_reason}`);
+          console.log(`[GemAI] tool_calls: ${turn.tool_calls?.length ?? 0}`);
+          console.log(`[GemAI] content snippet: ${turn.content?.slice(0, 120) ?? "(none)"}`);
 
           openAIMessages.push({
             role: "assistant",
-            content: assistantMsg.content,
-            tool_calls: assistantMsg.tool_calls,
+            content: turn.content,
+            tool_calls: turn.tool_calls,
           });
 
           /* ── No tool calls → final answer ── */
-          if (!assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0) {
-            finalText = assistantMsg.content ?? "";
+          if (!turn.tool_calls || turn.tool_calls.length === 0) {
+            finalText = turn.content ?? "";
             console.log("[GemAI] No tool calls — using final text.");
             break;
           }
 
-          /* ── Execute tool calls ── */
-          for (const toolCall of assistantMsg.tool_calls) {
-            const toolName = toolCall.function.name;
+          /* ── Execute tool calls in parallel ──
+             Tool calls returned within a single turn are independent of
+             each other (the model already has everything it needs to
+             issue them together), so there's no reason to await them one
+             at a time. Running them concurrently cuts latency whenever
+             the model fires off more than one call in a turn. */
+          const toolCallOutcomes = await Promise.all(
+            turn.tool_calls.map(async (toolCall) => {
+              const toolName = toolCall.function.name;
 
-            let toolArgs: Record<string, unknown>;
-            try {
-              toolArgs = JSON.parse(toolCall.function.arguments || "{}");
-            } catch {
-              console.error("[Tool Args Parse Error]", toolCall.function.arguments);
-              toolArgs = {};
-            }
+              let toolArgs: Record<string, unknown>;
+              try {
+                toolArgs = JSON.parse(toolCall.function.arguments || "{}");
+              } catch {
+                console.error("[Tool Args Parse Error]", toolCall.function.arguments);
+                toolArgs = {};
+              }
 
-            console.log(`[GemAI] → Tool called: "${toolName}"`, toolArgs);
-            enqueue({ type: "tool_call", tool: toolName, args: toolArgs });
+              console.log(`[GemAI] → Tool called: "${toolName}"`, toolArgs);
+              enqueue({ type: "tool_call", tool: toolName, args: toolArgs });
 
-            let toolResult: unknown;
-            try {
-              toolResult = await dispatchTool(toolName, toolArgs);
-            } catch (toolErr) {
-              console.error(`[Tool Error: ${toolName}]`, toolErr);
-              toolResult = { error: `Tool ${toolName} failed.` };
-            }
+              let toolResult: unknown;
+              try {
+                toolResult = await dispatchTool(toolName, toolArgs);
+              } catch (toolErr) {
+                console.error(`[Tool Error: ${toolName}]`, toolErr);
+                toolResult = { error: `Tool ${toolName} failed.` };
+              }
 
-            console.log(
-              `[GemAI] ← Tool result for "${toolName}":`,
-              JSON.stringify(toolResult)?.slice(0, 300)
-            );
+              console.log(
+                `[GemAI] ← Tool result for "${toolName}":`,
+                JSON.stringify(toolResult)?.slice(0, 300)
+              );
 
-            /* ── Collect frontend data by tool name ── */
+              return { toolCall, toolName, toolArgs, toolResult };
+            })
+          );
+
+          /* ── Collect frontend data by tool name (order preserved) ── */
+          for (const { toolCall, toolName, toolArgs, toolResult } of toolCallOutcomes) {
             if (
               toolName === "search_products" ||
               toolName === "recommend_products" ||
@@ -329,9 +419,6 @@ export async function POST(req: NextRequest) {
             } else if (toolName === "get_categories") {
               collectedCategories = Array.isArray(toolResult) ? toolResult : [];
               console.log(`[GemAI] collectedCategories count: ${collectedCategories.length}`);
-              if (collectedCategories.length > 0) {
-                console.log(`[GemAI] First category sample:`, JSON.stringify(collectedCategories[0]));
-              }
 
             } else if (toolName === "get_subcategories") {
               collectedSubcategories = Array.isArray(toolResult) ? toolResult : [];
@@ -344,9 +431,6 @@ export async function POST(req: NextRequest) {
                 }));
               }
               console.log(`[GemAI] collectedSubcategories count: ${collectedSubcategories.length}`);
-              if (collectedSubcategories.length > 0) {
-                console.log(`[GemAI] First subcategory sample:`, JSON.stringify(collectedSubcategories[0]));
-              }
             }
 
             openAIMessages.push({
@@ -357,7 +441,7 @@ export async function POST(req: NextRequest) {
             });
           }
 
-          if (choice.finish_reason === "stop") break;
+          if (turn.finish_reason === "stop") break;
         }
 
         if (!finalText) {

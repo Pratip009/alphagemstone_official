@@ -100,6 +100,7 @@ interface ChatMessage {
   subcategories?: CategoryCard[];
   comparison?: ComparisonData;
   isThinking?: boolean;
+  isStreaming?: boolean;
   isError?: boolean;
 }
 
@@ -686,6 +687,14 @@ function MessageBubble({
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {msg.content}
           </ReactMarkdown>
+          {msg.isStreaming && (
+            <motion.span
+              className="inline-block w-[2px] h-[13px] align-middle ml-0.5"
+              style={{ background: T.gold }}
+              animate={{ opacity: [1, 0, 1] }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+            />
+          )}
         </div>
 
         {hasCategories && (
@@ -1015,10 +1024,42 @@ export default function GemConsultant() {
         let buffer = "";
         let finalMsg: ChatMessage | null = null;
 
+        // Live-streamed text accumulates here so the person sees Victoria's
+        // answer appear token-by-token instead of staring at a spinner
+        // until the entire multi-step tool-calling turn finishes.
+        let streamingText = "";
+        let hasStreamed = false;
+
         const processLine = (line: string) => {
           const event = parseSSELine(line);
           if (!event) return;
-          if (event.type === "response") {
+
+          if (event.type === "delta") {
+            const chunk = (event.text as string) ?? "";
+            if (!chunk) return;
+            streamingText += chunk;
+            if (!hasStreamed) {
+              hasStreamed = true;
+              setMessages((prev) => [
+                ...prev.filter((m) => m.id !== "thinking" && m.id !== "streaming"),
+                { id: "streaming", role: "assistant", content: streamingText, isStreaming: true },
+              ]);
+            } else {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === "streaming" ? { ...m, content: streamingText } : m))
+              );
+            }
+          } else if (event.type === "tool_call") {
+            // Victoria is looking things up (e.g. querying live inventory).
+            // If no text has streamed yet, keep the thinking indicator up.
+            if (!hasStreamed) {
+              setMessages((prev) =>
+                prev.some((m) => m.id === "thinking")
+                  ? prev
+                  : [...prev, { id: "thinking", role: "assistant", content: "", isThinking: true }]
+              );
+            }
+          } else if (event.type === "response") {
             finalMsg = {
               id: crypto.randomUUID(),
               role: "assistant",
@@ -1051,7 +1092,7 @@ export default function GemConsultant() {
         }
 
         setMessages((prev) => {
-          const filtered = prev.filter((m) => m.id !== "thinking");
+          const filtered = prev.filter((m) => m.id !== "thinking" && m.id !== "streaming");
           return finalMsg
             ? [...filtered, finalMsg]
             : [
