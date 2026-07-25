@@ -39,7 +39,10 @@ const MOBILE_IMG_WIDTH = 900;
 function optimiseCloudinaryUrl(src: string, width: number): string {
   if (!src) return src;
   if (!src.includes("res.cloudinary.com")) return src;
-  return src.replace("/upload/", `/upload/f_auto,q_auto:good,w_${width},dpr_auto/`);
+  // dpr_auto alone can multiply the requested width by 2x/3x on retina
+  // screens with no ceiling, quietly turning a 1400px request into a
+  // 4200px download. Cap it at 2x so the payload stays predictable.
+  return src.replace("/upload/", `/upload/f_auto,q_auto:good,w_${width},c_limit,dpr_2.0/`);
 }
 
 // Tiny, heavily-compressed, blurred version — a few KB, paints almost
@@ -237,10 +240,13 @@ useEffect(() => {
     <>
       {initialSlides?.[0] && (
         <>
+          <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href="https://res.cloudinary.com" />
           <link
             rel="preload"
             as="image"
             media="(max-width: 639px)"
+            fetchPriority="high"
             href={optimiseCloudinaryUrl(
               initialSlides[0].mobileImage || initialSlides[0].desktopImage,
               MOBILE_IMG_WIDTH,
@@ -250,6 +256,7 @@ useEffect(() => {
             rel="preload"
             as="image"
             media="(min-width: 640px)"
+            fetchPriority="high"
             href={optimiseCloudinaryUrl(initialSlides[0].desktopImage, DESKTOP_IMG_WIDTH)}
           />
         </>
