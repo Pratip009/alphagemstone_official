@@ -143,6 +143,10 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
   const prev = useCallback(() => setCurrent((c) => (c - 1 + slides.length) % slides.length), [slides.length]);
 
+useEffect(() => {
+    setImgLoaded(false);
+  }, [current]);
+
   useEffect(() => {
     if (isPaused || slides.length <= 1) return;
     const id = setInterval(next, AUTO_ROTATE_MS);
@@ -232,16 +236,23 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
   return (
     <>
       {initialSlides?.[0] && (
-        <link
-          rel="preload"
-          as="image"
-          href={optimiseCloudinaryUrl(
-            isMobile && initialSlides[0].mobileImage
-              ? initialSlides[0].mobileImage
-              : initialSlides[0].desktopImage,
-            isMobile ? MOBILE_IMG_WIDTH : DESKTOP_IMG_WIDTH,
-          )}
-        />
+        <>
+          <link
+            rel="preload"
+            as="image"
+            media="(max-width: 639px)"
+            href={optimiseCloudinaryUrl(
+              initialSlides[0].mobileImage || initialSlides[0].desktopImage,
+              MOBILE_IMG_WIDTH,
+            )}
+          />
+          <link
+            rel="preload"
+            as="image"
+            media="(min-width: 640px)"
+            href={optimiseCloudinaryUrl(initialSlides[0].desktopImage, DESKTOP_IMG_WIDTH)}
+          />
+        </>
       )}
       <style>{`
        
@@ -449,6 +460,9 @@ export default function HeroCarousel({ initialSlides }: HeroCarouselProps) {
                   loading="eager"
                   decoding="async"
                   onLoad={() => setImgLoaded(true)}
+                  ref={(el) => {
+                    if (el?.complete && el.naturalWidth > 0) setImgLoaded(true);
+                  }}
                   style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
                 />
               </div>
