@@ -27,15 +27,17 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // ── PayPal SDK script (www.paypal.com) + sandbox ──
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com",
+              // ── PayPal SDK script (www.paypal.com) + sandbox; Vercel
+              // Speed Insights / Web Analytics loader script ──
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com https://va.vercel-scripts.com",
               // Elms Sans is now self-hosted from /public/fonts, so the
               // Google Fonts origins are no longer needed here.
               "style-src 'self' 'unsafe-inline' https://www.paypalobjects.com",
               "font-src 'self' https://www.paypalobjects.com",
               "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://images.unsplash.com https://www.paypalobjects.com https://t.paypal.com",
-              // ── PayPal API calls + SDK fingerprinting ──
-              "connect-src 'self' https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://api.postalpincode.in",
+              // ── PayPal API calls + SDK fingerprinting; Vercel Speed
+              // Insights / Web Analytics beacon endpoints ──
+              "connect-src 'self' https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://api.postalpincode.in https://va.vercel-scripts.com https://vitals.vercel-insights.com",
               // ── PayPal renders its buttons in iframes; Google Maps embed on /contact ──
               "frame-src https://www.paypal.com https://www.sandbox.paypal.com https://www.google.com",
               "frame-ancestors 'none'",

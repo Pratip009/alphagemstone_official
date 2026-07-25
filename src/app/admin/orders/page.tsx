@@ -122,7 +122,7 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head>
       <title>${invoiceNumber}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+     
       <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#fff;color:#1a1714;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@page{margin:0;size:A4;}</style>
     </head><body>${content}</body></html>`);
     win.document.close();

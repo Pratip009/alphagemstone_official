@@ -204,6 +204,7 @@ export default function Footer() {
                 alt="Alpha Gemstones Logo"
                 width={150}
                 height={50}
+                className="w-auto h-auto"
                 priority
               />
             </Link>

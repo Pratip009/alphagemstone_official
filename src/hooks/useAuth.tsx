@@ -54,13 +54,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   }, []);
 
+const hasSessionHint = useCallback(() => {
+    if (typeof document === 'undefined') return false;
+    return document.cookie.split('; ').some((c) => c.startsWith('has_session='));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        await fetchMe();
+        if (hasSessionHint()) {
+          await fetchMe();
+        }
       } catch {
-        // Not logged in / network error — treat as logged out.
+        
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -68,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [fetchMe]);
+  }, [fetchMe, hasSessionHint]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch('/api/auth/login', {

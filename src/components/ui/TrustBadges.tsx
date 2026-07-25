@@ -200,7 +200,7 @@ export default function TrustBadges() {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+       
 
         @keyframes hexSpin {
           0%   { filter: hue-rotate(0deg) brightness(1); }

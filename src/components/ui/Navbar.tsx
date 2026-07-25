@@ -1509,6 +1509,7 @@ export default function Navbar({
               alt="Alpha Gemstones Logo"
               width={180}
               height={70}
+              className="w-auto h-auto"
               priority
             />
           </Link>
