@@ -1921,6 +1921,8 @@ export default function Navbar({
                               src={sub.imageUrl}
                               alt={sub.name}
                               className="sub-link-img"
+                              loading="lazy"
+                              decoding="async"
                             />
                           ) : (
                             <div className="sub-link-img-placeholder">

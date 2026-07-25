@@ -461,7 +461,7 @@ export default function MegaMenu() {
                         {/* Thumbnail — swap placeholder for real image via sub.image */}
                         <div className="mm-sub-thumb">
                           {sub.image ? (
-                            <img src={sub.image} alt={sub.label} />
+                            <img src={sub.image} alt={sub.label} loading="lazy" decoding="async"/>
                           ) : (
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                               stroke="#0a0a0a" strokeWidth="1.5" strokeLinecap="round"
@@ -532,7 +532,7 @@ export default function MegaMenu() {
                   <Link key={sub.slug} href={sub.href} className="mm-mob-sub" onClick={() => setMobileOpen(false)}>
                     <div className="mm-mob-sub-thumb">
                       {sub.image ? (
-                        <img src={sub.image} alt={sub.label} />
+                        <img src={sub.image} alt={sub.label} loading="lazy" decoding="async"/>
                       ) : (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                           stroke="#0a0a0a" strokeWidth="1.5" strokeLinecap="round"
