@@ -14,7 +14,14 @@ import BirthstoneCarousel from "@/components/ui/BirthstoneCarousel";
 import AwardsAccolades from "@/components/ui/AwardsAccolades";
 import DiamondStudsSection from "@/components/ui/DiamondStudsSection";
 
-// Pre-fetch hero slides at request time on the server so the carousel renders
+// Statically generate this page (ISR): built once, served from cache, and
+// silently regenerated in the background at most once every 5 minutes.
+// Visitors always get a pre-rendered HTML response with the hero image
+// URL already in it — no per-request DB round trip — while edits made in
+// /admin/hero-slides still show up within ~5 min without a redeploy.
+export const revalidate = 300;
+
+// Pre-fetch hero slides at build/revalidation time so the carousel renders
 // immediately with data — no client-side loading skeleton on first paint.
 async function getHeroSlides() {
   try {
