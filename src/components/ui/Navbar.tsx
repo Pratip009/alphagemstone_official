@@ -1792,6 +1792,7 @@ export default function Navbar({
                       href={`/products?category=${cat.slug}`}
                       className={`cat-tab${isOpen ? " open" : ""}`}
                       data-track-click={`category_tab_${cat.slug}`}
+                      prefetch={false}
                       onClick={() =>
                         trackEvent("filter_apply", {
                           filterType: "category",
@@ -1875,6 +1876,7 @@ export default function Navbar({
                       }}
                       className="mega-cta"
                       data-track-cta={`mega_shop_all_${cat.slug}`}
+                      prefetch={false}
                     >
                       Shop all {cat.name}
                       <svg
@@ -1909,6 +1911,7 @@ export default function Navbar({
                             });
                           }}
                           className="mega-sub-item"
+                          prefetch={false}
                           style={{
                             animationDelay: `${Math.min(si, 12) * 18}ms`,
                           }}

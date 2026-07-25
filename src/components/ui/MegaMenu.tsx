@@ -441,7 +441,7 @@ export default function MegaMenu() {
                     <p className="mm-cat-desc">{activeCat.description}</p>
                   )}
                 </div>
-                <Link href={activeCat.href} className="mm-browse-btn" onClick={() => setOpen(false)}>
+                <Link href={activeCat.href} className="mm-browse-btn" onClick={() => setOpen(false)} prefetch={false}>
                   Browse all {activeCat.label.toLowerCase()} →
                 </Link>
               </div>
@@ -513,7 +513,7 @@ export default function MegaMenu() {
           </div>
         )}
 
-        {!loading && !error && categories.map((cat, i) => {
+        {!loading && !error && mobileOpen && categories.map((cat, i) => {
           const isExpanded = mobileCatIdx === i;
           return (
             <div key={cat.slug} className="mm-mob-cat">
@@ -525,7 +525,7 @@ export default function MegaMenu() {
                 <span className={`mm-mob-chev ${isExpanded ? 'mm-mob-chev-open' : ''}`} />
               </div>
               <div className={`mm-mob-subs ${isExpanded ? 'mm-mob-subs-open' : ''}`}>
-                <Link href={cat.href} className="mm-mob-browse" onClick={() => setMobileOpen(false)}>
+                <Link href={cat.href} className="mm-mob-browse" onClick={() => setMobileOpen(false)} prefetch={false}>
                   Browse all {cat.label} →
                 </Link>
                 {cat.subcategories.map(sub => (
