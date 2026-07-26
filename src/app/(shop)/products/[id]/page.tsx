@@ -751,10 +751,10 @@ export default async function ProductDetailPage({
         .pd-info-col-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; color: var(--ink); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         .pd-info-col-title::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
         .pd-info-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-        .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing： 0.02em; transition： color 0.2s; display： flex； align-items： center； gap：
-        .pd-info-col ul li a::before { content: ''; display: inline-block; width: 12px; height: 0.5px; background: var(--border); transition: background 0.2s, width 0.2s; flex-shrink: 0; }
-        .pd-info-col ul li a:hover { color: var(--ink); }
-        .pd-info-col ul li a:hover::before { background: var(--gold); width: 18px; }
+       .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.02em; transition: color 0.2s; display: flex; align-items: center; gap: 6px; }
+.pd-info-col ul li a::before { content: ''; display: inline-block; width: 12px; height: 0.5px; background: var(--border); transition: background 0.2s, width 0.2s; flex-shrink: 0; }
+.pd-info-col ul li a:hover { color: var(--ink); }
+.pd-info-col ul li a:hover::before { background: var(--gold); width: 18px; }
         .pd-bottom-strip { display: flex; align-items: center; justify-content: space-between; padding-bottom: 40px; gap: 16px; flex-wrap: wrap; }
         .pd-bottom-cert { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.08em; color: var(--muted); }
         .pd-bottom-cert svg { color: var(--gold); }

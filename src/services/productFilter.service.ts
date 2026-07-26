@@ -253,85 +253,106 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
 }
 
 // ─── Facets pipeline ──────────────────────────────────────────────────────────
-export function buildFacetsPipeline(baseFilter: FilterQuery<IProduct>) {
-  return [
-    { $match: baseFilter },
-    {
-      $facet: {
-        // Diamond facets
-        shapes: [
-          { $group: { _id: '$shape', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        colors: [
-          { $group: { _id: '$color', count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ],
-        clarities: [
-          { $group: { _id: '$clarity', count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ],
-        certifications: [
-          { $group: { _id: '$certification', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        priceRange: [
-          { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } },
-        ],
-        sizeRange: [
-          { $group: { _id: null, min: { $min: '$size' }, max: { $max: '$size' } } },
-        ],
+// `kind` scopes which $facet branches actually get computed. A single
+// $facet with all ~16 branches was being run on EVERY /products request
+// regardless of whether the page was showing watches or diamonds — so a
+// diamond listing was still grouping/unwinding watchFeatures, watchBrands,
+// etc. across every matched document (post-$match, in memory), and vice
+// versa. That extra, entirely-unused work was a big part of why the page
+// sat behind the full-page loading.tsx skeleton far longer than the actual
+// product query needed. Passing the resolved productType cuts the branch
+// count roughly in half and skips work whose result is never rendered.
+export function buildFacetsPipeline(
+  baseFilter: FilterQuery<IProduct>,
+  kind?: 'watch' | 'diamond' | 'gemstone',
+) {
+  const diamondFacets = {
+    shapes: [
+      { $group: { _id: '$shape', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    colors: [
+      { $group: { _id: '$color', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ],
+    clarities: [
+      { $group: { _id: '$clarity', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ],
+    certifications: [
+      { $group: { _id: '$certification', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    sizeRange: [
+      { $group: { _id: null, min: { $min: '$size' }, max: { $max: '$size' } } },
+    ],
+  };
 
-        // Watch facets
-        watchGenders: [
-          { $match: { watchGender: { $exists: true } } },
-          { $group: { _id: '$watchGender', count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ],
-        watchBrands: [
-          { $match: { watchBrand: { $exists: true } } },
-          { $group: { _id: '$watchBrand', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchMovements: [
-          { $match: { watchMovement: { $exists: true } } },
-          { $group: { _id: '$watchMovement', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchStrapTypes: [
-          { $match: { watchStrapType: { $exists: true } } },
-          { $group: { _id: '$watchStrapType', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchCaseMaterials: [
-          { $match: { watchCaseMaterial: { $exists: true } } },
-          { $group: { _id: '$watchCaseMaterial', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchDialColors: [
-          { $match: { watchDialColor: { $exists: true } } },
-          { $group: { _id: '$watchDialColor', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchFeatures: [
-          { $match: { watchFeatures: { $exists: true, $not: { $size: 0 } } } },
-          { $unwind: '$watchFeatures' },
-          { $group: { _id: '$watchFeatures', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchStyles: [
-          { $match: { watchStyle: { $exists: true } } },
-          { $group: { _id: '$watchStyle', count: { $sum: 1 } } },
-          { $sort: { count: -1 } },
-        ],
-        watchCaseSizes: [
-          { $match: { watchCaseSize: { $exists: true } } },
-          { $group: { _id: '$watchCaseSize', count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
-        ],
+  const watchFacets = {
+    watchGenders: [
+      { $match: { watchGender: { $exists: true } } },
+      { $group: { _id: '$watchGender', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ],
+    watchBrands: [
+      { $match: { watchBrand: { $exists: true } } },
+      { $group: { _id: '$watchBrand', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchMovements: [
+      { $match: { watchMovement: { $exists: true } } },
+      { $group: { _id: '$watchMovement', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchStrapTypes: [
+      { $match: { watchStrapType: { $exists: true } } },
+      { $group: { _id: '$watchStrapType', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchCaseMaterials: [
+      { $match: { watchCaseMaterial: { $exists: true } } },
+      { $group: { _id: '$watchCaseMaterial', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchDialColors: [
+      { $match: { watchDialColor: { $exists: true } } },
+      { $group: { _id: '$watchDialColor', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchFeatures: [
+      { $match: { watchFeatures: { $exists: true, $not: { $size: 0 } } } },
+      { $unwind: '$watchFeatures' },
+      { $group: { _id: '$watchFeatures', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchStyles: [
+      { $match: { watchStyle: { $exists: true } } },
+      { $group: { _id: '$watchStyle', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ],
+    watchCaseSizes: [
+      { $match: { watchCaseSize: { $exists: true } } },
+      { $group: { _id: '$watchCaseSize', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ],
+  };
 
-        totalCount: [{ $count: 'count' }],
-      },
-    },
-  ];
+  // Always cheap, always relevant regardless of kind.
+  const common = {
+    priceRange: [
+      { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } },
+    ],
+    totalCount: [{ $count: 'count' }],
+  };
+
+  const facetBranches =
+    kind === 'watch'
+      ? { ...watchFacets, ...common }
+      : kind === 'diamond' || kind === 'gemstone'
+        ? { ...diamondFacets, ...common }
+        // Unknown kind (e.g. empty result set, no prior signal) — compute
+        // everything, same as before, so nothing regresses.
+        : { ...diamondFacets, ...watchFacets, ...common };
+
+  return [{ $match: baseFilter }, { $facet: facetBranches }];
 }

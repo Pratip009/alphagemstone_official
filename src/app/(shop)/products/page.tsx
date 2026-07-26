@@ -7,6 +7,8 @@ import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+
+type ProductType = "watch" | "diamond" | "gemstone";
 interface PageProps {
   searchParams: Promise<Record<string, string>>;
 }
@@ -40,7 +42,7 @@ const WATCH_FILTER_PARAMS = [
 function resolveProductType(
   sp: Record<string, string>,
   firstProduct: Record<string, unknown> | undefined,
-): "watch" | "diamond" | "gemstone" {
+): ProductType {
   const kind = firstProduct?.productKind as string | undefined;
   if (kind === "watch")    return "watch";
   if (kind === "gemstone") return "gemstone";
@@ -115,10 +117,14 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     limit:              24,
   };
 
-  const [{ products, total, page, limit }, facets] = await Promise.all([
-    listProducts(params),
-    getProductFacets(params),
-  ]);
+  // Only the product list is awaited here. It's a single indexed query
+  // capped at `limit` (24), so it resolves quickly and lets the page start
+  // streaming right away. Facets (the ~10-16-branch aggregation) used to be
+  // awaited in the same Promise.all, which meant the route's loading.tsx
+  // full-page skeleton stayed up until BOTH finished — in practice, until
+  // the much slower facets query finished. That work now happens inside
+  // <FacetedFilterBar>, in its own Suspense boundary below.
+  const { products, total, page, limit } = await listProducts(params);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -142,10 +148,14 @@ export default async function ProductsPage({ searchParams }: PageProps) {
 
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
 
-          {/* ── Filter bar: horizontal, sticky, shown on every screen size ── */}
+          {/* ── Filter bar: horizontal, sticky, shown on every screen size ──
+              Facets are fetched inside FacetedFilterBar, independently of
+              the product grid above/below, so a slow facets aggregation
+              only delays this strip (behind SidebarSkeleton) and never
+              blocks the products themselves from rendering. ── */}
           <div className="-mx-4 sm:-mx-8 mb-8">
             <Suspense fallback={<SidebarSkeleton />}>
-              <FilterBar productType={productType} facets={facets} />
+              <FacetedFilterBar params={params} productType={productType} />
             </Suspense>
           </div>
 
@@ -256,6 +266,23 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       </div>
     </>
   );
+}
+
+// ─── Faceted filter bar ────────────────────────────────────────────────────────
+// Dedicated async Server Component so the (comparatively expensive) facets
+// aggregation runs behind its own Suspense boundary instead of blocking the
+// whole page. Next streams this in as soon as it resolves; everything else
+// on the page — the product grid, pagination, etc. — is already visible by
+// then since it only depended on the fast listProducts() query.
+async function FacetedFilterBar({
+  params,
+  productType,
+}: {
+  params: ProductFilterParams;
+  productType: ProductType;
+}) {
+  const facets = await getProductFacets(params, productType);
+  return <FilterBar productType={productType} facets={facets} />;
 }
 
 // ─── Active filter chips ──────────────────────────────────────────────────────

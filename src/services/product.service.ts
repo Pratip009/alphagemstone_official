@@ -113,7 +113,10 @@ export async function getProductStats() {
   return { total, active, inactive: total - active, memoEligible, inventoryValue };
 }
 
-export async function getProductFacets(params: ProductFilterParams) {
+export async function getProductFacets(
+  params: ProductFilterParams,
+  kind?: 'watch' | 'diamond' | 'gemstone',
+) {
   // Also resolve slugs for facets so counts are scoped correctly
   const resolved = await resolveSlugFilters({
     category: params.category,
@@ -123,7 +126,7 @@ export async function getProductFacets(params: ProductFilterParams) {
 
   const { query } = buildProductFilterQuery(resolved);
 
-  const pipeline = buildFacetsPipeline(query) as Parameters<typeof Product.aggregate>[0];
+  const pipeline = buildFacetsPipeline(query, kind) as Parameters<typeof Product.aggregate>[0];
   const [result] = await Product.aggregate(pipeline);
   return result;
 }
