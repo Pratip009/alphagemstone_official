@@ -189,13 +189,20 @@ function SubcategoryCard({
             : "0 1px 2px rgba(20,33,61,0.04)",
         }}
       >
-        <div className="sub-card-image">
+        <div className="sub-card-image" style={{
+    position: "relative",
+    background: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  }}>
           <img
             src={sub.imageUrl ?? fallback}
             alt={sub.name}
             style={{
-              width: "100%",
-              height: "100%",
+              width: "70%",
+              height: "70%",
               objectFit: "cover",
               transform: hovered ? "scale(1.06)" : "scale(1)",
               transition: "transform 0.5s cubic-bezier(0.22,1,0.36,1)",
@@ -590,7 +597,7 @@ function LandingView({
   onHoverPrefetch?: (sub: ISubcategory) => void;
   showHero: boolean;
 }) {
-  const RANDOM_PICK = 4;
+  const RANDOM_PICK = 5;
 
   const randomSubsMap = useMemo(() => {
     const map: Record<string, ISubcategory[]> = {};

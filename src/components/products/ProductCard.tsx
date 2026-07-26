@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cldUrl } from "@/lib/cloudinary-client";
-
 import { WishlistIconButton } from "@/components/wishlist/WishlistButton";
 
 interface ProductCardProps {
@@ -11,7 +10,6 @@ interface ProductCardProps {
     _id: string;
     name: string;
     price: number;
-    // gem / diamond fields
     shape?: string | string[];
     size?: number;
     color?: string | string[];
@@ -22,7 +20,6 @@ interface ProductCardProps {
     colorRaw?: string;
     clarityRaw?: string;
     gradeRaw?: string;
-    // watch fields
     watchBrand?: string;
     watchModel?: string;
     watchMovement?: string;
@@ -87,7 +84,6 @@ const WATCH_PLACEHOLDER =
 const DIAMOND_PLACEHOLDER =
   "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80&fit=crop";
 
-// Best-effort word -> hex map so a stated color renders as an inspection swatch.
 const COLOR_HEX: Record<string, string> = {
   black: "#1C1C1E",
   white: "#F5F5F7",
@@ -126,6 +122,7 @@ const COLOR_HEX: Record<string, string> = {
   opal: "#E7E2DE",
   garnet: "#7A2530",
 };
+
 function swatchHex(text?: string): string | null {
   if (!text) return null;
   const key = text.trim().toLowerCase();
@@ -134,16 +131,12 @@ function swatchHex(text?: string): string | null {
   return found ? COLOR_HEX[found] : null;
 }
 
-// Lot reference — the last four hex characters of the real Mongo _id, so the
-// number printed on the card is an actual stable identifier, not decoration.
 function lotNumber(id: string): string {
   const clean = (id || "").replace(/[^a-fA-F0-9]/g, "");
   const tail = clean.slice(-4).toUpperCase();
   return tail || "0000";
 }
 
-// Headline descriptor — "Round-Cut Sapphire" / "Men's Sport Watch" — the
-// catalog's classification line, built from the piece's own attributes.
 function buildKicker(
   product: ProductCardProps["product"],
   watch: boolean,
@@ -175,8 +168,6 @@ interface Particular {
   swatch?: string | null;
 }
 
-// The condition-report grid — every field shown here appears nowhere else on
-// the card, so nothing is repeated twice.
 function buildParticulars(
   product: ProductCardProps["product"],
   watch: boolean,
@@ -235,81 +226,28 @@ function buildParticulars(
 
 function WatchIcon() {
   return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 18 18"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg width="12" height="12" viewBox="0 0 18 18" fill="none" aria-hidden="true">
       <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M9 5.5V9l2 2"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <rect
-        x="7"
-        y="1"
-        width="4"
-        height="2.3"
-        rx="0.5"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-      <rect
-        x="7"
-        y="14.7"
-        width="4"
-        height="2.3"
-        rx="0.5"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
+      <path d="M9 5.5V9l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="7" y="1" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="7" y="14.7" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
 }
+
 function GemIcon() {
   return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 18 18"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6"
-        stroke="currentColor"
-        strokeWidth="0.8"
-      />
+    <svg width="12" height="12" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6" stroke="currentColor" strokeWidth="0.8" />
     </svg>
   );
 }
+
 function ArrowIcon() {
   return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 18 18"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M4 14L14 4M14 4H6M14 4V12"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width="13" height="13" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M4 14L14 4M14 4H6M14 4V12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -356,153 +294,188 @@ export default function ProductCard({
 
         .apc {
           --paper: #ffffff;
-          --ink: #17171a;
-          --ink-soft: #4b4b52;
-          --muted: #8d8d95;
-          --line: #d9d9dd;
-          --line-strong: #b8b8bf;
-          --accent: #a9823e;
-          --accent-deep: #8f6c30;
+          --paper-soft: #fafaf9;
+          --ink: #1a1a1c;
+          --ink-soft: #4a4a50;
+          --muted: #9a9aa0;
+          --line: #ebebea;
+          --line-strong: #d4d4d2;
+          --accent: #b08d4a;
+          --accent-soft: #f7f2e8;
           --oxblood: #9c3b45;
-          --avail: #2f7d53;
+          --avail: #2d7a52;
 
           display: block;
           text-decoration: none;
           color: inherit;
-          font-family: 'Inter', sans-serif;
+          font-family: 'Inter', system-ui, sans-serif;
           outline: none;
           width: 100%;
+          height: 100%;
         }
 
         .apc-card {
           position: relative;
           background: var(--paper);
-          border: 1.5px solid var(--line);
-          border-radius: 14px;
+          border: 1px solid var(--line);
+          border-radius: 16px;
           display: flex;
           flex-direction: column;
           height: 100%;
           overflow: hidden;
-          box-shadow: 0 1px 3px rgba(20,20,25,0.07), 0 1px 2px rgba(20,20,25,0.05);
-          transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
-        }
-        .apc:hover .apc-card, .apc:focus-visible .apc-card {
-          transform: translateY(-3px);
-          border-color: var(--line-strong);
-          box-shadow: 0 16px 32px -12px rgba(20,20,25,0.22);
-        }
-        .apc:focus-visible .apc-card {
-          box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+          transition: 
+            transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 0.35s ease;
         }
 
-        /* ── Lot strip ────────────────────────────────────────────────── */
-        .apc-lot-row {
+        .apc:hover .apc-card,
+        .apc:focus-visible .apc-card {
+          transform: translateY(-4px);
+          border-color: var(--line-strong);
+          box-shadow: 
+            0 20px 40px -16px rgba(26, 26, 28, 0.12),
+            0 8px 16px -8px rgba(26, 26, 28, 0.06);
+        }
+
+        .apc:focus-visible .apc-card {
+          box-shadow: 
+            0 0 0 2px var(--paper),
+            0 0 0 4px var(--accent),
+            0 20px 40px -16px rgba(26, 26, 28, 0.12);
+        }
+
+        /* ── Header strip ─────────────────────────────────────────────── */
+        .apc-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 7px 14px;
+          padding: 12px 16px 0;
+        }
+
+        .apc-lot {
           font-family: 'IBM Plex Mono', monospace;
           font-size: 10px;
           font-weight: 500;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.08em;
           color: var(--muted);
         }
-        .apc-lot-num::before { content: 'LOT № '; color: #c3c3c8; }
-        .apc-lot-type {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--accent-deep);
-          text-transform: uppercase;
+        .apc-lot span {
+          color: #c5c5c8;
+          margin-right: 3px;
         }
 
-        /* ── Photo — smaller frame, generous white margin ────────────── */
-        .apc-mat-wrap {
-          padding: 0 18px 10px;
+        .apc-type {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: var(--accent);
+        }
+
+        /* ── Image area ───────────────────────────────────────────────── */
+        .apc-visual {
+          position: relative;
+          padding: 12px 20px 8px;
           display: flex;
           justify-content: center;
         }
-        .apc-mat {
+
+        .apc-frame {
           position: relative;
-          width: 68%;
+          width: 100%;
+          max-width: 220px;
           aspect-ratio: 1 / 1;
-          border-radius: 8px;
-          background: #fbfbfc;
+          background: var(--paper-soft);
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
         }
+
         .apc-photo {
-          max-width: 82%;
-          max-height: 82%;
+          max-width: 78%;
+          max-height: 78%;
           object-fit: contain;
-          transition: transform 0.35s ease;
-        }
-        .apc:hover .apc-photo, .apc:focus-visible .apc-photo { transform: scale(1.06); }
-        .apc-mat.is-out .apc-photo {
-          filter: grayscale(0.65);
-          opacity: 0.45;
+          transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        .apc-stock-tag {
+        .apc:hover .apc-photo,
+        .apc:focus-visible .apc-photo {
+          transform: scale(1.05);
+        }
+
+        .apc-frame.is-out .apc-photo {
+          filter: grayscale(0.7);
+          opacity: 0.4;
+        }
+
+        /* Status badges */
+        .apc-badge {
           position: absolute;
-          top: 8px; left: 8px;
+          top: 10px;
+          left: 10px;
           z-index: 2;
-          display: flex; align-items: center; gap: 4px;
-          font-size: 9.5px;
+          font-size: 10px;
           font-weight: 600;
-          letter-spacing: 0.02em;
-          color: var(--oxblood);
-          background: #ffffff;
-          border: 1px solid rgba(156,59,69,0.28);
-          padding: 3px 7px;
-          border-radius: 20px;
-        }
-        .apc-pulse {
-          width: 4px; height: 4px; border-radius: 50%; background: var(--oxblood);
-          animation: apc-breathe 1.8s ease-in-out infinite;
+          letter-spacing: 0.04em;
+          padding: 4px 9px;
+          border-radius: 999px;
+          background: #fff;
+          border: 1px solid rgba(0,0,0,0.06);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
 
-        .apc-ribbon {
-          position: absolute;
-          top: 10px; left: 10px;
-          z-index: 3;
+        .apc-badge.low {
+          color: var(--oxblood);
+          border-color: rgba(156, 59, 69, 0.2);
+        }
+
+        .apc-badge.sold {
           background: var(--ink);
           color: #fff;
-          font-size: 9.5px;
-          font-weight: 600;
-          letter-spacing: 0.06em;
+          border-color: transparent;
           text-transform: uppercase;
-          padding: 4px 9px;
-          border-radius: 20px;
+          letter-spacing: 0.06em;
         }
 
         .apc-wishlist {
           position: absolute;
-          top: 8px; right: 8px;
+          top: 10px;
+          right: 10px;
           z-index: 3;
         }
 
-        .apc-reveal {
+        .apc-cta {
           position: absolute;
-          left: 50%; bottom: 9px;
-          transform: translate(-50%, 6px);
+          left: 50%;
+          bottom: 12px;
+          transform: translate(-50%, 8px);
           z-index: 2;
-          display: flex; align-items: center; gap: 5px;
-          font-size: 10.5px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
           font-weight: 600;
-          letter-spacing: 0.03em;
+          letter-spacing: 0.02em;
           color: var(--ink);
-          background: #ffffff;
+          background: #fff;
           border: 1px solid var(--line-strong);
-          padding: 6px 11px;
-          border-radius: 20px;
+          padding: 7px 14px;
+          border-radius: 999px;
           opacity: 0;
-          transition: opacity 0.25s ease, transform 0.25s ease;
+          pointer-events: none;
+          transition: opacity 0.3s ease, transform 0.3s ease;
           white-space: nowrap;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
         }
-        .apc:hover .apc-reveal, .apc:focus-visible .apc-reveal {
+
+        .apc:hover .apc-cta,
+        .apc:focus-visible .apc-cta {
           opacity: 1;
           transform: translate(-50%, 0);
         }
@@ -512,192 +485,218 @@ export default function ProductCard({
           display: flex;
           flex-direction: column;
           flex: 1;
-          padding: 0 16px 14px;
+          padding: 4px 18px 18px;
         }
+
         .apc-kicker {
           font-size: 10.5px;
           font-weight: 600;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.09em;
           text-transform: uppercase;
-          color: var(--accent-deep);
+          color: var(--accent);
+          margin-bottom: 3px;
         }
+
         .apc-name {
-          margin-top: 4px;
-          font-family: 'Fraunces', serif;
+          font-family: 'Fraunces', Georgia, serif;
           font-weight: 600;
-          font-size: 19px;
+          font-size: 18px;
+          line-height: 1.3;
+          letter-spacing: -0.015em;
           color: var(--ink);
-          line-height: 1.28;
-          letter-spacing: -0.01em;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+
         .apc-subtitle {
-          margin-top: 2px;
+          margin-top: 3px;
           font-size: 13px;
           font-weight: 500;
           color: var(--ink-soft);
         }
 
-        /* condition-report grid — larger, clearer type */
-        .apc-particulars {
-          margin-top: 8px;
-          padding-top: 8px;
+        /* Specs grid */
+        .apc-specs {
+          margin-top: 14px;
+          padding-top: 12px;
           border-top: 1px solid var(--line);
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 7px 14px;
+          gap: 10px 16px;
         }
-        .apc-p-label {
+
+        .apc-spec-label {
           font-size: 10px;
           font-weight: 600;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.06em;
           text-transform: uppercase;
           color: var(--muted);
+          margin-bottom: 2px;
         }
-        .apc-p-value {
-          margin-top: 2px;
+
+        .apc-spec-value {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 13.5px;
+          font-size: 13px;
           font-weight: 600;
           color: var(--ink);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
+
         .apc-swatch {
-          width: 9px; height: 9px; border-radius: 50%;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
           flex-shrink: 0;
-          border: 1px solid rgba(20,20,25,0.18);
+          border: 1px solid rgba(0,0,0,0.12);
         }
 
-        .apc-price-row {
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid var(--line);
+        /* Price row */
+        .apc-footer {
+          margin-top: auto;
+          padding-top: 14px;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
+          gap: 12px;
         }
+
+        .apc-price-block {
+          display: flex;
+          flex-direction: column;
+        }
+
         .apc-price-label {
-          display: block;
-          margin-bottom: 4px;
           font-size: 10px;
           font-weight: 600;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.07em;
           text-transform: uppercase;
           color: var(--muted);
+          margin-bottom: 2px;
         }
+
         .apc-price {
-          font-family: 'Fraunces', serif;
+          font-family: 'Fraunces', Georgia, serif;
           font-weight: 700;
           font-size: 22px;
+          letter-spacing: -0.02em;
           color: var(--ink);
+          line-height: 1;
         }
-        .apc-price sup {
-          font-size: 10px;
+
+        .apc-price span {
+          font-size: 11px;
           font-weight: 600;
           color: var(--muted);
           margin-left: 3px;
+          vertical-align: super;
         }
-        .apc-avail {
-          display: flex;
+
+        .apc-stock {
+          display: inline-flex;
           align-items: center;
           gap: 5px;
           font-size: 11.5px;
           font-weight: 600;
           color: var(--avail);
+          white-space: nowrap;
         }
-        .apc-avail .apc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--avail); }
-        .apc-avail.out { color: var(--muted); }
-        .apc-avail.out .apc-dot { background: var(--muted); }
 
-        @keyframes apc-breathe {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.7); }
+        .apc-stock::before {
+          content: "";
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
         }
-/* ── Tablets ──────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .apc-mat { width: 74%; }
-  .apc-name { font-size: 17px; }
-  .apc-particulars { gap: 6px 10px; }
-  .apc-price { font-size: 20px; }
-}
 
-/* ── Phones ───────────────────────────────────────────────────── */
-@media (max-width: 560px) {
-  .apc-card { border-radius: 10px; }
+        .apc-stock.out {
+          color: var(--muted);
+        }
 
-  .apc-lot-row { padding: 6px 10px; font-size: 9px; }
+        /* ── Responsive ───────────────────────────────────────────────── */
+        @media (max-width: 900px) {
+          .apc-frame { max-width: 200px; }
+          .apc-name { font-size: 16.5px; }
+          .apc-price { font-size: 20px; }
+        }
 
-  .apc-mat-wrap { padding: 0 10px 8px; }
-  .apc-mat { width: 82%; border-radius: 6px; }
+        @media (max-width: 640px) {
+          .apc-card { border-radius: 14px; }
 
-  .apc-stock-tag { top: 6px; left: 6px; font-size: 8.5px; padding: 2px 6px; }
-  .apc-ribbon { top: 8px; left: 8px; font-size: 8.5px; padding: 3px 7px; }
-  .apc-wishlist { top: 6px; right: 6px; }
-  /* Hover-only affordance — there's no hover on touch, so it can
-     never be reached here. Keeping it in the DOM but hidden avoids
-     wasting layout/paint on something that will never be seen. */
-  .apc-reveal { display: none; }
+          .apc-header { padding: 10px 14px 0; }
+          .apc-visual { padding: 10px 14px 6px; }
+          .apc-frame { max-width: none; border-radius: 10px; }
 
-  .apc-body { padding: 0 10px 10px; }
-  .apc-kicker { font-size: 9px; }
-  .apc-name { font-size: 15px; margin-top: 3px; -webkit-line-clamp: 2; }
-  .apc-subtitle { font-size: 11.5px; }
+          .apc-body { padding: 2px 14px 14px; }
+          .apc-kicker { font-size: 9.5px; }
+          .apc-name { font-size: 15.5px; }
+          .apc-subtitle { font-size: 12px; }
 
-  /* Two label/value columns get uncomfortably tight once the card
-     itself is only ~150-180px wide in a 2-up mobile grid — stack
-     them instead of shrinking text past a readable size. */
-  .apc-particulars {
-    grid-template-columns: 1fr;
-    gap: 5px;
-    margin-top: 6px;
-    padding-top: 6px;
-  }
-  .apc-p-label { font-size: 9px; }
-  .apc-p-value { font-size: 12px; }
+          .apc-specs {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+            margin-top: 12px;
+            padding-top: 10px;
+          }
+          .apc-spec-label { font-size: 9.5px; }
+          .apc-spec-value { font-size: 12.5px; }
 
-  /* Price + availability no longer fit on one line at this width
-     without truncating one of them — stack instead of squeezing. */
-  .apc-price-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    margin-top: 8px;
-    padding-top: 8px;
-  }
-  .apc-price { font-size: 18px; }
-  .apc-price sup { font-size: 9px; }
-  .apc-avail { font-size: 10.5px; }
-}
+          .apc-footer {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding-top: 12px;
+          }
+          .apc-price { font-size: 19px; }
+
+          /* Hide hover CTA on touch devices */
+          .apc-cta { display: none; }
+        }
+
+        @media (max-width: 400px) {
+          .apc-specs { grid-template-columns: 1fr; gap: 7px; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .apc-card, .apc-photo, .apc-reveal { transition: none !important; }
-          .apc:hover .apc-card, .apc:focus-visible .apc-card { transform: none !important; }
-          .apc-pulse { animation: none !important; }
+          .apc-card,
+          .apc-photo,
+          .apc-cta {
+            transition: none !important;
+          }
+          .apc:hover .apc-card,
+          .apc:focus-visible .apc-card {
+            transform: none !important;
+          }
         }
       `}</style>
 
       <Link href={`/products/${product._id}`} className="apc">
-        <div className="apc-card">
-          <div className="apc-lot-row">
-            <span className="apc-lot-num">{lot}</span>
-            <span className="apc-lot-type">
+        <article className="apc-card">
+          {/* Header */}
+          <div className="apc-header">
+            <div className="apc-lot">
+              <span>LOT</span>
+              {lot}
+            </div>
+            <div className="apc-type">
               {watch ? <WatchIcon /> : <GemIcon />}
               {watch ? "Watch" : "Gem"}
-            </span>
+            </div>
           </div>
 
-          <div className="apc-mat-wrap">
-            <div className={`apc-mat ${isAvailable ? "" : "is-out"}`}>
+          {/* Image */}
+          <div className="apc-visual">
+            <div className={`apc-frame ${isAvailable ? "" : "is-out"}`}>
               {product.images[0] ? (
                 <ProductImage
                   src={cldUrl(product.images[0], {
-                    width: 400,
+                    width: 420,
                     aiUpscale: true,
                   })}
                   alt={product.name}
@@ -712,37 +711,34 @@ export default function ProductCard({
               )}
 
               {lowStock && (
-                <div className="apc-stock-tag">
-                  <span className="apc-pulse" />
-                  Only {product.stock} left
-                </div>
+                <div className="apc-badge low">Only {product.stock} left</div>
               )}
-
-              {!isAvailable && <div className="apc-ribbon">Sold Out</div>}
+              {!isAvailable && <div className="apc-badge sold">Sold Out</div>}
 
               <div className="apc-wishlist">
                 <WishlistIconButton productId={product._id} size="sm" />
               </div>
 
               {isAvailable && (
-                <div className="apc-reveal" aria-hidden="true">
+                <div className="apc-cta" aria-hidden="true">
                   View details <ArrowIcon />
                 </div>
               )}
             </div>
           </div>
 
+          {/* Content */}
           <div className="apc-body">
             <div className="apc-kicker">{kicker}</div>
-            <div className="apc-name">{product.name}</div>
+            <h3 className="apc-name">{product.name}</h3>
             {subtitle && <div className="apc-subtitle">{subtitle}</div>}
 
             {particulars.length > 0 && (
-              <div className="apc-particulars">
+              <div className="apc-specs">
                 {particulars.map((row, i) => (
                   <div key={i}>
-                    <div className="apc-p-label">{row.label}</div>
-                    <div className="apc-p-value">
+                    <div className="apc-spec-label">{row.label}</div>
+                    <div className="apc-spec-value">
                       {row.swatch && (
                         <span
                           className="apc-swatch"
@@ -756,21 +752,20 @@ export default function ProductCard({
               </div>
             )}
 
-            <div className="apc-price-row">
-              <div>
+            <div className="apc-footer">
+              <div className="apc-price-block">
                 <span className="apc-price-label">Price</span>
-                <span className="apc-price">
+                <div className="apc-price">
                   ${product.price.toLocaleString()}
-                  <sup>USD</sup>
-                </span>
+                  <span>USD</span>
+                </div>
               </div>
-              <span className={`apc-avail ${isAvailable ? "" : "out"}`}>
-                <span className="apc-dot" />
+              <div className={`apc-stock ${isAvailable ? "" : "out"}`}>
                 {isAvailable ? `${product.stock} available` : "Sold out"}
-              </span>
+              </div>
             </div>
           </div>
-        </div>
+        </article>
       </Link>
     </>
   );

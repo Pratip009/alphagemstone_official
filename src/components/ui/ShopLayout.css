@@ -222,15 +222,16 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 12px 8px; /* tighter gutter on small phones */
   align-items: stretch; /* every card in a row stretches to the tallest one */
+  justify-content: start;
 }
 @media (min-width: 480px) {
-  .landing-sub-grid { gap: 18px 12px; }
+  .landing-sub-grid { grid-template-columns: repeat(3, 1fr); gap: 18px 12px; }
 }
 @media (min-width: 768px) {
-  .landing-sub-grid { gap: 24px 16px; }
+  .landing-sub-grid { grid-template-columns: repeat(4, 1fr); gap: 24px 16px; }
 }
 @media (min-width: 1024px) {
-  .landing-sub-grid { gap: 28px 20px; }
+  .landing-sub-grid { grid-template-columns: repeat(5, 1fr); gap: 24px 18px; }
 }
 /* Mobile: 2 cards per row (2x2 for a 4-item pick) instead of squeezing 4 in */
 @media (max-width: 639px) {
@@ -240,8 +241,9 @@
 /* ── Subcategory card (3D parallax tilt) ── */
 .sub-card-perspective {
   cursor: pointer;
-  perspective: 900px; /* gives the tilt below somewhere to "fall away" into */
+  perspective: 900px;
   height: 100%;
+   
 }
 .sub-card {
   display: flex;
