@@ -599,7 +599,32 @@ function LandingView({
 }) {
   const RANDOM_PICK = 5;
 
-  const randomSubsMap = useMemo(() => {
+  // Deterministic (unshuffled) picks — identical on server and on the
+  // client's first render, so the initial hydration always matches.
+  const deterministicSubsMap = useMemo(() => {
+    const map: Record<string, ISubcategory[]> = {};
+    categories.forEach((cat) => {
+      const all = subcategories.filter(
+        (s) => s.category._id.toString() === cat._id.toString(),
+      );
+      map[cat._id] = all.slice(0, RANDOM_PICK);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, subcategories]);
+
+  // Only shuffle (Math.random) after mount, once we're guaranteed to be
+  // running purely on the client — this was causing React error #418
+  // (hydration mismatch) because Math.random() gave a different order
+  // on the server-rendered HTML vs. the client's hydration pass.
+  const [mounted, setMounted] = useState(false);
+  const [shuffledSubsMap, setShuffledSubsMap] = useState<Record<
+    string,
+    ISubcategory[]
+  > | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
     const map: Record<string, ISubcategory[]> = {};
     categories.forEach((cat) => {
       const all = subcategories.filter(
@@ -607,9 +632,12 @@ function LandingView({
       );
       map[cat._id] = shuffleArray(all).slice(0, RANDOM_PICK);
     });
-    return map;
+    setShuffledSubsMap(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, subcategories]);
+
+  const randomSubsMap =
+    mounted && shuffledSubsMap ? shuffledSubsMap : deterministicSubsMap;
 
   return (
     <div>
