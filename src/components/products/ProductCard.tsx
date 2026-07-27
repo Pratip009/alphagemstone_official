@@ -697,7 +697,7 @@ export default function ProductCard({
                 <ProductImage
                   src={cldUrl(product.images[0], {
                     width: 420,
-                    aiUpscale: true,
+                  
                   })}
                   alt={product.name}
                   fallback={placeholder}

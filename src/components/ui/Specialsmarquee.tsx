@@ -74,7 +74,7 @@ function ProductCard({
               width: featured ? 700 : 500,
               quality: "auto:best",
               format: "auto",
-              aiUpscale: true,
+              
             })}
             alt={product.name}
             onError={() => setImgError(true)}

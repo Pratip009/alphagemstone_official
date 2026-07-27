@@ -1024,7 +1024,7 @@ export default async function ProductDetailPage({
                             width: 360,
                             quality: "auto",
                             format: "auto",
-                            aiUpscale: true,
+                            
                           })}
                           alt={item.name}
                           loading="lazy"
