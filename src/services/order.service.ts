@@ -85,11 +85,23 @@ export async function createOrderFromCart(
     }
   }
 
-  const selectedShippingCost =
+  // rawShippingRate = the carrier's actual quoted rate (e.g. $7.50 for USPS).
+  // serviceFee       = $2 if rawShippingRate < $10, else $0 — computed ONCE here
+  //                    from the raw rate and stored as its own field, so nothing
+  //                    downstream (admin panel, order history, emails) has to
+  //                    re-derive it by subtracting numbers back out of a combined
+  //                    total. That re-derivation is exactly what causes the
+  //                    "$7.50 splits into $5.50 shipping + $2 fee" style bugs.
+  const rawShippingRate =
+    shippingSelection?.shippingRate !== undefined
+      ? shippingSelection.shippingRate
+      : shippingCost;
+  const combinedShippingCost =
     shippingSelection?.shippingRate !== undefined
       ? applyShippingServiceFee(shippingSelection.shippingRate)
       : shippingCost;
-  const finalTotal = Math.max(0, subtotal + tax + selectedShippingCost - couponDiscount);
+  const serviceFee = Math.round((combinedShippingCost - rawShippingRate) * 100) / 100;
+  const finalTotal = Math.max(0, subtotal + tax + combinedShippingCost - couponDiscount);
 
   const order = new Order({
     user:            userId,
@@ -97,7 +109,8 @@ export async function createOrderFromCart(
     shippingAddress,
     subtotal,
     tax,
-    shippingCost:    selectedShippingCost,
+    shippingCost:    combinedShippingCost,
+    serviceFee,
     totalAmount:     finalTotal,
     appliedCouponCode,
     couponDiscount,
@@ -109,6 +122,7 @@ export async function createOrderFromCart(
     shippingService:           shippingSelection?.shippingService           ?? null,
     shippingServiceCode:       shippingSelection?.shippingServiceCode       ?? null,
     shippingRateId:            shippingSelection?.shippingRateId            ?? null,
+    shippingRate:              rawShippingRate,
     shippingEstimatedDays:     shippingSelection?.shippingEstimatedDays     ?? null,
     shippingEstimatedDelivery: shippingSelection?.shippingEstimatedDelivery ?? null,
   });

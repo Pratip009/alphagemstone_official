@@ -20,6 +20,7 @@ export interface OrderShippingData {
   shippingService?:           string | null;
   shippingRateId?:            string | null;
   shippingRate?:              number;
+  serviceFee?:                number;
   shippingEstimatedDelivery?: string | null;
   shippingEstimatedDays?:     number | null;
   trackingNumber?:            string | null;
@@ -263,6 +264,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
                 { label: 'Carrier',      value: order.shippingCarrier },
                 { label: 'Service',      value: order.shippingService },
                 { label: 'Quoted cost',  value: order.shippingRate != null ? `$${order.shippingRate.toFixed(2)}` : null },
+                { label: 'Service fee',  value: order.serviceFee ? `$${order.serviceFee.toFixed(2)}` : null },
                 { label: 'Est. delivery',value: order.shippingEstimatedDelivery ?? (order.shippingEstimatedDays ? `${order.shippingEstimatedDays} days` : null) },
                 { label: 'Rate ID',      value: order.shippingRateId, mono: true, muted: true },
               ].filter(r => r.value).map(({ label, value, mono, muted }) => (

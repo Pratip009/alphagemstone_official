@@ -47,6 +47,7 @@ interface Order {
   subtotal: number;
   tax: number;
   shippingCost: number;
+  serviceFee?: number;
   totalAmount: number;
   status: string;
   paymentMethod: string;
@@ -208,7 +209,22 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
           </table>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 48 }}>
             <div style={{ width: 280 }}>
-              {[{ label: 'Subtotal', value: `$${order.subtotal.toLocaleString()}` }, { label: 'Shipping', value: order.shippingCost === 0 ? 'Free' : `$${order.shippingCost.toLocaleString()}` }, { label: 'Tax', value: `$${order.tax.toFixed(2)}` }].map(({ label, value }) => (
+              {(() => {
+                // Show the raw carrier rate and service fee as separate
+                // line items using the stored values; fall back to the
+                // combined shippingCost for orders placed before these
+                // fields existed.
+                const fee = order.serviceFee ?? 0;
+                const rawShipping = order.shippingRate && order.shippingRate > 0
+                  ? order.shippingRate
+                  : Math.max(0, order.shippingCost - fee);
+                return [
+                  { label: 'Subtotal', value: `$${order.subtotal.toLocaleString()}` },
+                  { label: 'Shipping', value: rawShipping === 0 ? 'Free' : `$${rawShipping.toLocaleString()}` },
+                  ...(fee > 0 ? [{ label: 'Service Fee', value: `$${fee.toFixed(2)}` }] : []),
+                  { label: 'Tax', value: `$${order.tax.toFixed(2)}` },
+                ];
+              })().map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #f0ece6', fontSize: 13, color: '#6b6560' }}>
                   <span>{label}</span><span>{value}</span>
                 </div>
@@ -311,6 +327,7 @@ function OrderDetail({ order, onShippingUpdate, onInvoice }: {
     shippingService: order.shippingService,
     shippingRateId: order.shippingRateId,
     shippingRate: order.shippingRate,
+    serviceFee: order.serviceFee,
     shippingEstimatedDelivery: order.shippingEstimatedDelivery,
     shippingEstimatedDays: order.shippingEstimatedDays,
     trackingNumber: order.trackingNumber,
@@ -378,11 +395,18 @@ function OrderDetail({ order, onShippingUpdate, onInvoice }: {
 
           {/* Totals */}
           <div className="mt-3 rounded-xl overflow-hidden border border-[#ede9e1]">
-            {[
-              { label: 'Subtotal', value: `$${order.subtotal.toLocaleString()}` },
-              { label: 'Shipping', value: order.shippingCost === 0 ? 'Free' : `$${order.shippingCost.toLocaleString()}` },
-              { label: 'Tax', value: `$${order.tax.toFixed(2)}` },
-            ].map(({ label, value }) => (
+            {(() => {
+              const fee = order.serviceFee ?? 0;
+              const rawShipping = order.shippingRate && order.shippingRate > 0
+                ? order.shippingRate
+                : Math.max(0, order.shippingCost - fee);
+              return [
+                { label: 'Subtotal', value: `$${order.subtotal.toLocaleString()}` },
+                { label: 'Shipping', value: rawShipping === 0 ? 'Free' : `$${rawShipping.toLocaleString()}` },
+                ...(fee > 0 ? [{ label: 'Service Fee', value: `$${fee.toFixed(2)}` }] : []),
+                { label: 'Tax', value: `$${order.tax.toFixed(2)}` },
+              ];
+            })().map(({ label, value }) => (
               <div key={label} className="flex justify-between px-3 py-1.5 border-b border-[#f0ece6] text-[0.68rem] text-[#8a8278]">
                 <span>{label}</span><span>{value}</span>
               </div>
