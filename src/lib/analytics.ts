@@ -1,6 +1,6 @@
 const VISITOR_ID_KEY = "alpha_analytics_visitor_id";
 const SESSION_ID_KEY = "alpha_analytics_session_id";
-
+const USER_ID_KEY = "alpha_analytics_user_id";
 function generateId(prefix: string) {
   return `${prefix}_${crypto.randomUUID()}`;
 }
@@ -42,7 +42,16 @@ function getUtmParams() {
     utmCampaign: params.get("utm_campaign") || undefined,
   };
 }
+export function setAnalyticsUserId(userId: string | null) {
+  if (typeof window === "undefined") return;
+  if (userId) localStorage.setItem(USER_ID_KEY, userId);
+  else localStorage.removeItem(USER_ID_KEY);
+}
 
+export function getAnalyticsUserId() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(USER_ID_KEY);
+}
 export async function trackEvent(
   eventType: string,
   data: Record<string, unknown> = {}
@@ -53,6 +62,7 @@ export async function trackEvent(
     const visitorId = getVisitorId();
     const sessionId = getSessionId();
     if (!visitorId || !sessionId) return;
+    const userId = getAnalyticsUserId();
 
     await fetch("/api/analytics/track", {
       method: "POST",
@@ -60,6 +70,7 @@ export async function trackEvent(
       body: JSON.stringify({
         visitorId,
         sessionId,
+        ...(userId ? { userId } : {}),
         eventType,
         page: window.location.pathname,
         pageTitle: document.title,

@@ -6,7 +6,7 @@ import AnalyticsSession from "@/models/AnalyticsSession";
 interface AnalyticsPayload {
   sessionId: string;
   visitorId: string;
-
+userId?: string;
   eventType:
     | "page_view"
     | "click"
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       await AnalyticsEvent.create({
         sessionId: body.sessionId,
         visitorId: body.visitorId,
+        ...(body.userId && { userId: body.userId }),
         eventType: body.eventType,
         page: body.page,
         pageTitle: body.pageTitle,
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
         $set: {
           lastActivityAt: now,
           ...(body.page && { exitPage: body.page }),
+          ...(body.userId && { userId: body.userId }),
         },
         $setOnInsert: {
           visitorId: body.visitorId,

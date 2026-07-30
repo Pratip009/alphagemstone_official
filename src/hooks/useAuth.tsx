@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { setAnalyticsUserId } from '@/lib/analytics';
 
 interface UserAddress {
   line1: string;
@@ -76,7 +77,9 @@ const hasSessionHint = useCallback(() => {
       cancelled = true;
     };
   }, [fetchMe, hasSessionHint]);
-
+useEffect(() => {
+    setAnalyticsUserId(user?.id ?? null);
+  }, [user]);
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',

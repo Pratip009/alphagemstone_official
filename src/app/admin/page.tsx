@@ -223,6 +223,7 @@ export default function AdminDashboard() {
         <div className="bg-white border border-[#ede9e1] rounded-2xl overflow-hidden flex flex-col">
 
           {/* Table header */}
+          {/* Table header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#ede9e1]">
             <div>
               <h2 className="text-[0.85rem] font-semibold text-[#1a1714]">User Registry</h2>

@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IAnalyticsSession extends Document {
   sessionId: string;
   visitorId: string;
+  userId?: string;
 
   startedAt: Date;
   lastActivityAt: Date;
@@ -36,10 +37,14 @@ const AnalyticsSessionSchema = new Schema<IAnalyticsSession>(
       unique: true,
       index: true,
     },
-
     visitorId: {
       type: String,
       required: true,
+      index: true,
+    },
+
+    userId: {
+      type: String,
       index: true,
     },
 
@@ -93,14 +98,11 @@ const AnalyticsSessionSchema = new Schema<IAnalyticsSession>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const AnalyticsSession: Model<IAnalyticsSession> =
   mongoose.models.AnalyticsSession ||
-  mongoose.model<IAnalyticsSession>(
-    "AnalyticsSession",
-    AnalyticsSessionSchema
-  );
+  mongoose.model<IAnalyticsSession>("AnalyticsSession", AnalyticsSessionSchema);
 
 export default AnalyticsSession;

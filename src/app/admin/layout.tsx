@@ -17,12 +17,14 @@ import {
   Tag,
   FileClock,
   UserCheck,
-  BarChart3
+  BarChart3,
+  UsersRound
 } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Home", icon: HomeIcon, exact: true },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/users", label: "Users", icon: UsersRound },
   { href: "/admin/hero-slides", label: "Hero Slides", icon: ImagePlay },
   { href: "/admin/products", label: "Products", icon: Gem },
   { href: "/admin/upload", label: "Bulk Upload", icon: UploadCloud },
