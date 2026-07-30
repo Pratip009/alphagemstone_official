@@ -18,6 +18,14 @@ export const STORE_ORIGIN: ShippingAddress = {
   country:    process.env.STORE_COUNTRY  ?? 'US',
   phone:      process.env.STORE_PHONE    ?? '2125550100',
 };
+export const LOW_COST_CARRIER_THRESHOLD = 10;
+export const LOW_COST_CARRIER_SERVICE_FEE = 2;
+
+export function applyShippingServiceFee(rawRate: number): number {
+  const rate = Number(rawRate) || 0;
+  const withFee = rate < LOW_COST_CARRIER_THRESHOLD ? rate + LOW_COST_CARRIER_SERVICE_FEE : rate;
+  return Math.round(withFee * 100) / 100;
+}
 
 export const DEFAULT_PACKAGE: PackageDimensions = {
   weightLbs:        parseFloat(process.env.DEFAULT_WEIGHT_LBS     ?? '0.5'),

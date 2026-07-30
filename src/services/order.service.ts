@@ -14,7 +14,7 @@ import {
   orderDeliveredEmailHtml,
   adminNewOrderEmailHtml,
 } from '@/lib/email-templates';
-
+import { applyShippingServiceFee } from '@/lib/shipping-config';
 const resend    = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const ADMIN_NOTIFICATION_EMAILS = (process.env.ADMIN_NOTIFICATION_EMAILS || '')
@@ -85,7 +85,10 @@ export async function createOrderFromCart(
     }
   }
 
-  const selectedShippingCost = shippingSelection?.shippingRate ?? shippingCost;
+  const selectedShippingCost =
+    shippingSelection?.shippingRate !== undefined
+      ? applyShippingServiceFee(shippingSelection.shippingRate)
+      : shippingCost;
   const finalTotal = Math.max(0, subtotal + tax + selectedShippingCost - couponDiscount);
 
   const order = new Order({

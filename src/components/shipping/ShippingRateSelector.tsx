@@ -29,6 +29,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ShippingRate, ShippingAddress, PackageDimensions } from '@/types/shipping';
+import { applyShippingServiceFee } from '@/lib/shipping-config';
 
 interface ShippingRateSelectorProps {
   origin:            ShippingAddress;
@@ -302,7 +303,7 @@ export default function ShippingRateSelector({
 
                   <div className="shrink-0 text-right">
                     <p className="ss-mono text-[18px] font-bold tabular-nums" style={{ letterSpacing: '-0.02em', color: 'var(--ss-ink)' }}>
-                      ${rate.rate.toFixed(2)}
+                        ${applyShippingServiceFee(rate.rate).toFixed(2)}
                     </p>
                     <div className="mt-[5px] flex flex-col items-end gap-1">
                       {rate.guaranteed && (
