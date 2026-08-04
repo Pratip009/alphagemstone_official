@@ -5,7 +5,7 @@ import { connectDB } from '@/lib/db';
 import { createSubcategory, listSubcategories } from '@/services/category.service';
 import { withAdmin, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { uploadBuffer } from '@/lib/cloudinary';
+import { uploadBuffer } from '@/lib/r2';
 
 // ── POST /api/admin/subcategories ────────────────────────────────────────────
 // Accepts EITHER:

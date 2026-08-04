@@ -15,7 +15,7 @@ const {
   R2_ACCESS_KEY_ID,
   R2_SECRET_ACCESS_KEY,
   R2_BUCKET_NAME,
-  R2_PUBLIC_URL, // e.g. https://pub-xxxx.r2.dev  or  https://cdn.yourdomain.com
+  R2_PUBLIC_URL, 
 } = process.env;
 
 function requireEnv() {

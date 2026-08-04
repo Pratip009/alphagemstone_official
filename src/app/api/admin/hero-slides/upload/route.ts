@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { uploadBuffer } from '@/lib/cloudinary';
+import { uploadBuffer } from '@/lib/r2';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { assertValidImageBuffer } from '@/lib/file-signature';

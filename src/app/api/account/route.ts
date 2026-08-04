@@ -4,7 +4,7 @@ import User from '@/models/User';
 import { toPublicUser } from '@/services/auth.service';
 import { withAuth, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { uploadBuffer, destroyImage } from '@/lib/cloudinary';
+import { uploadBuffer, destroyImage } from '@/lib/r2';
 import { assertValidImageBuffer } from '@/lib/file-signature';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
