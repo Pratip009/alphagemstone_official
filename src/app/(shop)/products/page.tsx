@@ -81,7 +81,7 @@ export async function generateMetadata({
     description: isWatch
       ? "Shop luxury timepieces at Alpha Gemstone — exceptional horological craftsmanship."
       : isGemstone
-        ? "Shop certified natural and lab-grown gemstones at Alpha Gemstone."
+        ? "Shop certified natural gemstones at Alpha Gemstone."
         : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Gemstone.",
   };
 }
@@ -177,7 +177,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                     {productType === "watch"
                       ? "Exceptional horological craftsmanship"
                       : productType === "gemstone"
-                        ? "Certified natural & lab-grown gemstones"
+                        ? "Certified natural gemstones"
                         : "Ethically sourced · GIA & IGI certified"}
                   </p>
                 </div>
