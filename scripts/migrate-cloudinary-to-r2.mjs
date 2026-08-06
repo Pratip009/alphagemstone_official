@@ -436,46 +436,61 @@ async function migrateModel({ key, Model, folder, docFilter, extractUrls, applyU
   if (only && !only.includes(key)) return;
 
   console.log(`\n📦 ${key}`);
-  let query = Model.find(docFilter).cursor();
   let count = 0;
+  let lastId = null;
+  const batchSize = 25;
 
-  for await (const doc of query) {
+  while (true) {
     if (limit && count >= limit) break;
-    stats.docsScanned++;
 
-    const urls = extractUrls(doc).filter(isCloudinaryUrl);
-    if (urls.length === 0) continue;
+    const pageFilter = lastId ? { $and: [docFilter, { _id: { $gt: lastId } }] } : docFilter;
 
-    count++;
-    const mapping = new Map(); // sourceUrl -> { url, key }
-    let docFailed = false;
+    // Short-lived query per batch — never stays open across the slow
+    // download/upload work below, so there's no cursor for Atlas to kill.
+    const docs = await Model.find(pageFilter).sort({ _id: 1 }).limit(batchSize).exec();
+    if (docs.length === 0) break;
 
-    for (const url of urls) {
-      try {
-        const migrated = await migrateUrl(url, folder, { model: key, docId: String(doc._id) });
-        mapping.set(url, migrated);
-        progress();
-      } catch (err) {
-        stats.failed++;
-        docFailed = true;
-        failures.push({ model: key, docId: String(doc._id), url, error: err.message });
-        console.error(`\n   ❌ ${doc._id}: ${err.message}`);
+    for (const doc of docs) {
+      lastId = doc._id;
+      if (limit && count >= limit) break;
+      stats.docsScanned++;
+
+      const urls = extractUrls(doc).filter(isCloudinaryUrl);
+      if (urls.length === 0) continue;
+
+      count++;
+      const mapping = new Map(); // sourceUrl -> { url, key }
+      let docFailed = false;
+
+      for (const url of urls) {
+        try {
+          const migrated = await migrateUrl(url, folder, { model: key, docId: String(doc._id) });
+          mapping.set(url, migrated);
+          progress();
+        } catch (err) {
+          stats.failed++;
+          docFailed = true;
+          failures.push({ model: key, docId: String(doc._id), url, error: err.message });
+          console.error(`\n   ❌ ${doc._id}: ${err.message}`);
+        }
+      }
+
+      if (mapping.size === 0) continue;
+
+      if (apply) {
+        const sourceIds = urls.map(publicIdFromUrl);
+        applyUrls(doc, mapping);
+        await doc.save();
+        stats.docsChanged++;
+        if (!docFailed) {
+          for (const id of sourceIds) await deleteFromCloudinary(id);
+        }
+      } else {
+        stats.docsChanged++;
       }
     }
 
-    if (mapping.size === 0) continue;
-
-    if (apply) {
-      const sourceIds = urls.map(publicIdFromUrl);
-      applyUrls(doc, mapping);
-      await doc.save();
-      stats.docsChanged++;
-      if (!docFailed) {
-        for (const id of sourceIds) await deleteFromCloudinary(id);
-      }
-    } else {
-      stats.docsChanged++;
-    }
+    if (docs.length < batchSize) break; // that was the last page
   }
 
   console.log(count === 0 ? '   (nothing to migrate)' : '');
