@@ -102,7 +102,10 @@ interface SearchProduct {
   size?: number; shape?: string[]; color?: string[]; clarity?: string[]; certification?: string[];
 }
 
-type MatchedField = "name" | "brand" | "model" | "gem" | "sku" | "carat";
+// "description" added — previously the server never returned this field and the
+// client never scored it, so any product only findable via its description text
+// was invisible in search regardless of how good the query was.
+type MatchedField = "name" | "brand" | "model" | "gem" | "sku" | "carat" | "description";
 
 type ResultItem =
   | { type: "category"; item: SearchCategory }
@@ -138,7 +141,9 @@ async function loadCategories() {
 // single page of up to 500 products once and searched only inside that page —
 // anything outside it (which, on a catalog this size, is most of it) was
 // silently unsearchable. Every keystroke now asks the database directly via
-// /api/products/search, which has no such cap.
+// /api/products/search, which has no such cap. The route itself now also
+// matches per-word (not just as one literal phrase) and includes `description`
+// — see app/api/products/search/route.ts.
 
 async function fetchProducts(q: string, signal: AbortSignal): Promise<SearchProduct[]> {
   const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=24`, { signal });
@@ -156,6 +161,10 @@ function scoreProduct(prod: SearchProduct, lq: string, carat: number | null): { 
     { field: "model", text: prod.watchModel, weight: 0.9 },
     { field: "gem", text: prod.gemstoneName, weight: 0.85 },
     { field: "sku", text: prod.legacySku, weight: 0.6 },
+    // Description is long free text, so it's weighted lowest — a name/brand
+    // match should always outrank a product that only mentions the query
+    // somewhere in its description copy.
+    { field: "description", text: prod.description, weight: 0.4 },
   ];
   let best: { matchedField: MatchedField; score: number; matchedOn: string } | null = null;
   for (const c of candidates) {
@@ -870,7 +879,8 @@ export default function SearchBar({
                           r.matchedField === "model" ? `Model: ${r.matchedOn}` :
                           r.matchedField === "gem" ? `Stone: ${r.matchedOn}` :
                           r.matchedField === "sku" ? `SKU: ${r.matchedOn}` :
-                          r.matchedField === "carat" ? `Carat: ${r.matchedOn}` : null;
+                          r.matchedField === "carat" ? `Carat: ${r.matchedOn}` :
+                          r.matchedField === "description" ? `In description` : null;
                         return (
                           <button key={prod._id} id={`${listboxId}-opt-${idx}`} role="option" aria-selected={activeIdx === idx}
                             className={`sb-row${activeIdx === idx ? " active" : ""}`}
