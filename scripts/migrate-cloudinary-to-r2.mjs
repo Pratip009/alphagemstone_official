@@ -486,25 +486,19 @@ async function migrateModel({ key, Model, folder, docFilter, extractUrls, applyU
       if (mapping.size === 0) continue;
 
       if (apply) {
-        applyUrls(doc, mapping);
-        const modifiedPaths = doc.modifiedPaths();
-        if (modifiedPaths.length === 0) {
-          // Shouldn't happen once a URL was successfully mapped — if you're
-          // seeing this, it means applyUrls() didn't actually change
-          // anything Mongoose could detect for this document. Printing
-          // the mapping + current field value so we can see why.
-          console.warn(
-            `\n   ⚠️  ${key}/${doc._id}: URL was migrated (in mapping) but no field changed on the document.` +
-              `\n      mapping keys: ${JSON.stringify([...mapping.keys()])}` +
-              `\n      doc.desktopImage: ${JSON.stringify(doc.desktopImage)}` +
-              `\n      doc.imageUrl: ${JSON.stringify(doc.imageUrl)}` +
-              `\n      doc.avatarUrl: ${JSON.stringify(doc.avatarUrl)}` +
-              `\n      doc.image: ${JSON.stringify(doc.image)}`
-          );
-          continue;
-        }
-        const setObj = {};
-        for (const path of modifiedPaths) setObj[path] = doc.get(path);
+        // applyUrls returns the exact { fieldName: newValue } pairs to
+        // write, rather than mutating `doc` in place. We tried mutating +
+        // doc.modifiedPaths()/doc.get() earlier, but for these schema-less
+        // (strict:false, no declared paths) models that combination
+        // unreliably reported "modified" without actually changing what
+        // doc.get() returned — MongoDB then matched the document but found
+        // the $set value identical to what was already stored, so
+        // modifiedCount came back 0 with no error anywhere. Building the
+        // $set object explicitly sidesteps Mongoose's dirty-tracking for
+        // these fields entirely, so what gets sent to Mongo is exactly
+        // what we intended, no guessing.
+        const setObj = applyUrls(doc, mapping);
+        if (!setObj || Object.keys(setObj).length === 0) continue;
         bulkOps.push({
           updateOne: { filter: { _id: doc._id }, update: { $set: setObj } },
         });
@@ -606,8 +600,8 @@ async function main() {
     docFilter: { images: { $elemMatch: { $regex: 'res.cloudinary.com' } } },
     extractUrls: (doc) => doc.images || [],
     applyUrls: (doc, mapping) => {
-      doc.images = (doc.images || []).map((u) => mapping.get(u)?.url ?? u);
-      doc.markModified('images');
+      const newImages = (doc.images || []).map((u) => mapping.get(u)?.url ?? u);
+      return { images: newImages };
     },
   });
 
@@ -619,12 +613,8 @@ async function main() {
     extractUrls: (doc) => [doc.imageUrl],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.imageUrl);
-      if (m) {
-        doc.imageUrl = m.url;
-        doc.imagePublicId = m.key;
-        doc.markModified('imageUrl');
-        doc.markModified('imagePublicId');
-      }
+      if (!m) return null;
+      return { imageUrl: m.url, imagePublicId: m.key };
     },
   });
 
@@ -637,14 +627,10 @@ async function main() {
     },
     extractUrls: (doc) => [doc.desktopImage, doc.mobileImage].filter(Boolean),
     applyUrls: (doc, mapping) => {
-      if (mapping.has(doc.desktopImage)) {
-        doc.desktopImage = mapping.get(doc.desktopImage).url;
-        doc.markModified('desktopImage');
-      }
-      if (doc.mobileImage && mapping.has(doc.mobileImage)) {
-        doc.mobileImage = mapping.get(doc.mobileImage).url;
-        doc.markModified('mobileImage');
-      }
+      const setObj = {};
+      if (mapping.has(doc.desktopImage)) setObj.desktopImage = mapping.get(doc.desktopImage).url;
+      if (doc.mobileImage && mapping.has(doc.mobileImage)) setObj.mobileImage = mapping.get(doc.mobileImage).url;
+      return setObj;
     },
   });
 
@@ -656,12 +642,8 @@ async function main() {
     extractUrls: (doc) => [doc.avatarUrl],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.avatarUrl);
-      if (m) {
-        doc.avatarUrl = m.url;
-        doc.avatarPublicId = m.key;
-        doc.markModified('avatarUrl');
-        doc.markModified('avatarPublicId');
-      }
+      if (!m) return null;
+      return { avatarUrl: m.url, avatarPublicId: m.key };
     },
   });
 
@@ -673,10 +655,8 @@ async function main() {
     extractUrls: (doc) => [doc.image],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.image);
-      if (m) {
-        doc.image = m.url;
-        doc.markModified('image');
-      }
+      if (!m) return null;
+      return { image: m.url };
     },
   });
 
@@ -688,10 +668,8 @@ async function main() {
     extractUrls: (doc) => [doc.image],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.image);
-      if (m) {
-        doc.image = m.url;
-        doc.markModified('image');
-      }
+      if (!m) return null;
+      return { image: m.url };
     },
   });
 
@@ -703,10 +681,8 @@ async function main() {
     extractUrls: (doc) => [doc.image],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.image);
-      if (m) {
-        doc.image = m.url;
-        doc.markModified('image');
-      }
+      if (!m) return null;
+      return { image: m.url };
     },
   });
 

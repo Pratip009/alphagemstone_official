@@ -33,13 +33,14 @@ export function optimizedImageUrl(
   // already optimizes those automatically via next/image at build/request
   // time when rendered with <Image>, and this helper is mainly for the
   // plain-<img>-tag call sites that pre-date the R2 migration.
-  if (src.startsWith('http') && opts.width) {
-    const params = new URLSearchParams({
-      url: src,
-      w: String(opts.width),
-      q: String(opts.quality ?? 75),
-    });
-    return `/_next/image?${params.toString()}`;
+  //
+  // NOTE: Next's /_next/image optimizer is currently returning 400 for R2
+  // URLs in production (likely a Content-Type/response validation issue
+  // upstream at R2 — under investigation). Serving the raw R2 URL directly
+  // avoids a broken image on the live site; it just means no automatic
+  // resize/re-encode for R2 sources until that's root-caused and fixed.
+  if (src.startsWith('http')) {
+    return src;
   }
 
   return src;

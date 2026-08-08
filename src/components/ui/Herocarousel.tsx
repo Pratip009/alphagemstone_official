@@ -49,9 +49,9 @@ function optimiseCloudinaryUrl(src: string, width: number): string {
     // 4200px download. Cap it at 2x so the payload stays predictable.
     return src.replace("/upload/", `/upload/f_auto,q_auto:good,w_${width},c_limit,dpr_2.0/`);
   }
-  if (src.startsWith("http")) {
-    return `/_next/image?${new URLSearchParams({ url: src, w: String(width), q: "80" }).toString()}`;
-  }
+  // NOTE: Next's /_next/image optimizer is currently returning 400 for R2
+  // URLs in production — serving the raw URL directly until that's
+  // root-caused, rather than breaking the hero image entirely.
   return src;
 }
 
@@ -63,9 +63,9 @@ function cloudinaryBlurUrl(src: string): string {
   if (src.includes("res.cloudinary.com")) {
     return src.replace("/upload/", "/upload/f_auto,q_1,w_32,e_blur:1500/");
   }
-  if (src.startsWith("http")) {
-    return `/_next/image?${new URLSearchParams({ url: src, w: "32", q: "1" }).toString()}`;
-  }
+  // Same as above — no blur placeholder for R2 sources until /_next/image
+  // is working again; returning the full-size src just means no blur-up
+  // effect for these, not a broken image.
   return src;
 }
 
