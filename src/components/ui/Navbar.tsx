@@ -1573,6 +1573,7 @@ export default function Navbar({
                             alt={user.name}
                             width={26}
                             height={26}
+                            unoptimized
                             className="nav-avatar-img"
                           />
                         ) : (
@@ -1608,6 +1609,7 @@ export default function Navbar({
                               alt={user.name}
                               width={38}
                               height={38}
+                              unoptimized
                               className="nav-avatar-img"
                             />
                           ) : (
@@ -2101,6 +2103,7 @@ export default function Navbar({
                       alt={user.name}
                       width={42}
                       height={42}
+                      unoptimized
                       className="nav-avatar-img"
                     />
                   ) : (

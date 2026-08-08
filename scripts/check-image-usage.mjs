@@ -69,6 +69,14 @@ const Memo = mongoose.models.Memo || mongoose.model('Memo', new mongoose.Schema(
 const Order = mongoose.models.Order || mongoose.model('Order', new mongoose.Schema({}, { strict: false }));
 const NewsletterCampaign =
   mongoose.models.NewsletterCampaign || mongoose.model('NewsletterCampaign', new mongoose.Schema({}, { strict: false }));
+const Blog = mongoose.models.Blog || mongoose.model('Blog', new mongoose.Schema({}, { strict: false }));
+
+// Pulls every src="..." from <img> tags embedded in a rich-text HTML string.
+function extractImgSrcs(html) {
+  if (!html || typeof html !== 'string') return [];
+  const matches = [...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)];
+  return matches.map((m) => m[1]);
+}
 
 // Same field map as migrate-cloudinary-to-r2.mjs's extractUrls(), so a URL
 // counted here as "referenced by 3 docs" is the same URL that script would
@@ -86,6 +94,13 @@ const SOURCES = [
   { key: 'memo', label: 'Memo.image', Model: Memo, extractUrls: (doc) => [doc.image] },
   { key: 'order', label: 'Order.image', Model: Order, extractUrls: (doc) => [doc.image] },
   { key: 'newsletter', label: 'NewsletterCampaign.image', Model: NewsletterCampaign, extractUrls: (doc) => [doc.image] },
+  { key: 'blog_featured', label: 'Blog.featuredImage', Model: Blog, extractUrls: (doc) => [doc.featuredImage] },
+  {
+    key: 'blog_content',
+    label: 'Blog.content (embedded <img> tags)',
+    Model: Blog,
+    extractUrls: (doc) => extractImgSrcs(doc.content),
+  },
 ];
 
 async function main() {
@@ -102,7 +117,7 @@ async function main() {
     // Only project the fields we actually read, keeps this cheap even on
     // large collections.
     const projection = { _id: 1 };
-    for (const f of ['images', 'imageUrl', 'desktopImage', 'mobileImage', 'avatarUrl', 'image']) {
+    for (const f of ['images', 'imageUrl', 'desktopImage', 'mobileImage', 'avatarUrl', 'image', 'featuredImage', 'content']) {
       projection[f] = 1;
     }
 

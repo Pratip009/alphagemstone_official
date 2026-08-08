@@ -197,6 +197,7 @@ function RelatedArticlesSidebar({ related, currentSlug }: { related: RelatedBlog
                   src={b.featuredImage}
                   alt={b.title}
                   fill
+                  unoptimized
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                   sizes="64px"
                 />
@@ -510,7 +511,7 @@ export default function BlogDetailPage() {
       <section className="relative">
         {blog.featuredImage ? (
           <div className="relative h-[420px] md:h-[520px] overflow-hidden">
-            <Image src={blog.featuredImage} alt={blog.title} fill className="object-cover" priority sizes="100vw" />
+            <Image src={blog.featuredImage} alt={blog.title} fill unoptimized className="object-cover" priority sizes="100vw" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f0e0c]/80 via-[#0f0e0c]/30 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-8 md:p-14">
               <div className="max-w-6xl mx-auto">

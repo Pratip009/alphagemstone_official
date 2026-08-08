@@ -75,6 +75,11 @@ function BlogCardComponent({ blog }: { blog: BlogCard }) {
               src={blog.featuredImage}
               alt={blog.title}
               fill
+              // Next's built-in optimizer (/_next/image) is currently
+              // returning 400 for R2-hosted images — see image-url.ts for
+              // details. Serving unoptimized avoids a broken image; revisit
+              // once the upstream R2 Content-Type issue is root-caused.
+              unoptimized
               className="object-cover group-hover:scale-105 transition-transform duration-500"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
