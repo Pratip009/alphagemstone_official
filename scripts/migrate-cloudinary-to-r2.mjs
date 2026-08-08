@@ -450,6 +450,14 @@ async function migrateModel({ key, Model, folder, docFilter, extractUrls, applyU
     const docs = await Model.find(pageFilter).sort({ _id: 1 }).limit(batchSize).exec();
     if (docs.length === 0) break;
 
+    // Accumulate one bulkWrite per page (up to `batchSize` docs) instead of
+    // calling doc.save() per document. When most/all URLs in this page are
+    // cache hits (♻️ reused, e.g. after resuming an interrupted run), the
+    // download/upload step is nearly instant and the Mongo write becomes
+    // the bottleneck — batching turns `batchSize` round-trips into 1.
+    const bulkOps = [];
+    const pendingDeletes = []; // { docId, sourceIds } — run after bulkWrite confirms the write landed
+
     for (const doc of docs) {
       lastId = doc._id;
       if (limit && count >= limit) break;
@@ -478,15 +486,89 @@ async function migrateModel({ key, Model, folder, docFilter, extractUrls, applyU
       if (mapping.size === 0) continue;
 
       if (apply) {
-        const sourceIds = urls.map(publicIdFromUrl);
         applyUrls(doc, mapping);
-        await doc.save();
-        stats.docsChanged++;
-        if (!docFailed) {
-          for (const id of sourceIds) await deleteFromCloudinary(id);
+        const modifiedPaths = doc.modifiedPaths();
+        if (modifiedPaths.length === 0) {
+          // Shouldn't happen once a URL was successfully mapped — if you're
+          // seeing this, it means applyUrls() didn't actually change
+          // anything Mongoose could detect for this document. Printing
+          // the mapping + current field value so we can see why.
+          console.warn(
+            `\n   ⚠️  ${key}/${doc._id}: URL was migrated (in mapping) but no field changed on the document.` +
+              `\n      mapping keys: ${JSON.stringify([...mapping.keys()])}` +
+              `\n      doc.desktopImage: ${JSON.stringify(doc.desktopImage)}` +
+              `\n      doc.imageUrl: ${JSON.stringify(doc.imageUrl)}` +
+              `\n      doc.avatarUrl: ${JSON.stringify(doc.avatarUrl)}` +
+              `\n      doc.image: ${JSON.stringify(doc.image)}`
+          );
+          continue;
         }
+        const setObj = {};
+        for (const path of modifiedPaths) setObj[path] = doc.get(path);
+        bulkOps.push({
+          updateOne: { filter: { _id: doc._id }, update: { $set: setObj } },
+        });
+        // Pushed in lockstep with bulkOps (including a null placeholder for
+        // docFailed docs) so bulkOps[i] and pendingDeletes[i] always refer
+        // to the same document — required for the write-error index
+        // mapping below to line up correctly.
+        pendingDeletes.push(docFailed ? null : { docId: String(doc._id), sourceIds: urls.map(publicIdFromUrl) });
       } else {
         stats.docsChanged++;
+      }
+    }
+
+    if (apply && bulkOps.length > 0) {
+      let bulkResult;
+      let writeErrorIndexes = new Set();
+      try {
+        bulkResult = await Model.bulkWrite(bulkOps, { ordered: false });
+      } catch (err) {
+        // With ordered:false, a BulkWriteError still carries per-op results
+        // for everything that *did* succeed — only the ops that actually
+        // failed need to be retried on the next run.
+        bulkResult = err.result ?? null;
+        const writeErrors = err.writeErrors || bulkResult?.result?.writeErrors || [];
+        for (const we of writeErrors) {
+          writeErrorIndexes.add(we.index);
+          const failedDoc = docs[we.index];
+          failures.push({
+            model: key,
+            docId: failedDoc ? String(failedDoc._id) : '(unknown)',
+            url: '(bulkWrite)',
+            error: we.errmsg || String(we),
+          });
+          console.error(`\n   ❌ ${failedDoc ? failedDoc._id : '(unknown)'}: bulk write failed — ${we.errmsg || we}`);
+        }
+        stats.failed += writeErrors.length;
+      }
+
+      const succeededCount = bulkOps.length - writeErrorIndexes.size;
+      const actuallyMatched = bulkResult?.matchedCount ?? bulkResult?.result?.nMatched ?? null;
+      const actuallyModified = bulkResult?.modifiedCount ?? bulkResult?.result?.nModified ?? null;
+      if (actuallyMatched !== null && actuallyMatched < succeededCount) {
+        console.warn(
+          `\n   ⚠️  ${key}: sent ${succeededCount} update(s) but MongoDB only matched ${actuallyMatched} document(s) — ` +
+            `this usually means the script is connected to a different database than expected (see the "Connected to MongoDB" line above), or these _id's no longer exist.`
+        );
+      }
+      stats.docsChanged += actuallyModified !== null ? actuallyModified : succeededCount;
+
+      // Only delete originals from Cloudinary for docs whose write actually
+      // landed — bulkOps and pendingDeletes are in matching op-order per
+      // doc (both built during the same pass with the same skip rules), so
+      // op index doubles as the delete index.
+      for (let i = 0; i < bulkOps.length; i++) {
+        if (writeErrorIndexes.has(i)) continue;
+        const del = pendingDeletes[i];
+        if (!del) continue;
+        for (const id of del.sourceIds) {
+          try {
+            await deleteFromCloudinary(id);
+          } catch (err) {
+            console.warn(`\n   ⚠️  Cloudinary delete failed for ${id}: ${err.message}`);
+          }
+        }
       }
     }
 
@@ -515,7 +597,7 @@ async function main() {
   await loadCheckpoint();
 
   await mongoose.connect(MONGODB_URI);
-  console.log('✅ Connected to MongoDB');
+  console.log(`✅ Connected to MongoDB — host: ${mongoose.connection.host}, database: ${mongoose.connection.name}`);
 
   await migrateModel({
     key: 'product',
@@ -540,6 +622,8 @@ async function main() {
       if (m) {
         doc.imageUrl = m.url;
         doc.imagePublicId = m.key;
+        doc.markModified('imageUrl');
+        doc.markModified('imagePublicId');
       }
     },
   });
@@ -553,8 +637,14 @@ async function main() {
     },
     extractUrls: (doc) => [doc.desktopImage, doc.mobileImage].filter(Boolean),
     applyUrls: (doc, mapping) => {
-      if (mapping.has(doc.desktopImage)) doc.desktopImage = mapping.get(doc.desktopImage).url;
-      if (doc.mobileImage && mapping.has(doc.mobileImage)) doc.mobileImage = mapping.get(doc.mobileImage).url;
+      if (mapping.has(doc.desktopImage)) {
+        doc.desktopImage = mapping.get(doc.desktopImage).url;
+        doc.markModified('desktopImage');
+      }
+      if (doc.mobileImage && mapping.has(doc.mobileImage)) {
+        doc.mobileImage = mapping.get(doc.mobileImage).url;
+        doc.markModified('mobileImage');
+      }
     },
   });
 
@@ -569,6 +659,8 @@ async function main() {
       if (m) {
         doc.avatarUrl = m.url;
         doc.avatarPublicId = m.key;
+        doc.markModified('avatarUrl');
+        doc.markModified('avatarPublicId');
       }
     },
   });
@@ -581,7 +673,10 @@ async function main() {
     extractUrls: (doc) => [doc.image],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.image);
-      if (m) doc.image = m.url;
+      if (m) {
+        doc.image = m.url;
+        doc.markModified('image');
+      }
     },
   });
 
@@ -593,7 +688,10 @@ async function main() {
     extractUrls: (doc) => [doc.image],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.image);
-      if (m) doc.image = m.url;
+      if (m) {
+        doc.image = m.url;
+        doc.markModified('image');
+      }
     },
   });
 
@@ -605,7 +703,10 @@ async function main() {
     extractUrls: (doc) => [doc.image],
     applyUrls: (doc, mapping) => {
       const m = mapping.get(doc.image);
-      if (m) doc.image = m.url;
+      if (m) {
+        doc.image = m.url;
+        doc.markModified('image');
+      }
     },
   });
 

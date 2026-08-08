@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { cldUrl } from "@/lib/cloudinary-client";
+import { optimizedImageUrl } from "@/lib/image-url";
 import { WishlistIconButton } from "@/components/wishlist/WishlistButton";
 
 interface ProductCardProps {
@@ -695,9 +695,8 @@ export default function ProductCard({
             <div className={`apc-frame ${isAvailable ? "" : "is-out"}`}>
               {product.images[0] ? (
                 <ProductImage
-                  src={cldUrl(product.images[0], {
+                  src={optimizedImageUrl(product.images[0], {
                     width: 420,
-                  
                   })}
                   alt={product.name}
                   fallback={placeholder}

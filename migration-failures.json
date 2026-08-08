@@ -1,13 +1,6 @@
 [
   {
     "model": "product",
-    "docId": "6a46e313c80b8d2d266e6eb7",
-    "url": "https://res.cloudinary.com/demo/image/upload/f_auto,q_auto:best/v1/placeholder/no-image-available.png",
-    "error": "Download failed (404): https://res.cloudinary.com/demo/image/upload/f_auto,q_auto:best/v1/placeholder/no-image-available.png",
-    "fallback": true
-  },
-  {
-    "model": "product",
     "docId": "6a62d78fc75f95d7d2089a61",
     "url": "https://res.cloudinary.com/demo/image/upload/v1/placeholder/no-image-available.png",
     "error": "Download failed (404): https://res.cloudinary.com/demo/image/upload/v1/placeholder/no-image-available.png",

@@ -7,6 +7,9 @@ const nextConfig = {
       { protocol: "https", hostname: "images.pexels.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
+      // Cloudflare R2 — replace with your actual R2_PUBLIC_URL hostname if
+      // you're using a custom domain instead of the default *.r2.dev one.
+      { protocol: "https", hostname: "pub-f1751cc6619d4c769aceeaffe6043848.r2.dev" },
     ],
   },
 
@@ -34,7 +37,9 @@ const nextConfig = {
               // Google Fonts origins are no longer needed here.
               "style-src 'self' 'unsafe-inline' https://www.paypalobjects.com",
               "font-src 'self' https://www.paypalobjects.com",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://images.unsplash.com https://www.paypalobjects.com https://t.paypal.com",
+              // res.cloudinary.com kept temporarily until every doc is confirmed
+              // migrated off Cloudinary — safe to remove after that.
+              "img-src 'self' data: blob: https://res.cloudinary.com https://pub-f1751cc6619d4c769aceeaffe6043848.r2.dev https://images.pexels.com https://images.unsplash.com https://www.paypalobjects.com https://t.paypal.com",
               // ── PayPal API calls + SDK fingerprinting; Vercel Speed
               // Insights / Web Analytics beacon endpoints ──
               "connect-src 'self' https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com https://api.postalpincode.in https://va.vercel-scripts.com https://vitals.vercel-insights.com",

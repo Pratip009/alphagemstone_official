@@ -28,29 +28,45 @@ interface HeroCarouselProps {
 
 const AUTO_ROTATE_MS = 6000;
 
-// ── Cloudinary URL optimiser ─────────────────────────────────────────────────
+// ── Image optimiser ──────────────────────────────────────────────────────────
 // q_auto:good lets Cloudinary pick the smallest byte size that still looks
 // sharp (previously this was hardcoded to q_100 — near-lossless, maximum
 // file size, which was the actual cause of the slow loads). w_<width> stops
 // mobile from downloading the same multi-megapixel image as desktop.
+//
+// Handles both Cloudinary sources (kept on Cloudinary's own transform URL
+// params) and any other absolute URL — importantly, R2 URLs post-migration
+// — by routing those through Next.js's built-in image optimizer instead, so
+// resizing/re-encoding keeps working the same way after the migration.
 const DESKTOP_IMG_WIDTH = 1400;
 const MOBILE_IMG_WIDTH = 900;
 
 function optimiseCloudinaryUrl(src: string, width: number): string {
   if (!src) return src;
-  if (!src.includes("res.cloudinary.com")) return src;
-  // dpr_auto alone can multiply the requested width by 2x/3x on retina
-  // screens with no ceiling, quietly turning a 1400px request into a
-  // 4200px download. Cap it at 2x so the payload stays predictable.
-  return src.replace("/upload/", `/upload/f_auto,q_auto:good,w_${width},c_limit,dpr_2.0/`);
+  if (src.includes("res.cloudinary.com")) {
+    // dpr_auto alone can multiply the requested width by 2x/3x on retina
+    // screens with no ceiling, quietly turning a 1400px request into a
+    // 4200px download. Cap it at 2x so the payload stays predictable.
+    return src.replace("/upload/", `/upload/f_auto,q_auto:good,w_${width},c_limit,dpr_2.0/`);
+  }
+  if (src.startsWith("http")) {
+    return `/_next/image?${new URLSearchParams({ url: src, w: String(width), q: "80" }).toString()}`;
+  }
+  return src;
 }
 
 // Tiny, heavily-compressed, blurred version — a few KB, paints almost
 // instantly, and gives the user something to look at while the real
 // image is still downloading on a slow connection.
 function cloudinaryBlurUrl(src: string): string {
-  if (!src || !src.includes("res.cloudinary.com")) return src;
-  return src.replace("/upload/", "/upload/f_auto,q_1,w_32,e_blur:1500/");
+  if (!src) return src;
+  if (src.includes("res.cloudinary.com")) {
+    return src.replace("/upload/", "/upload/f_auto,q_1,w_32,e_blur:1500/");
+  }
+  if (src.startsWith("http")) {
+    return `/_next/image?${new URLSearchParams({ url: src, w: "32", q: "1" }).toString()}`;
+  }
+  return src;
 }
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────

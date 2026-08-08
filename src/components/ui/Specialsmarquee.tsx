@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { cldUrl } from "@/lib/cloudinary-client";
+import { optimizedImageUrl } from "@/lib/image-url";
 
 interface PopulatedCategory {
   _id: string;
@@ -70,11 +70,9 @@ function ProductCard({
       >
         {hasImg ? (
           <img
-            src={cldUrl(product.images[0], {
+            src={optimizedImageUrl(product.images[0], {
               width: featured ? 700 : 500,
-              quality: "auto:best",
-              format: "auto",
-              
+              quality: 90,
             })}
             alt={product.name}
             onError={() => setImgError(true)}

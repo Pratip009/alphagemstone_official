@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { cldUrl } from "@/lib/cloudinary-client";
+import { optimizedImageUrl } from "@/lib/image-url";
 
 // ─── Unsplash fallbacks ───────────────────────────────────────────────────────
 const SHAPE_UNSPLASH: Record<string, string> = {
@@ -154,9 +155,9 @@ export default function ProductGallery({
   // A tiny, near-instant, non-upscaled version of the same photo used as a
   // blur-up placeholder while the (possibly AI-generated) full version is
   // still being produced by Cloudinary on a cold cache.
-  const blurSrc = cldUrl(activeSrc, {
+  const blurSrc = optimizedImageUrl(activeSrc, {
     width: 40,
-    quality: "auto:low",
+    quality: 20,
   });
 
   // Zoom is available once we've resolved dimensions (or given up trying);
@@ -440,7 +441,7 @@ export default function ProductGallery({
                 // Thumbnails are small and never need AI upscaling — plain
                 // fast resize only, so the thumbnail strip never triggers
                 // a cold-cache ML generation.
-                src={cldUrl(resolvedSrc(i), { width: 112, quality: "auto" })}
+                src={optimizedImageUrl(resolvedSrc(i), { width: 112 })}
                 alt={`${name} view ${i + 1}`}
                 onError={() => handleImgError(i)}
               />
