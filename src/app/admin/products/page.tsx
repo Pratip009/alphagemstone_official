@@ -261,17 +261,18 @@ type WatchForm = typeof EMPTY_WATCH_FORM;
 
 /* ── ConfirmModal ─────────────────────────────────────────────────────────── */
 function ConfirmDeleteModal({
-  mode, productName, totalCount, onConfirm, onCancel, loading,
+  mode, productName, totalCount, error, onConfirm, onCancel, loading,
 }: {
-  mode: "single" | "all";
+  mode: "single" | "all" | "filtered";
   productName?: string;
   totalCount?: number;
+  error?: string;
   onConfirm: () => void;
   onCancel: () => void;
   loading: boolean;
 }) {
   const [confirmText, setConfirmText] = useState("");
-  const required = mode === "all" ? "DELETE ALL" : "";
+  const required = mode === "all" ? "DELETE ALL" : mode === "filtered" ? "DEACTIVATE" : "";
   const canConfirm = mode === "single" || confirmText === required;
 
   return (
@@ -299,6 +300,30 @@ function ConfirmDeleteModal({
               />
             </div>
           </>
+        ) : mode === "filtered" ? (
+          <>
+            <h2 className="ap-modal-title">Delete Filtered Products</h2>
+            <p className="ap-modal-body">
+              This will deactivate <strong>{totalCount} product{totalCount === 1 ? "" : "s"}</strong>{" "}
+              matching your current filter — the same set shown in the table right now. Deactivated
+              products stop showing on the storefront but stay in the catalogue, so this{" "}
+              <strong>can be undone</strong> by reactivating them individually (unlike &quot;Delete All&quot;
+              above, this does not remove any records).
+            </p>
+            <div className="ap-modal-input-wrap">
+              <label className="ap-modal-input-label">
+                Type <strong>DEACTIVATE</strong> to confirm
+              </label>
+              <input
+                className="ap-modal-confirm-input"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="DEACTIVATE"
+                autoFocus
+              />
+            </div>
+            {error && <p className="ap-modal-body" style={{ color: "#b91c1c" }}>⚠ {error}</p>}
+          </>
         ) : (
           <>
             <h2 className="ap-modal-title">Delete Product</h2>
@@ -316,7 +341,11 @@ function ConfirmDeleteModal({
             onClick={onConfirm}
             disabled={!canConfirm || loading}
           >
-            {loading ? "Deleting…" : mode === "all" ? "Delete All Products" : "Delete Product"}
+            {loading
+              ? (mode === "filtered" ? "Deactivating…" : "Deleting…")
+              : mode === "all" ? "Delete All Products"
+              : mode === "filtered" ? "Deactivate Products"
+              : "Delete Product"}
           </button>
         </div>
       </div>
@@ -1172,6 +1201,7 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterSubcategory, setFilterSubcategory] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterShape, setFilterShape] = useState("");
   const [filterClarity, setFilterClarity] = useState("");
@@ -1184,8 +1214,10 @@ export default function AdminProductsPage() {
   const [modal, setModal] = useState<
     | { mode: "all" }
     | { mode: "single"; id: string; name: string }
+    | { mode: "filtered" }
     | null
   >(null);
+  const [filteredDeleteError, setFilteredDeleteError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
 
   const [memoModalProduct, setMemoModalProduct] = useState<Product | null>(null);
@@ -1208,6 +1240,7 @@ export default function AdminProductsPage() {
       const params = new URLSearchParams();
       if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
       if (filterCategory) params.set("category", filterCategory);
+      if (filterSubcategory) params.set("subcategory", filterSubcategory);
       if (filterStatus !== "all") params.set("status", filterStatus);
       if (filterShape) params.set("shape", filterShape);
       if (filterClarity) params.set("clarity", filterClarity);
@@ -1235,7 +1268,13 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, filterCategory, filterStatus, filterShape, filterClarity, filterMemo, sortKey, sortDir, page]);
+  }, [debouncedSearch, filterCategory, filterSubcategory, filterStatus, filterShape, filterClarity, filterMemo, sortKey, sortDir, page]);
+
+  // Subcategory options are scoped to whichever category is currently
+  // selected — picking a category resets subcategory in the same state
+  // update (see the category <select> onChange below) so the two can never
+  // end up in an impossible combination.
+  const subcategoryOptions = categories.find((c) => c._id === filterCategory)?.subcategories || [];
 
   useEffect(() => {
     (async () => {
@@ -1307,6 +1346,41 @@ export default function AdminProductsPage() {
     }
   };
 
+  // Deactivates every product matching the CURRENT filter bar — e.g.
+  // category=Diamond + subcategory=Black Diamonds — via the dedicated
+  // bulk-deactivate endpoint. This is a soft delete (isActive: false),
+  // same as the existing single-product delete, and only ever runs
+  // server-side with the same filter shown on screen (see
+  // buildAdminProductQuery on the backend), so what's deactivated always
+  // matches what was visible before confirming.
+  const handleDeleteFiltered = async () => {
+    setModalLoading(true);
+    setFilteredDeleteError("");
+    try {
+      await apiFetch("/api/admin/products/bulk-deactivate", {
+        method: "POST",
+        body: JSON.stringify({
+          q: debouncedSearch.trim() || undefined,
+          category: filterCategory || undefined,
+          subcategory: filterSubcategory || undefined,
+          status: filterStatus,
+          shape: filterShape || undefined,
+          clarity: filterClarity || undefined,
+          memo: filterMemo,
+          confirm: true,
+        }),
+      });
+      setSuccess(`Deactivated ${total} product(s) matching the current filter.`);
+      setModal(null);
+      setPage(1);
+      fetchProducts();
+    } catch (err) {
+      setFilteredDeleteError(err instanceof Error ? err.message : "Failed to deactivate filtered products");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   const handleMemoSave = async (patch: { memoEligible: boolean; memoMinDays?: number; memoMaxDays?: number }) => {
     if (!memoModalProduct) return;
     setMemoModalLoading(true);
@@ -1326,7 +1400,7 @@ export default function AdminProductsPage() {
     }
   };
 
-  const hasFilters = !!(search || filterCategory || filterStatus !== "all" || filterShape || filterClarity || filterMemo !== "all");
+  const hasFilters = !!(search || filterCategory || filterSubcategory || filterStatus !== "all" || filterShape || filterClarity || filterMemo !== "all");
   const isWatch = (p: Product) => !!(p.watchBrand || p.watchMovement || p.watchGender);
 
   return (
@@ -1337,9 +1411,14 @@ export default function AdminProductsPage() {
         <ConfirmDeleteModal
           mode={modal.mode}
           productName={modal.mode === "single" ? modal.name : undefined}
-          totalCount={stats.total}
-          onConfirm={modal.mode === "all" ? handleDeleteAll : handleDeleteSingle}
-          onCancel={() => setModal(null)}
+          totalCount={modal.mode === "filtered" ? total : stats.total}
+          error={modal.mode === "filtered" ? filteredDeleteError : undefined}
+          onConfirm={
+            modal.mode === "all" ? handleDeleteAll
+            : modal.mode === "filtered" ? handleDeleteFiltered
+            : handleDeleteSingle
+          }
+          onCancel={() => { setModal(null); setFilteredDeleteError(""); }}
           loading={modalLoading}
         />
       )}
@@ -1428,9 +1507,25 @@ export default function AdminProductsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <select className="ap-input" value={filterCategory} onChange={(e) => { setPage(1); setFilterCategory(e.target.value); }}>
+            <select
+              className="ap-input"
+              value={filterCategory}
+              onChange={(e) => { setPage(1); setFilterCategory(e.target.value); setFilterSubcategory(""); }}
+            >
               <option value="">All Categories</option>
               {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
+            <select
+              className="ap-input"
+              value={filterSubcategory}
+              onChange={(e) => { setPage(1); setFilterSubcategory(e.target.value); }}
+              disabled={!filterCategory}
+              title={!filterCategory ? "Select a category first" : undefined}
+            >
+              <option value="">
+                {filterCategory ? "All Subcategories" : "Select a category first…"}
+              </option>
+              {subcategoryOptions.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
             </select>
             <select className="ap-input" value={filterShape} onChange={(e) => { setPage(1); setFilterShape(e.target.value); }}>
               <option value="">All Shapes</option>
@@ -1465,11 +1560,20 @@ export default function AdminProductsPage() {
               <span className="ap-filter-count">
                 Showing <strong>{total.toLocaleString()}</strong> of <strong>{stats.total.toLocaleString()}</strong> products
               </span>
+              {total > 0 && (
+                <button
+                  className="ap-btn-danger"
+                  style={{ padding: "0.35rem 0.75rem", fontSize: "0.85rem" }}
+                  onClick={() => setModal({ mode: "filtered" })}
+                >
+                  🗑 Delete filtered ({total.toLocaleString()})
+                </button>
+              )}
               <button
                 className="ap-clear-btn"
                 onClick={() => {
                   setPage(1);
-                  setSearch(""); setDebouncedSearch(""); setFilterCategory(""); setFilterStatus("all");
+                  setSearch(""); setDebouncedSearch(""); setFilterCategory(""); setFilterSubcategory(""); setFilterStatus("all");
                   setFilterShape(""); setFilterClarity(""); setFilterMemo("all");
                 }}
               >

@@ -37,6 +37,7 @@ export async function listProducts(params: ProductFilterParams) {
 export interface AdminProductQueryParams {
   q?: string;
   category?: string;
+  subcategory?: string;
   status?: 'all' | 'active' | 'inactive';
   shape?: string;
   clarity?: string;
@@ -50,7 +51,13 @@ export interface AdminProductQueryParams {
 const ADMIN_SORT_FIELDS = new Set(['name', 'price', 'stock', 'createdAt']);
 const ADMIN_MAX_LIMIT = 100;
 
-export async function listProductsAdmin(params: AdminProductQueryParams) {
+// Shared by listProductsAdmin (read) and bulkDeactivateProductsAdmin
+// (write) so the two can never drift apart — whatever set of products an
+// admin sees on screen for a given filter is exactly the set a bulk action
+// against that same filter will touch.
+function buildAdminProductQuery(
+  params: Pick<AdminProductQueryParams, 'q' | 'category' | 'subcategory' | 'status' | 'shape' | 'clarity' | 'memo'>
+): mongoose.FilterQuery<IProduct> {
   const query: mongoose.FilterQuery<IProduct> = {};
 
   if (params.q && params.q.trim()) {
@@ -59,12 +66,37 @@ export async function listProductsAdmin(params: AdminProductQueryParams) {
     query.name = { $regex: escaped, $options: 'i' };
   }
   if (params.category) query.category = params.category;
+  if (params.subcategory) query.subcategory = params.subcategory;
   if (params.status === 'active') query.isActive = true;
   else if (params.status === 'inactive') query.isActive = false;
   if (params.shape) query.shape = params.shape;
   if (params.clarity) query.clarity = params.clarity;
   if (params.memo === 'eligible') query.memoEligible = true;
   else if (params.memo === 'not') query.memoEligible = { $ne: true };
+
+  return query;
+}
+
+// True if at least one real filter is set — i.e. this isn't just "match
+// everything". Used to stop the bulk-deactivate endpoint from ever being
+// called with an empty/no-op filter that would silently match the whole
+// catalogue (that's what the separate, explicit "Delete All" flow is for).
+function hasAnyAdminFilter(
+  params: Pick<AdminProductQueryParams, 'q' | 'category' | 'subcategory' | 'status' | 'shape' | 'clarity' | 'memo'>
+): boolean {
+  return !!(
+    (params.q && params.q.trim()) ||
+    params.category ||
+    params.subcategory ||
+    (params.status && params.status !== 'all') ||
+    params.shape ||
+    params.clarity ||
+    (params.memo && params.memo !== 'all')
+  );
+}
+
+export async function listProductsAdmin(params: AdminProductQueryParams) {
+  const query = buildAdminProductQuery(params);
 
   const sortField = params.sortBy && ADMIN_SORT_FIELDS.has(params.sortBy) ? params.sortBy : 'name';
   const sortDir: 1 | -1 = params.sortDir === 'desc' ? -1 : 1;
@@ -80,11 +112,47 @@ export async function listProductsAdmin(params: AdminProductQueryParams) {
       .skip(skip)
       .limit(limit)
       .populate('category', 'name slug')
+      .populate('subcategory', 'name slug')
       .lean(),
     Product.countDocuments(query),
   ]);
 
   return { products, total, page, limit };
+}
+
+// How many products the given filter currently matches — used to preview a
+// bulk-deactivate before it runs, with the exact same query the write will
+// use (see buildAdminProductQuery above).
+export async function countProductsAdmin(
+  params: Pick<AdminProductQueryParams, 'q' | 'category' | 'subcategory' | 'status' | 'shape' | 'clarity' | 'memo'>
+): Promise<number> {
+  const query = buildAdminProductQuery(params);
+  return Product.countDocuments(query);
+}
+
+export interface BulkDeactivateResult {
+  matched: number;
+  modified: number;
+}
+
+// Soft-deletes (isActive: false) every product matching the given filter —
+// the same behavior as the existing single-product delete endpoint
+// (deleteProduct below), just applied to a whole filtered set at once
+// instead of one _id at a time. Deliberately refuses to run against an
+// empty filter (see hasAnyAdminFilter) so this can never become a second,
+// accidental "delete everything" path.
+export async function bulkDeactivateProductsAdmin(
+  params: Pick<AdminProductQueryParams, 'q' | 'category' | 'subcategory' | 'status' | 'shape' | 'clarity' | 'memo'>
+): Promise<BulkDeactivateResult> {
+  if (!hasAnyAdminFilter(params)) {
+    throw new Error('At least one filter is required for a bulk deactivate — refusing to match the whole catalogue.');
+  }
+  const query = buildAdminProductQuery(params);
+  const result = await Product.updateMany(query, { $set: { isActive: false } });
+  return {
+    matched: result.matchedCount ?? 0,
+    modified: result.modifiedCount ?? 0,
+  };
 }
 
 // Global catalogue stats for the admin dashboard cards. Deliberately

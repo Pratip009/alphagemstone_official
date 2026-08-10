@@ -132,6 +132,7 @@ export const GET = withAdmin(async (req) => {
     const { products, total, page, limit } = await listProductsAdmin({
       q: sp.get("q") || undefined,
       category: sp.get("category") || undefined,
+      subcategory: sp.get("subcategory") || undefined,
       status: (sp.get("status") as "all" | "active" | "inactive") || "all",
       shape: sp.get("shape") || undefined,
       clarity: sp.get("clarity") || undefined,
