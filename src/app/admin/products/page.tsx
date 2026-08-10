@@ -48,6 +48,10 @@ const css = `
   .ap-btn-danger:hover { background: #fef2f2; border-color: #dc2626; }
   .ap-btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  .ap-btn-success { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 1.1rem; height: 40px; background: transparent; color: #15803d; border: 1.5px solid #86efac; border-radius: 8px; font-family: "Elms Sans", sans-serif; font-size: 0.825rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .ap-btn-success:hover { background: #f0fdf4; border-color: #15803d; }
+  .ap-btn-success:disabled { opacity: 0.4; cursor: not-allowed; }
+
   /* Product type toggle */
   .ap-type-toggle { display: flex; background: #f1f0ec; border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 1.5rem; }
   .ap-type-btn { flex: 1; height: 38px; border: none; border-radius: 7px; font-family: "Elms Sans", sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.18s; color: #64748b; background: transparent; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
@@ -101,10 +105,8 @@ const css = `
   .ap-row-actions { display: flex; align-items: center; gap: 6px; }
   .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
   .ap-deactivate:hover { color: #d97706; background: #fef3c7; }
-  .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
-.ap-deactivate:hover { color: #d97706; background: #fef3c7; }
-.ap-reactivate { font-size: 0.75rem; color: #15803d; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
-.ap-reactivate:hover { color: #15803d; background: #dcfce7; }
+  .ap-reactivate { font-size: 0.75rem; color: #15803d; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
+  .ap-reactivate:hover { color: #15803d; background: #dcfce7; }
   .ap-delete-row { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
   .ap-delete-row:hover { color: #dc2626; background: #fef2f2; }
 
@@ -267,7 +269,7 @@ type WatchForm = typeof EMPTY_WATCH_FORM;
 function ConfirmDeleteModal({
   mode, productName, totalCount, error, onConfirm, onCancel, loading,
 }: {
-  mode: "single" | "all" | "filtered";
+  mode: "single" | "all" | "filtered" | "reactivateFiltered";
   productName?: string;
   totalCount?: number;
   error?: string;
@@ -276,13 +278,13 @@ function ConfirmDeleteModal({
   loading: boolean;
 }) {
   const [confirmText, setConfirmText] = useState("");
-  const required = mode === "all" ? "DELETE ALL" : mode === "filtered" ? "DEACTIVATE" : "";
+  const required = mode === "all" ? "DELETE ALL" : mode === "filtered" ? "DEACTIVATE" : mode === "reactivateFiltered" ? "REACTIVATE" : "";
   const canConfirm = mode === "single" || confirmText === required;
 
   return (
     <div className="ap-modal-backdrop" onClick={onCancel}>
       <div className="ap-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="ap-modal-icon">🗑</div>
+        <div className="ap-modal-icon">{mode === "reactivateFiltered" ? "♻" : "🗑"}</div>
         {mode === "all" ? (
           <>
             <h2 className="ap-modal-title">Delete All Products</h2>
@@ -328,6 +330,28 @@ function ConfirmDeleteModal({
             </div>
             {error && <p className="ap-modal-body" style={{ color: "#b91c1c" }}>⚠ {error}</p>}
           </>
+        ) : mode === "reactivateFiltered" ? (
+          <>
+            <h2 className="ap-modal-title">Reactivate Filtered Products</h2>
+            <p className="ap-modal-body">
+              This will reactivate <strong>{totalCount} product{totalCount === 1 ? "" : "s"}</strong>{" "}
+              matching your current filter — the same set shown in the table right now. Reactivated
+              products immediately become visible on the storefront again.
+            </p>
+            <div className="ap-modal-input-wrap">
+              <label className="ap-modal-input-label">
+                Type <strong>REACTIVATE</strong> to confirm
+              </label>
+              <input
+                className="ap-modal-confirm-input"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="REACTIVATE"
+                autoFocus
+              />
+            </div>
+            {error && <p className="ap-modal-body" style={{ color: "#b91c1c" }}>⚠ {error}</p>}
+          </>
         ) : (
           <>
             <h2 className="ap-modal-title">Delete Product</h2>
@@ -346,9 +370,10 @@ function ConfirmDeleteModal({
             disabled={!canConfirm || loading}
           >
             {loading
-              ? (mode === "filtered" ? "Deactivating…" : "Deleting…")
+              ? (mode === "filtered" ? "Deactivating…" : mode === "reactivateFiltered" ? "Reactivating…" : "Deleting…")
               : mode === "all" ? "Delete All Products"
               : mode === "filtered" ? "Deactivate Products"
+              : mode === "reactivateFiltered" ? "Reactivate Products"
               : "Delete Product"}
           </button>
         </div>
@@ -1219,9 +1244,11 @@ export default function AdminProductsPage() {
     | { mode: "all" }
     | { mode: "single"; id: string; name: string }
     | { mode: "filtered" }
+    | { mode: "reactivateFiltered" }
     | null
   >(null);
   const [filteredDeleteError, setFilteredDeleteError] = useState("");
+  const [filteredReactivateError, setFilteredReactivateError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
 
   const [memoModalProduct, setMemoModalProduct] = useState<Product | null>(null);
@@ -1314,13 +1341,14 @@ export default function AdminProductsPage() {
     await apiFetch(`/api/admin/products/${id}`, { method: "DELETE" });
     fetchProducts();
   };
+
   const handleReactivate = async (id: string) => {
-  await apiFetch(`/api/admin/products/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ isActive: true }),
-  });
-  fetchProducts();
-};
+    await apiFetch(`/api/admin/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ isActive: true }),
+    });
+    fetchProducts();
+  };
 
   const handleDeleteSingle = async () => {
     if (modal?.mode !== "single") return;
@@ -1392,6 +1420,38 @@ export default function AdminProductsPage() {
     }
   };
 
+  // Reactivates every product matching the CURRENT filter bar — mirror
+  // image of handleDeleteFiltered above, via the dedicated
+  // bulk-reactivate endpoint. Sets isActive back to true for the exact
+  // same set of products shown in the table right now.
+  const handleReactivateFiltered = async () => {
+    setModalLoading(true);
+    setFilteredReactivateError("");
+    try {
+      await apiFetch("/api/admin/products/bulk-reactivate", {
+        method: "POST",
+        body: JSON.stringify({
+          q: debouncedSearch.trim() || undefined,
+          category: filterCategory || undefined,
+          subcategory: filterSubcategory || undefined,
+          status: filterStatus,
+          shape: filterShape || undefined,
+          clarity: filterClarity || undefined,
+          memo: filterMemo,
+          confirm: true,
+        }),
+      });
+      setSuccess(`Reactivated ${total} product(s) matching the current filter.`);
+      setModal(null);
+      setPage(1);
+      fetchProducts();
+    } catch (err) {
+      setFilteredReactivateError(err instanceof Error ? err.message : "Failed to reactivate filtered products");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   const handleMemoSave = async (patch: { memoEligible: boolean; memoMinDays?: number; memoMaxDays?: number }) => {
     if (!memoModalProduct) return;
     setMemoModalLoading(true);
@@ -1422,14 +1482,19 @@ export default function AdminProductsPage() {
         <ConfirmDeleteModal
           mode={modal.mode}
           productName={modal.mode === "single" ? modal.name : undefined}
-          totalCount={modal.mode === "filtered" ? total : stats.total}
-          error={modal.mode === "filtered" ? filteredDeleteError : undefined}
+          totalCount={modal.mode === "filtered" || modal.mode === "reactivateFiltered" ? total : stats.total}
+          error={
+            modal.mode === "filtered" ? filteredDeleteError
+            : modal.mode === "reactivateFiltered" ? filteredReactivateError
+            : undefined
+          }
           onConfirm={
             modal.mode === "all" ? handleDeleteAll
             : modal.mode === "filtered" ? handleDeleteFiltered
+            : modal.mode === "reactivateFiltered" ? handleReactivateFiltered
             : handleDeleteSingle
           }
-          onCancel={() => { setModal(null); setFilteredDeleteError(""); }}
+          onCancel={() => { setModal(null); setFilteredDeleteError(""); setFilteredReactivateError(""); }}
           loading={modalLoading}
         />
       )}
@@ -1580,6 +1645,15 @@ export default function AdminProductsPage() {
                   🗑 Delete filtered ({total.toLocaleString()})
                 </button>
               )}
+              {total > 0 && (
+                <button
+                  className="ap-btn-success"
+                  style={{ padding: "0.35rem 0.75rem", fontSize: "0.85rem" }}
+                  onClick={() => setModal({ mode: "reactivateFiltered" })}
+                >
+                  ♻ Reactivate filtered ({total.toLocaleString()})
+                </button>
+              )}
               <button
                 className="ap-clear-btn"
                 onClick={() => {
@@ -1660,34 +1734,34 @@ export default function AdminProductsPage() {
                           : "— Not Memo"}
                       </button>
                     </td>
-                   <td>
-  <div className="ap-row-actions">
-    {p.isActive ? (
-      <button
-        className="ap-deactivate"
-        onClick={() => handleDeactivate(p._id)}
-        title="Deactivate (soft delete)"
-      >
-        Deactivate
-      </button>
-    ) : (
-      <button
-        className="ap-reactivate"
-        onClick={() => handleReactivate(p._id)}
-        title="Reactivate this product"
-      >
-        Reactivate
-      </button>
-    )}
-    <button
-      className="ap-delete-row"
-      onClick={() => setModal({ mode: "single", id: p._id, name: p.name })}
-      title="Permanently delete this product"
-    >
-      🗑 Delete
-    </button>
-  </div>
-</td>
+                    <td>
+                      <div className="ap-row-actions">
+                        {p.isActive ? (
+                          <button
+                            className="ap-deactivate"
+                            onClick={() => handleDeactivate(p._id)}
+                            title="Deactivate (soft delete)"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            className="ap-reactivate"
+                            onClick={() => handleReactivate(p._id)}
+                            title="Reactivate this product"
+                          >
+                            Reactivate
+                          </button>
+                        )}
+                        <button
+                          className="ap-delete-row"
+                          onClick={() => setModal({ mode: "single", id: p._id, name: p.name })}
+                          title="Permanently delete this product"
+                        >
+                          🗑 Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

@@ -154,6 +154,22 @@ export async function bulkDeactivateProductsAdmin(
     modified: result.modifiedCount ?? 0,
   };
 }
+// Re-activates (isActive: true) every product matching the given filter —
+// the mirror image of bulkDeactivateProductsAdmin above, same guardrail
+// against an empty/no-op filter.
+export async function bulkReactivateProductsAdmin(
+  params: Pick<AdminProductQueryParams, 'q' | 'category' | 'subcategory' | 'status' | 'shape' | 'clarity' | 'memo'>
+): Promise<BulkDeactivateResult> {
+  if (!hasAnyAdminFilter(params)) {
+    throw new Error('At least one filter is required for a bulk reactivate — refusing to match the whole catalogue.');
+  }
+  const query = buildAdminProductQuery(params);
+  const result = await Product.updateMany(query, { $set: { isActive: true } });
+  return {
+    matched: result.matchedCount ?? 0,
+    modified: result.modifiedCount ?? 0,
+  };
+}
 
 // Global catalogue stats for the admin dashboard cards. Deliberately
 // unfiltered (independent of whatever search/filter the admin currently has
