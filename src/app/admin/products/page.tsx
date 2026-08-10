@@ -101,6 +101,10 @@ const css = `
   .ap-row-actions { display: flex; align-items: center; gap: 6px; }
   .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
   .ap-deactivate:hover { color: #d97706; background: #fef3c7; }
+  .ap-deactivate { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
+.ap-deactivate:hover { color: #d97706; background: #fef3c7; }
+.ap-reactivate { font-size: 0.75rem; color: #15803d; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
+.ap-reactivate:hover { color: #15803d; background: #dcfce7; }
   .ap-delete-row { font-size: 0.75rem; color: #94a3b8; background: none; border: none; cursor: pointer; font-family: "Elms Sans", sans-serif; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
   .ap-delete-row:hover { color: #dc2626; background: #fef2f2; }
 
@@ -1310,6 +1314,13 @@ export default function AdminProductsPage() {
     await apiFetch(`/api/admin/products/${id}`, { method: "DELETE" });
     fetchProducts();
   };
+  const handleReactivate = async (id: string) => {
+  await apiFetch(`/api/admin/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ isActive: true }),
+  });
+  fetchProducts();
+};
 
   const handleDeleteSingle = async () => {
     if (modal?.mode !== "single") return;
@@ -1649,24 +1660,34 @@ export default function AdminProductsPage() {
                           : "— Not Memo"}
                       </button>
                     </td>
-                    <td>
-                      <div className="ap-row-actions">
-                        <button
-                          className="ap-deactivate"
-                          onClick={() => handleDeactivate(p._id)}
-                          title="Deactivate (soft delete)"
-                        >
-                          Deactivate
-                        </button>
-                        <button
-                          className="ap-delete-row"
-                          onClick={() => setModal({ mode: "single", id: p._id, name: p.name })}
-                          title="Permanently delete this product"
-                        >
-                          🗑 Delete
-                        </button>
-                      </div>
-                    </td>
+                   <td>
+  <div className="ap-row-actions">
+    {p.isActive ? (
+      <button
+        className="ap-deactivate"
+        onClick={() => handleDeactivate(p._id)}
+        title="Deactivate (soft delete)"
+      >
+        Deactivate
+      </button>
+    ) : (
+      <button
+        className="ap-reactivate"
+        onClick={() => handleReactivate(p._id)}
+        title="Reactivate this product"
+      >
+        Reactivate
+      </button>
+    )}
+    <button
+      className="ap-delete-row"
+      onClick={() => setModal({ mode: "single", id: p._id, name: p.name })}
+      title="Permanently delete this product"
+    >
+      🗑 Delete
+    </button>
+  </div>
+</td>
                   </tr>
                 );
               })}
