@@ -87,3 +87,15 @@ export const GET = withAdmin(async (req: AuthenticatedRequest, context: { params
     return errorResponse('Failed to fetch order', 500);
   }
 });
+export const DELETE = withAdmin(async (req: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
+  try {
+    await connectDB();
+    const { id } = await context.params;
+    const order = await Order.findByIdAndDelete(id).lean();
+    if (!order) return errorResponse('Order not found', 404);
+    return successResponse({ _id: id, deleted: true });
+  } catch (err) {
+    console.error('[deleteOrder]', err);
+    return errorResponse('Failed to delete order', 500);
+  }
+});

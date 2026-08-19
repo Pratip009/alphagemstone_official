@@ -8,6 +8,7 @@ import {
   FileText, Printer, X, TrendingUp, DollarSign, AlertCircle,
   Eye, MoreVertical, ArrowUpRight, Filter, Download, Gem,
   MapPin, CreditCard, Calendar, Hash, ChevronDown, ChevronUp,
+  Trash2, Loader2,
 } from 'lucide-react';
 import AdminOrderShipping, { type OrderShippingData } from '@/components/admin/AdminOrderShipping';
 
@@ -316,10 +317,12 @@ function ShippingChip({ order }: { order: Order }) {
 }
 
 // ─── Expanded Order Detail ────────────────────────────────────────────────────
-function OrderDetail({ order, onShippingUpdate, onInvoice }: {
+function OrderDetail({ order, onShippingUpdate, onInvoice, onDelete, isDeleting }: {
   order: Order;
   onShippingUpdate: (orderId: string, updated: Partial<Order>) => void;
   onInvoice: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
 }) {
   const shippingData: OrderShippingData = {
     _id: order._id,
@@ -461,6 +464,15 @@ function OrderDetail({ order, onShippingUpdate, onInvoice }: {
                   <Truck size={12} /> Track Package
                 </a>
               )}
+              <button
+                onClick={onDelete}
+                disabled={isDeleting}
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-[0.72rem] font-semibold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+              >
+                {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                {isDeleting ? 'Deleting…' : 'Delete Order'}
+              </button>
             </div>
           </div>
         </div>
@@ -509,6 +521,9 @@ export default function AdminOrdersPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -528,6 +543,77 @@ export default function AdminOrdersPage() {
 
   const handleShippingUpdate = (orderId: string, updated: Partial<Order>) => {
     setOrders(prev => prev.map(o => o._id === orderId ? { ...o, ...updated } : o));
+  };
+
+  const removeOrdersFromState = (ids: string[]) => {
+    const idSet = new Set(ids);
+    setOrders(prev => prev.filter(o => !idSet.has(o._id)));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.delete(id));
+      return next;
+    });
+    setExpandedId(prev => (prev && idSet.has(prev) ? null : prev));
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    const ok = window.confirm('Delete this order permanently? This cannot be undone.');
+    if (!ok) return;
+    setDeletingIds(prev => new Set(prev).add(id));
+    try {
+      const res = await authFetch(`/api/admin/orders/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        removeOrdersFromState([id]);
+      } else {
+        console.error('Failed to delete order', await res.text());
+        alert('Failed to delete order. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to delete order', err);
+      alert('Failed to delete order. Please try again.');
+    } finally {
+      setDeletingIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (filtered.length > 0 && filtered.every(o => prev.has(o._id))) {
+        return new Set();
+      }
+      return new Set(filtered.map(o => o._id));
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const ok = window.confirm(`Delete ${ids.length} selected order${ids.length !== 1 ? 's' : ''} permanently? This cannot be undone.`);
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map(id => authFetch(`/api/admin/orders/${id}`, { method: 'DELETE' }))
+      );
+      const succeededIds = ids.filter((_, i) => results[i].status === 'fulfilled' && (results[i] as PromiseFulfilledResult<Response>).value.ok);
+      removeOrdersFromState(succeededIds);
+      if (succeededIds.length < ids.length) {
+        alert(`${succeededIds.length} of ${ids.length} orders deleted. Some deletions failed — please try again.`);
+      }
+    } catch (err) {
+      console.error('Bulk delete failed', err);
+      alert('Failed to delete selected orders. Please try again.');
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -620,8 +706,42 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
+        {/* Bulk selection bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between px-5 py-2.5 border-b" style={{ background: '#fef2f2', borderColor: '#fecaca' }}>
+            <span className="text-[0.7rem] font-semibold" style={{ color: '#dc2626' }}>
+              {selectedIds.size} order{selectedIds.size !== 1 ? 's' : ''} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1.5 rounded-lg text-[0.68rem] font-semibold transition-colors"
+                style={{ color: '#8a8278' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.68rem] font-semibold transition-colors disabled:opacity-60"
+                style={{ background: '#dc2626', color: '#fff' }}
+              >
+                {bulkDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                Delete selected
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Column headers */}
-        <div className="grid items-center px-5 py-2.5" style={{ gridTemplateColumns: '28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 56px' }}>
+        <div className="grid items-center px-5 py-2.5" style={{ gridTemplateColumns: '22px 28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 68px' }}>
+          <input
+            type="checkbox"
+            checked={filtered.length > 0 && filtered.every(o => selectedIds.has(o._id))}
+            onChange={toggleSelectAll}
+            disabled={filtered.length === 0}
+            className="w-3.5 h-3.5 rounded cursor-pointer accent-[#c9a84c]"
+          />
           <span />
           {['Order', 'Customer', 'Amount', 'Payment', 'Shipping', 'Status', ''].map((h, i) => (
             <span key={i} className="text-[0.58rem] tracking-[0.18em] uppercase font-bold" style={{ color: '#b0a898' }}>
@@ -638,7 +758,8 @@ export default function AdminOrdersPage() {
         <div>
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="grid items-center px-5 py-4 border-t animate-pulse" style={{ gridTemplateColumns: '28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 56px', borderColor: '#f5f3ef' }}>
+              <div key={i} className="grid items-center px-5 py-4 border-t animate-pulse" style={{ gridTemplateColumns: '22px 28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 68px', borderColor: '#f5f3ef' }}>
+                <div className="w-3.5 h-3.5 rounded bg-[#ede9e1]" />
                 <div className="w-5 h-5 rounded-lg bg-[#ede9e1]" />
                 {[100, 150, 70, 60, 80, 80, 40].map((w, j) => (
                   <div key={j} className="h-3 bg-[#ede9e1] rounded-lg" style={{ width: w }} />
@@ -656,19 +777,33 @@ export default function AdminOrdersPage() {
           ) : (
             filtered.map(order => {
               const isExpanded = expandedId === order._id;
+              const isSelected = selectedIds.has(order._id);
+              const isDeleting = deletingIds.has(order._id);
               return (
                 <div key={order._id} className="border-t" style={{ borderColor: '#f5f3ef' }}>
                   {/* Row */}
                   <div
                     className="grid items-center px-5 py-3.5 cursor-pointer transition-colors group"
                     style={{
-                      gridTemplateColumns: '28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 56px',
-                      background: isExpanded ? '#faf9f7' : undefined,
+                      gridTemplateColumns: '22px 28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 68px',
+                      background: isSelected ? '#fef2f2' : isExpanded ? '#faf9f7' : undefined,
+                      opacity: isDeleting ? 0.5 : 1,
                     }}
                     onClick={() => setExpandedId(isExpanded ? null : order._id)}
-                    onMouseEnter={e => { if (!isExpanded) (e.currentTarget as HTMLDivElement).style.background = '#fdfcfb'; }}
-                    onMouseLeave={e => { if (!isExpanded) (e.currentTarget as HTMLDivElement).style.background = ''; }}
+                    onMouseEnter={e => { if (!isExpanded && !isSelected) (e.currentTarget as HTMLDivElement).style.background = '#fdfcfb'; }}
+                    onMouseLeave={e => { if (!isExpanded && !isSelected) (e.currentTarget as HTMLDivElement).style.background = ''; }}
                   >
+                    {/* Select checkbox */}
+                    <div onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(order._id)}
+                        disabled={isDeleting}
+                        className="w-3.5 h-3.5 rounded cursor-pointer accent-[#c9a84c]"
+                      />
+                    </div>
+
                     {/* Expand icon */}
                     <div className="w-5 h-5 rounded-md flex items-center justify-center transition-all" style={{ background: isExpanded ? '#c9a84c20' : '#f0ece6', color: isExpanded ? '#c9a84c' : '#c4bdb2' }}>
                       {isExpanded ? <ChevronUp size={10} strokeWidth={2.5} /> : <ChevronDown size={10} strokeWidth={2.5} />}
@@ -730,6 +865,15 @@ export default function AdminOrdersPage() {
                       >
                         <FileText size={11} strokeWidth={2} />
                       </button>
+                      <button
+                        onClick={() => handleDeleteOrder(order._id)}
+                        disabled={isDeleting}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                        style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
+                        title="Delete order"
+                      >
+                        {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} strokeWidth={2} />}
+                      </button>
                     </div>
                   </div>
 
@@ -739,6 +883,8 @@ export default function AdminOrdersPage() {
                       order={order}
                       onShippingUpdate={handleShippingUpdate}
                       onInvoice={() => setInvoiceOrder(order)}
+                      onDelete={() => handleDeleteOrder(order._id)}
+                      isDeleting={isDeleting}
                     />
                   )}
                 </div>
