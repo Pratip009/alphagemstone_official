@@ -2,18 +2,24 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
-  SHAPES, CLARITIES,
+  SHAPES, COLORS, CLARITIES,
   WATCH_GENDERS, WATCH_BRANDS, WATCH_MOVEMENTS,
   WATCH_STRAP_TYPES, WATCH_CASE_MATERIALS, WATCH_DIAL_COLORS,
   WATCH_FEATURES, WATCH_STYLES, WATCH_CASE_SIZES,
 } from '@/models/Product';
 
-const DISPLAY_COLORS = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'fancy-yellow', 'fancy-pink', 'fancy-blue'];
-
+// Approximate swatch colors for the real gemstone-color vocabulary (see
+// src/lib/productAttributes.ts). Anything without an explicit entry below
+// falls back to a neutral grey (COLOR_SWATCH[color] ?? '#e5e5e5').
 const COLOR_SWATCH: Record<string, string> = {
-  D: '#fbfbfa', E: '#fbfbfa', F: '#fbfbfa', G: '#f8f6ee', H: '#f5f1e2',
-  I: '#f1ead2', J: '#ece2c0', K: '#e6d7a9',
-  'fancy-yellow': '#e8cf5a', 'fancy-pink': '#e7b3bd', 'fancy-blue': '#a9c6d8',
+  Red: '#c0392b', Blue: '#2e6da4', Yellow: '#e8cf5a', Green: '#3d8b52',
+  Violet: '#8e6fc9', Pink: '#e7b3bd', Purple: '#7d5ba6', White: '#fbfbfa',
+  Black: '#2b2b2b', Brown: '#8b5a2b', Orange: '#e08a2b',
+  Champagne: '#e6d7a9', Cognac: '#9a5a2b', Canary: '#e8d84a',
+  Padparadscha: '#e6935a', Paraiba: '#2fb8b0', Mystic: '#6a4c93',
+  Smoky: '#7a6a5c', Aqua: '#7fd4d0', Teal: '#2a8c82', Peach: '#f2b98a',
+  Grey: '#9a9a9a', Silver: '#c7c7c7', Clear: '#f4f4f2', Multicolor: '#c48ac9',
+  Rainbow: '#c48ac9',
 };
 
 const dedupe = <T,>(arr: readonly T[]): T[] => Array.from(new Set(arr));
@@ -439,7 +445,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
 
               <FilterCard label="Color" collapsed={!!collapsed.color} onToggle={() => toggleCollapsed('color')} active={activeColors.length > 0} count={activeColors.length}>
                 <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
-                  {dedupe(DISPLAY_COLORS).map((color) => (
+                  {dedupe(COLORS).map((color) => (
                     <SwatchOption
                       key={color}
                       label={color}

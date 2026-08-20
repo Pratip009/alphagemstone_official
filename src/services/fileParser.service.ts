@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import {
-  SHAPES, WATCH_BRANDS, WATCH_GENDERS,
-  type Shape, type WatchBrand, type WatchGender,
+  SHAPES, COLORS, CLARITIES, WATCH_BRANDS, WATCH_GENDERS,
+  type Shape, type Color, type Clarity, type WatchBrand, type WatchGender,
 } from '@/models/Product';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,7 +21,9 @@ export interface ParsedRow {
   shape?: Shape[];
   shapeRaw?: string;
   size?: number;
+  color?: Color[];
   colorRaw?: string;
+  clarity?: Clarity[];
   clarityRaw?: string;
   gradeRaw?: string;
   gemstoneName?: string;
@@ -108,29 +110,120 @@ function splitKeywords(val: unknown): string[] | undefined {
 }
 
 // ─── Shape normalization ───────────────────────────────────────────────────────
-// The legacy catalog's shape text ("Round", "Long Cushion", "Emerald Cut
-// (Baguette)") only loosely maps onto the fixed SHAPES enum. Best-effort
-// match to the enum for filtering; the exact original text is always kept
-// in shapeRaw so nothing is lost even when the match falls back to "other".
-const SHAPE_MAP: Record<string, Shape> = {
-  round: 'round', oval: 'oval', pear: 'pear', trillion: 'trillion',
-  marquise: 'marquise', octagon: 'octagon', heart: 'heart',
-  cushion: 'cushion', 'long cushion': 'cushion', 'antique cushion': 'cushion',
-  'princess cut': 'princess', princess: 'princess',
-  'emerald cut': 'emerald', emerald: 'emerald',
-  'emerald cut (baguette)': 'baguette', baguette: 'baguette',
-  bullet: 'bullet', hexagon: 'hexagon', shield: 'shield', kite: 'kite',
-  cabochon: 'cabochon', 'sugarloaf (square cabochon)': 'cabochon',
-  triangle: 'triangle', asscher: 'asscher', radiant: 'radiant',
-};
+// The catalog's raw shape text (attributes.shape / legacy `shape`) is
+// free-form — "Round", "Long Cushion", "Buff Top Oval", "Faceted Briolette
+// Drop" — and doesn't map 1:1 onto a fixed enum. This does a keyword-based
+// best-effort match against the SHAPES vocabulary (src/lib/productAttributes.ts,
+// itself derived from what's actually in attributes.shape across the full
+// CSV export — covers ~96% of populated rows). Keywords are checked in an
+// order that prefers the more specific/common shape when a raw value
+// contains more than one shape-like word (e.g. "Oval Cabochon" → oval, since
+// "cabochon" there describes the cut, already captured separately in
+// cutType). Anything that matches nothing falls back to "other"; the exact
+// original text is always kept in shapeRaw so nothing is lost.
+const SHAPE_KEYWORDS: Array<[Shape, string[]]> = [
+  ['round', ['round']],
+  ['oval', ['oval']],
+  ['cushion', ['cushion']],
+  ['pear', ['pear']],
+  ['marquise', ['marquise']],
+  ['octagon', ['octagon']],
+  ['emerald', ['emerald']],
+  ['heart', ['heart']],
+  ['princess', ['princess']],
+  ['baguette', ['baguette', 'baggutte']],
+  ['trillion', ['trillion']],
+  ['bullet', ['bullet']],
+  ['square', ['square']],
+  ['briolette', ['briolette']],
+  ['drop', ['drop']],
+  ['bead', ['bead']],
+  ['nugget', ['nugget']],
+  ['barrel', ['barrel']],
+  ['button', ['button']],
+  ['cabochon', ['cabochon', 'sugarloaf']],
+  ['kite', ['kite']],
+  ['hexagon', ['hexagon']],
+  ['triangle', ['triangle']],
+];
 
 function normalizeShape(raw: string): Shape | undefined {
   if (!raw) return undefined;
   const key = raw.toLowerCase().trim();
-  if (SHAPE_MAP[key]) return SHAPE_MAP[key];
-  // fall through: any exact enum match by lowercase
-  const direct = SHAPES.find((s) => s === key);
-  if (direct) return direct;
+  for (const [shape, keywords] of SHAPE_KEYWORDS) {
+    if (keywords.some((kw) => key.includes(kw))) return shape;
+  }
+  return 'other';
+}
+
+// ─── Color normalization ───────────────────────────────────────────────────────
+// attributes.color is free-text gemstone-trade color language (243 distinct
+// raw values — "Golden Yellow", "Violet Blue", "Mystic Peacock Blue",
+// "Raspberry Red"...), not a diamond grading scale. Same keyword-bucket
+// approach as shape; covers ~95% of populated rows in the CSV export. The
+// exact original text is always kept in colorRaw.
+const COLOR_KEYWORDS: Array<[Color, string[]]> = [
+  ['Padparadscha', ['padparadscha']],
+  ['Canary', ['canary']],
+  ['Champagne', ['champagne']],
+  ['Cognac', ['cognac']],
+  ['Paraiba', ['paraiba']],
+  ['Mystic', ['mystic']],
+  ['Rainbow', ['rainbow']],
+  ['Multicolor', ['multi', 'fancy color']],
+  ['Smoky', ['smoky', 'smokey']],
+  ['Teal', ['teal']],
+  ['Aqua', ['aqua']],
+  ['Peach', ['peach']],
+  ['Grey', ['grey', 'gray']],
+  ['Silver', ['silver']],
+  ['Clear', ['clear', 'milky']],
+  ['Violet', ['violet']],
+  ['Purple', ['purple']],
+  ['Pink', ['pink', 'rose', 'strawberry']],
+  ['Red', ['red', 'ruby', 'cinnamon']],
+  ['Orange', ['orange']],
+  ['Yellow', ['yellow', 'golden']],
+  ['Green', ['green', 'olive', 'evergreen']],
+  ['Blue', ['blue']],
+  ['Brown', ['brown']],
+  ['Black', ['black']],
+  ['White', ['white']],
+];
+
+function normalizeColor(raw: string): Color | undefined {
+  if (!raw) return undefined;
+  const key = raw.toLowerCase().trim();
+  for (const [color, keywords] of COLOR_KEYWORDS) {
+    if (keywords.some((kw) => key.includes(kw))) return color;
+  }
+  return 'other';
+}
+
+// ─── Clarity normalization ─────────────────────────────────────────────────────
+// attributes.clarity mixes formal grading codes (SI2, I1/I2, VS1/SI1 — often
+// as a slash-separated range) with descriptive trade terms (Opaque, "Clean,
+// Bright", Semi Translucent, Regular). Combined/ranged codes resolve to
+// their first (worse) grade, e.g. "SI1/SI2" -> SI1, "I1-I2" -> I1. Covers
+// ~99.9% of populated rows. The exact original text is always kept in
+// clarityRaw.
+function normalizeClarity(raw: string): Clarity | undefined {
+  if (!raw) return undefined;
+  const v = raw.trim();
+  const key = v.toLowerCase();
+  if (key.includes('top clean') || key.includes('eye clean') || key.includes('clean, bright') || key.includes('clear, bright')) return 'Eye Clean';
+  if (key.includes('semi translucent')) return 'Semi Translucent';
+  if (key.includes('translucent')) return 'Translucent';
+  if (key.includes('transparent')) return 'Transparent';
+  if (key.includes('opaque')) return 'Opaque';
+  if (key.includes('commercial')) return 'Commercial';
+  if (key.includes('fine')) return 'Fine';
+  if (key.includes('regular')) return 'Regular';
+  if (key.includes('slight') || key.includes('visible inclusion')) return 'SI';
+  if (key.includes('included')) return 'Included';
+  if (key === 'vvs') return 'VVS1';
+  const codeMatch = v.toUpperCase().match(/^(VVS1|VS1|VS2|VS|SI1|SI2|SI3|SI|I1|I2|I3|I4)/);
+  if (codeMatch) return codeMatch[1] as Clarity;
   return 'other';
 }
 
@@ -150,11 +243,9 @@ function normalizeWatchGender(raw: string, warnings: ParseWarning[], row: number
   if (key === 'mens' || key === 'men') return 'Men';
   if (key === 'womens' || key === 'women') return 'Women';
   if (key === 'unisex') return 'Unisex';
-  if (key === 'boys') return 'Boys';
-  if (key === 'girls') return 'Girls';
-  if (key === 'kids') return 'Kids';
-  // legacy file has a few rows where this column holds a SKU instead of a
-  // gender (misaligned data) — drop rather than guess.
+  // Boys/Girls/Kids never appear in this catalog (only Men's/Women's
+  // Watches subcategories + one Unisex SKU exist) — dropped rather than
+  // guessed at, same as any other unrecognized value.
   warnings.push({ row, field: 'watchGender', message: `Unrecognized gender value "${raw}" — dropped` });
   return undefined;
 }
@@ -432,6 +523,8 @@ function parseLegacyRow(r: Record<string, unknown>, rowNum: number, warnings: Pa
 
   const shapeRaw = clean(r.shape);
   const shapeNormalized = normalizeShape(shapeRaw);
+  const colorRaw = clean(r.color);
+  const colorNormalized = normalizeColor(colorRaw);
 
   const sizeCt = productKind === 'diamond' || productKind === 'gemstone'
     ? num(r.approx_weight) ?? num(r.size)
@@ -444,6 +537,7 @@ function parseLegacyRow(r: Record<string, unknown>, rowNum: number, warnings: Pa
   // stays in clarityRaw and the descriptive text is preserved separately.
   const clarityCode = clean(r.clarity);
   const clarityGradeText = clean(r.clarity_grade);
+  const clarityNormalized = normalizeClarity(clarityCode || clarityGradeText);
 
   // everything with too much free-form variance to enum-constrain safely —
   // preserved verbatim rather than dropped or guessed at.
@@ -481,7 +575,9 @@ function parseLegacyRow(r: Record<string, unknown>, rowNum: number, warnings: Pa
     shape: shapeNormalized ? [shapeNormalized] : undefined,
     shapeRaw: shapeRaw || undefined,
     size: sizeCt,
-    colorRaw: clean(r.color) || undefined,
+    color: colorNormalized ? [colorNormalized] : undefined,
+    colorRaw: colorRaw || undefined,
+    clarity: clarityNormalized ? [clarityNormalized] : undefined,
     clarityRaw: clarityCode || clarityGradeText || undefined,
     gradeRaw: clean(r.grade) || undefined,
     gemstoneName: gemstoneNameRaw || undefined,
@@ -548,6 +644,10 @@ function parseMatchedRow(r: Record<string, unknown>, rowNum: number, warnings: P
   const gemstoneNameRaw = clean(r['attributes.gemstoneName']);
   const shapeRaw = clean(r['attributes.shape']);
   const shapeNormalized = normalizeShape(shapeRaw);
+  const colorRaw = clean(r['attributes.color']);
+  const colorNormalized = normalizeColor(colorRaw);
+  const clarityRaw = clean(r['attributes.clarity']);
+  const clarityNormalized = normalizeClarity(clarityRaw);
 
   const productKind = detectProductKind('', '', '', gemstoneNameRaw, categoryName);
 
@@ -599,8 +699,10 @@ function parseMatchedRow(r: Record<string, unknown>, rowNum: number, warnings: P
     shape: shapeNormalized ? [shapeNormalized] : undefined,
     shapeRaw: shapeRaw || undefined,
     size: sizeCt,
-    colorRaw: clean(r['attributes.color']) || undefined,
-    clarityRaw: clean(r['attributes.clarity']) || undefined,
+    color: colorNormalized ? [colorNormalized] : undefined,
+    colorRaw: colorRaw || undefined,
+    clarity: clarityNormalized ? [clarityNormalized] : undefined,
+    clarityRaw: clarityRaw || undefined,
     gradeRaw: clean(r['attributes.grade']) || undefined,
     gemstoneName: gemstoneNameRaw || undefined,
     cutType: clean(r['attributes.cutType']) || undefined,

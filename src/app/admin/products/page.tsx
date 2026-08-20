@@ -962,7 +962,7 @@ function AddProductForm({
                     required
                   />
                   <PillGroup
-                    label="Color Grade"
+                    label="Color"
                     options={COLORS}
                     selected={(diamondForm as DiamondForm).colors}
                     onChange={(v) => setDiamondForm((prev) => ({ ...prev, colors: v }))}

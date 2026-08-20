@@ -2,13 +2,11 @@
 import { useState, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
-  SHAPES, CLARITIES,
+  SHAPES, COLORS, CLARITIES,
   WATCH_GENDERS, WATCH_BRANDS, WATCH_MOVEMENTS,
   WATCH_STRAP_TYPES, WATCH_CASE_MATERIALS, WATCH_DIAL_COLORS,
   WATCH_FEATURES, WATCH_STYLES, WATCH_CASE_SIZES,
 } from '@/models/Product';
-
-const DISPLAY_COLORS = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'fancy-yellow', 'fancy-pink', 'fancy-blue'];
 
 // dedupe helper — guards against duplicate values in the model's constant arrays
 // (e.g. "other" listed twice), which otherwise produce duplicate React keys.
@@ -380,8 +378,8 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
             ))}
           </FilterGroup>
 
-          <FilterGroup label="Color Grade">
-            {dedupe(DISPLAY_COLORS).map((color) => (
+          <FilterGroup label="Color">
+            {dedupe(COLORS).map((color) => (
               <CheckItem
                 key={color} label={color}
                 count={facets?.colors?.find((f) => f._id === color)?.count}

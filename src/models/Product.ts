@@ -1,244 +1,38 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import {
+  SHAPES, COLORS, CLARITIES, CERTIFICATIONS,
+  WATCH_GENDERS, WATCH_BRANDS, WATCH_MOVEMENTS, WATCH_STRAP_TYPES,
+  WATCH_CASE_MATERIALS, WATCH_DIAL_COLORS, WATCH_FEATURES, WATCH_STYLES,
+  WATCH_CASE_SIZES, PRODUCT_KINDS,
+  type ProductKind, type Shape, type Color, type Clarity, type Certification,
+  type WatchGender, type WatchBrand, type WatchMovement, type WatchStrapType,
+  type WatchCaseMaterial, type WatchDialColor, type WatchFeature,
+  type WatchStyle, type WatchCaseSize,
+} from '@/lib/productAttributes';
 
-// ─── Diamond / Gemstone enums (unchanged) ─────────────────────────────────────
+// Diamond/gemstone/watch attribute vocab (SHAPES, COLORS, CLARITIES, WATCH_*,
+// PRODUCT_KINDS, etc.) now lives in a single place — src/lib/productAttributes.ts
+// — instead of being duplicated here. That file is also the canonical source
+// for the filter UI (FilterSidebar, FilterBar, SearchBar), so a value can
+// never drift between what's filterable and what's actually on a product.
+// The option lists themselves were rebuilt from the real
+// products_with_matched_categories.csv export: SHAPES/COLORS/CLARITIES now
+// reflect the gemstone-trade language actually used in attributes.shape/
+// color/clarity (not a diamond GIA grading scale that never matched this
+// catalog), and WATCH_BRANDS was trimmed from ~60 luxury brands down to the
+// 6 that actually appear on this store's watch SKUs.
+export {
+  SHAPES, COLORS, CLARITIES, CERTIFICATIONS,
+  WATCH_GENDERS, WATCH_BRANDS, WATCH_MOVEMENTS, WATCH_STRAP_TYPES,
+  WATCH_CASE_MATERIALS, WATCH_DIAL_COLORS, WATCH_FEATURES, WATCH_STYLES,
+  WATCH_CASE_SIZES, PRODUCT_KINDS,
+};
+export type {
+  ProductKind, Shape, Color, Clarity, Certification,
+  WatchGender, WatchBrand, WatchMovement, WatchStrapType,
+  WatchCaseMaterial, WatchDialColor, WatchFeature, WatchStyle, WatchCaseSize,
+};
 
-export const SHAPES = [
-  'round',
-  'oval',
-  'princess',
-  'cushion',
-  'emerald',
-  'pear',
-  'marquise',
-  'radiant',
-  'asscher',
-  'heart',
-
-  // Production data
-  'trillion',
-  'triangle',
-  'baguette',
-  'tapered-baguette',
-  'bullet',
-  'kite',
-  'hexagon',
-  'octagon',
-  'shield',
-  'rose-cut',
-  'cabochon',
-
-  'other',
-] as const;
-
-export const COLORS = [
-  'D','E','F','G','H','I','J','K','L','M',
-  'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-'VIOLET',
-  'fancy-yellow',
-  'fancy-light-yellow',
-  'fancy-intense-yellow',
-  'fancy-vivid-yellow',
-'RASPBERRY RED',
-  'fancy-pink',
-  'fancy-purple-pink',
-
-  'fancy-blue',
-  'fancy-green',
-  'fancy-red',
-  'fancy-orange',
-  'fancy-brown',
-  'fancy-grey',
-  'fancy-black',
-  'fancy-white',
-
-  'champagne',
-  'cognac',
-
-  'other',
-] as const;
-
-export const CLARITIES = [
-  'FL',
-  'IF',
-  'VVS1',
-  'VVS2',
-  'VS1',
-  'VS2',
-  'SI1',
-  'SI2',
-  'SI3',
-  'I1',
-  'I2',
-  'I3',
-
-  'P1',
-  'P2',
-  'P3',
-
-  'other',
-] as const;
-
-export const CERTIFICATIONS = [
-  'GIA',
-  'IGI',
-  'HRD',
-  'AGS',
-  'EGL',
-
-  'GCAL',
-  'GSI',
-  'NGTC',
-  'SSEF',
-  'GRS',
-  'AGL',
-
-  'none',
-] as const;
-
-// ─── Watch-specific enums ─────────────────────────────────────────────────────
-
-export const WATCH_GENDERS = [
-  'Men',
-  'Women',
-  'Unisex',
-  'Boys',
-  'Girls',
-  'Kids',
-] as const;
-
-export const WATCH_BRANDS = [
-  'Rolex', 'Omega', 'Cartier', 'Citizen', 'Seiko',
-  'Patek Philippe', 'Audemars Piguet', 'Vacheron Constantin',
-  'A. Lange & Söhne', 'Jaeger-LeCoultre', 'IWC', 'Panerai',
-  'Breitling', 'TAG Heuer', 'Richard Mille', 'Hublot',
-  'Zenith', 'Blancpain', 'Breguet', 'Tudor',
-  'Grand Seiko', 'Longines', 'Tissot', 'Hamilton',
-  'Frederique Constant', 'Fossil', 'Casio', 'other','Rado',
-'Bulova',
-'Oris',
-'Movado',
-'Mido',
-'Bell & Ross',
-'Ulysse Nardin',
-'Corum',
-'Piaget',
-'Chopard',
-'Bulgari',
-'Montblanc',
-'Maurice Lacroix',
-'Raymond Weil',
-'Baume & Mercier',
-'Nomos',
-'Sinn',
-'Christopher Ward',
-'Victorinox',
-'Invicta',
-'Timex',
-'Orient',
-'Daniel Wellington',
-'Michael Kors',
-'Armani Exchange',
-'Emporio Armani',
-'Diesel',
-'Guess',
-'Nixon',
-'Skagen',
-'Calvin Klein',
-'Pulsar',
-'other',
-] as const;
-
-export const WATCH_MOVEMENTS = [
-  'Automatic',
-  'Quartz',
-  'Mechanical',
-  'Manual',
-  'Solar',
-  'Eco-Drive',
-  'Kinetic',
-] as const;
-
-export const WATCH_STRAP_TYPES = [
-  'Metal Bracelet',
-  'Leather',
-  'Rubber / Silicone',
-  'Fabric',
-  'NATO',
-  'Canvas',
-  'Ceramic',
-  'Resin',
-] as const;
-
-export const WATCH_CASE_MATERIALS = [
-  'Stainless Steel',
-  'Gold',
-  'Rose Gold',
-  'White Gold',
-  'Titanium',
-  'Ceramic',
-  'Carbon',
-  'Bronze',
-  'Platinum',
-  'Two-tone',
-] as const;
-
-export const WATCH_DIAL_COLORS = [
-  'Black',
-  'White',
-  'Blue',
-  'Green',
-  'Gold',
-  'Silver',
-  'Grey',
-  'Brown',
-  'Red',
-  'Orange',
-  'Pink',
-  'Purple',
-  'Champagne',
-  'Mother of Pearl',
-  'Skeleton',
-  'Transparent',
-  'other',
-] as const;
-
-export const WATCH_FEATURES = [
-  'Chronograph',
-  'Date Display',
-  'Day-Date',
-  'Moonphase',
-  'GMT',
-  'Power Reserve',
-  'Water Resistant',
-  'Diamond Studded',
-  'Skeleton Dial',
-  'Tourbillon',
-  'Perpetual Calendar',
-  'World Time',
-  'Alarm',
-] as const;
-
-export const WATCH_STYLES = [
-  'Luxury',
-  'Casual',
-  'Sport',
-  'Dress',
-  'Diver',
-  'Pilot',
-  'Field',
-  'Racing',
-] as const;
-export const WATCH_CASE_SIZES = [
-  'Extra Small',
-  'Small',
-  'Medium',
-  'Large',
-  'Extra Large',
-] as const;
-
-// ─── Product kind ──────────────────────────────────────────────────────────────
-export const PRODUCT_KINDS = ['diamond', 'gemstone', 'watch', 'jewelry'] as const;
-export type ProductKind = (typeof PRODUCT_KINDS)[number];
 
 // ─── Memo status (per-item) ────────────────────────────────────────────────────
 // Mirrors the status enum on the Memo model itself (src/models/Memo.ts).
@@ -269,21 +63,9 @@ export type MemoItemStatus = (typeof MEMO_ITEM_STATUSES)[number];
 export const MEMO_MAX_DAYS_CEILING = 14;
 
 // ─── TypeScript types ─────────────────────────────────────────────────────────
-
-export type Shape        = (typeof SHAPES)[number];
-export type Color        = (typeof COLORS)[number];
-export type Clarity      = (typeof CLARITIES)[number];
-export type Certification = (typeof CERTIFICATIONS)[number];
-
-export type WatchGender       = (typeof WATCH_GENDERS)[number];
-export type WatchBrand        = (typeof WATCH_BRANDS)[number];
-export type WatchMovement     = (typeof WATCH_MOVEMENTS)[number];
-export type WatchStrapType    = (typeof WATCH_STRAP_TYPES)[number];
-export type WatchCaseMaterial = (typeof WATCH_CASE_MATERIALS)[number];
-export type WatchDialColor    = (typeof WATCH_DIAL_COLORS)[number];
-export type WatchFeature      = (typeof WATCH_FEATURES)[number];
-export type WatchStyle        = (typeof WATCH_STYLES)[number];
-export type WatchCaseSize     = (typeof WATCH_CASE_SIZES)[number];
+// Shape/Color/Clarity/Certification/Watch* types are already imported (as
+// types) and re-exported above, alongside the value exports — no need to
+// re-import/re-export them a second time here.
 
 // ─── IProduct interface ───────────────────────────────────────────────────────
 

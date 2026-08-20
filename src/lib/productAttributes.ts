@@ -16,30 +16,41 @@
 // and delete the local copies in that file.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Derived from src/models/Product.ts / attributes.shape across the ~18.6k
+// rows in the current AlphaGemstone catalog export (products_with_matched_
+// categories.csv). Buckets cover ~96% of populated shape values; anything
+// that doesn't match a bucket keyword falls back to "other" — see
+// normalizeShape() in fileParser.service.ts for the raw→bucket mapping.
 export const SHAPES = [
-  "round", "oval", "princess", "cushion", "emerald", "pear", "marquise",
-  "radiant", "asscher", "heart",
-  "trillion", "triangle", "baguette", "tapered-baguette", "bullet", "kite",
-  "hexagon", "octagon", "shield", "rose-cut", "cabochon",
+  "round", "oval", "cushion", "pear", "trillion", "square", "marquise",
+  "octagon", "heart", "emerald", "princess", "bullet", "baguette",
+  "drop", "briolette", "nugget", "barrel", "bead", "button",
+  "cabochon", "kite", "hexagon", "triangle",
   "other",
 ] as const;
 
+// Real gemstone color language used across the catalog (colored stones,
+// not GIA diamond-grading letters — the old D-Z / fancy-* list never
+// matched anything in this data). Buckets cover ~95% of populated color
+// values; see normalizeColor() in fileParser.service.ts.
 export const COLORS = [
-  "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-  "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-  "VIOLET",
-  "fancy-yellow", "fancy-light-yellow", "fancy-intense-yellow", "fancy-vivid-yellow",
-  "RASPBERRY RED",
-  "fancy-pink", "fancy-purple-pink",
-  "fancy-blue", "fancy-green", "fancy-red", "fancy-orange", "fancy-brown",
-  "fancy-grey", "fancy-black", "fancy-white",
-  "champagne", "cognac",
+  "Red", "Blue", "Yellow", "Green", "Violet", "Pink", "Purple",
+  "White", "Black", "Brown", "Orange",
+  "Champagne", "Cognac", "Canary", "Padparadscha", "Paraiba", "Mystic",
+  "Smoky", "Aqua", "Teal", "Peach", "Grey", "Silver", "Clear", "Multicolor", "Rainbow",
   "other",
 ] as const;
 
+// Mix of formal clarity grades (SI1/SI2/I1-I4/VS1/VS2/VVS1/VVS2/FL) and the
+// descriptive clarity language this catalog actually uses for colored
+// stones (Eye Clean, Opaque, Translucent, Fine, Regular, Commercial...).
+// Covers ~99.9% of populated clarity values; see normalizeClarity().
 export const CLARITIES = [
-  "FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "SI3",
-  "I1", "I2", "I3", "P1", "P2", "P3",
+  "VVS1", "VS1", "VS2", "VS",
+  "SI1", "SI2", "SI3", "SI",
+  "I1", "I2", "I3", "I4",
+  "Eye Clean", "Included", "Commercial", "Fine", "Regular",
+  "Transparent", "Translucent", "Semi Translucent", "Opaque",
   "other",
 ] as const;
 
@@ -49,22 +60,15 @@ export const CERTIFICATIONS = [
   "none",
 ] as const;
 
-export const WATCH_GENDERS = ["Men", "Women", "Unisex", "Boys", "Girls", "Kids"] as const;
+// Only Men's/Women's Watches subcategories exist in the catalog, plus one
+// "Unisex" watch by name (Bulova 'Marine Star' Solano).
+export const WATCH_GENDERS = ["Men", "Women", "Unisex"] as const;
 
+// The full luxury-watch-brand list (Rolex, Patek Philippe, etc.) never
+// matched a single product — this store's ~11 watch SKUs are Bulova,
+// Calvin Klein, Invicta, Movado, Pulsar, and Vellaccio.
 export const WATCH_BRANDS = [
-  "Rolex", "Omega", "Cartier", "Citizen", "Seiko",
-  "Patek Philippe", "Audemars Piguet", "Vacheron Constantin",
-  "A. Lange & Söhne", "Jaeger-LeCoultre", "IWC", "Panerai",
-  "Breitling", "TAG Heuer", "Richard Mille", "Hublot",
-  "Zenith", "Blancpain", "Breguet", "Tudor",
-  "Grand Seiko", "Longines", "Tissot", "Hamilton",
-  "Frederique Constant", "Fossil", "Casio", "Rado", "Bulova", "Oris",
-  "Movado", "Mido", "Bell & Ross", "Ulysse Nardin", "Corum", "Piaget",
-  "Chopard", "Bulgari", "Montblanc", "Maurice Lacroix", "Raymond Weil",
-  "Baume & Mercier", "Nomos", "Sinn", "Christopher Ward", "Victorinox",
-  "Invicta", "Timex", "Orient", "Daniel Wellington", "Michael Kors",
-  "Armani Exchange", "Emporio Armani", "Diesel", "Guess", "Nixon",
-  "Skagen", "Calvin Klein", "Pulsar",
+  "Bulova", "Calvin Klein", "Invicta", "Movado", "Pulsar", "Vellaccio",
   "other",
 ] as const;
 
