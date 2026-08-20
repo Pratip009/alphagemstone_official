@@ -25,6 +25,13 @@ export interface ParsedRow {
   clarityRaw?: string;
   gradeRaw?: string;
   gemstoneName?: string;
+  cutType?: string;
+  luster?: string;
+  hardness?: string;
+  treatment?: string;
+  origin?: string;
+  caratWeight?: number;
+  dimensions?: string;
 
   watchBrand?: WatchBrand;
   watchModel?: string;
@@ -37,6 +44,18 @@ export interface ParsedRow {
   legacyAttributes?: Record<string, string>;
   legacyProductId?: number;
   legacySku?: string;
+
+  // ── "matched categories" export fields ─────────────────────────────────
+  weight?: number;
+  msrp?: number;
+  manufacturerId?: string;
+  minOrder?: number;
+  maxOrder?: number;
+  qtyBlocks?: number;
+  makeAnOffer?: boolean;
+  parentProductId?: number;
+  subcategory2Raw?: string;
+  categoryPath?: string;
 }
 
 export interface ParseWarning { row: number; field: string; message: string }
@@ -70,6 +89,11 @@ function num(val: unknown): number | undefined {
   if (!s) return undefined;
   const n = parseFloat(s.replace(/[^0-9.\-]/g, ''));
   return Number.isFinite(n) ? n : undefined;
+}
+
+// "True"/"False" (as opposed to the legacy export's "1"/"0" status column).
+function bool(val: unknown): boolean {
+  return clean(val).toLowerCase() === 'true';
 }
 
 // Splits a comma-separated keyword string into a trimmed, de-duplicated,
@@ -149,6 +173,7 @@ function detectProductKind(
   const catLower = categoryName.toLowerCase();
 
   if (gemLower.includes('diamond') || catLower.includes('diamond')) return 'diamond';
+  if (catLower.includes('watch')) return 'watch';
   if (gemstoneName) return 'gemstone';
 
   // No stone name at all — but the category may still indicate one
@@ -475,6 +500,138 @@ function parseLegacyRow(r: Record<string, unknown>, rowNum: number, warnings: Pa
   };
 }
 
+// ─── "Matched categories" legacy export mapping ────────────────────────────────
+// Handles the newer re-export of the same legacy catalogue: product_id, model,
+// name, price, msrp, quantity, weight, status, manufacturer_id, min_order,
+// max_order, qty_blocks, make_an_offer, parent_product_id, category_ids,
+// imageurl, matched_image_path, image_matched, description, seo.title,
+// seo.description, seo.keywords, attributes.* (gemstoneName, cutType, color,
+// shape, luster, hardness, treatment, origin, grade, size, caratWeight,
+// clarity), additional_attributes.extra_field_NNNN (unnamed dynamic
+// attributes — no id→label mapping ships with the file, so they're preserved
+// verbatim rather than guessed at), and pre-resolved category / subcategory /
+// subcategory_2 / category_path columns (this file has already been matched
+// against the real taxonomy, unlike the raw legacy `categories_name` export).
+function parseMatchedRow(r: Record<string, unknown>, rowNum: number, warnings: ParseWarning[]): ParsedRow | null {
+  const name = clean(r.name);
+  const categoryName = clean(r.category);
+  if (!name) return null;
+  if (!categoryName) return null;
+
+  const priceRaw = num(r.price);
+  const price = priceRaw !== undefined ? priceRaw : 0;
+  if (priceRaw === undefined) warnings.push({ row: rowNum, field: 'price', message: 'Missing/invalid price — defaulted to 0' });
+
+  const stockRaw = num(r.quantity);
+  const stock = stockRaw !== undefined ? Math.max(0, Math.round(stockRaw)) : 0;
+
+  // status is "True"/"False" text in this export (vs. "1"/"0" in the raw
+  // legacy one) — anything else defaults to active with a warning.
+  const statusRaw = clean(r.status);
+  let isActive = true;
+  if (statusRaw.toLowerCase() === 'false') isActive = false;
+  else if (statusRaw.toLowerCase() !== 'true' && statusRaw !== '') {
+    warnings.push({ row: rowNum, field: 'isActive', message: `Unexpected status "${statusRaw}" — defaulted to active` });
+  }
+
+  // Local, project-served images — NOT R2. The uploaded local folder mirrors
+  // matched_image_path's layout exactly (e.g.
+  // product-images-migration/alphagemsgems/100/G003235.gif), so it's copied
+  // straight into /public and served as a root-relative path — no R2 upload
+  // for this bulk import. New products added afterward through the normal
+  // admin flow still upload to R2 via lib/r2.ts, completely unchanged.
+  const matchedPath = clean(r.matched_image_path);
+  const images = bool(r.image_matched) && matchedPath
+    ? [`/${matchedPath.replace(/^\/+/, '')}`]
+    : [];
+
+  const gemstoneNameRaw = clean(r['attributes.gemstoneName']);
+  const shapeRaw = clean(r['attributes.shape']);
+  const shapeNormalized = normalizeShape(shapeRaw);
+
+  const productKind = detectProductKind('', '', '', gemstoneNameRaw, categoryName);
+
+  const caratWeight = num(r['attributes.caratWeight']);
+  // `size` on the Product model is the carat-weight filter field for
+  // diamonds/gemstones (see normalizeShape/legacy parser above) — the
+  // physical mm dimensions ("4x3 mm") go in `dimensions` instead so nothing
+  // gets silently coerced to NaN.
+  const sizeCt = productKind === 'diamond' || productKind === 'gemstone' ? caratWeight : undefined;
+
+  // Every additional_attributes.extra_field_NNNN column that has a value on
+  // this row, plus a few identifiers worth keeping for traceability. No
+  // label mapping ships with this file, so the raw column name is the key.
+  const legacyAttributes: Record<string, string> = {};
+  for (const [key, val] of Object.entries(r)) {
+    if (!key.startsWith('additional_attributes.')) continue;
+    const v = clean(val);
+    if (!v) continue;
+    legacyAttributes[key.replace('additional_attributes.', '')] = v;
+  }
+  const categoryIdsRaw = clean(r.category_ids);
+  if (categoryIdsRaw) legacyAttributes.legacyCategoryIds = categoryIdsRaw;
+  const categoryPathsAll = clean(r.category_paths_all);
+  if (categoryPathsAll && categoryPathsAll !== clean(r.category_path)) {
+    legacyAttributes.categoryPathsAll = categoryPathsAll;
+  }
+  // image_matched=False (or blank matched_image_path) — no local file to
+  // point at, so the product is saved with no image rather than a broken
+  // local path. The raw legacy fragment is kept here so these ~9 rows are
+  // easy to find and fix by hand later.
+  if (!images.length) {
+    const rawImageUrl = clean(r.imageurl);
+    if (rawImageUrl) legacyAttributes.unmatchedImageUrl = rawImageUrl;
+  }
+
+  const parentProductIdNum = num(r.parent_product_id);
+
+  return {
+    name,
+    category: categoryName,
+    subcategory: clean(r.subcategory) || undefined,
+    price,
+    stock,
+    isActive,
+    description: clean(r.description) || undefined,
+    images,
+    productKind,
+
+    shape: shapeNormalized ? [shapeNormalized] : undefined,
+    shapeRaw: shapeRaw || undefined,
+    size: sizeCt,
+    colorRaw: clean(r['attributes.color']) || undefined,
+    clarityRaw: clean(r['attributes.clarity']) || undefined,
+    gradeRaw: clean(r['attributes.grade']) || undefined,
+    gemstoneName: gemstoneNameRaw || undefined,
+    cutType: clean(r['attributes.cutType']) || undefined,
+    luster: clean(r['attributes.luster']) || undefined,
+    hardness: clean(r['attributes.hardness']) || undefined,
+    treatment: clean(r['attributes.treatment']) || undefined,
+    origin: clean(r['attributes.origin']) || undefined,
+    caratWeight,
+    dimensions: clean(r['attributes.size']) || undefined,
+
+    metaTitle: clean(r['seo.title']) || undefined,
+    metaDescription: clean(r['seo.description']) || undefined,
+    metaKeywords: splitKeywords(r['seo.keywords']),
+
+    legacyAttributes: Object.keys(legacyAttributes).length ? legacyAttributes : undefined,
+    legacyProductId: num(r.product_id),
+    legacySku: clean(r.model) || undefined,
+
+    weight: num(r.weight),
+    msrp: num(r.msrp),
+    manufacturerId: clean(r.manufacturer_id) || undefined,
+    minOrder: num(r.min_order),
+    maxOrder: num(r.max_order),
+    qtyBlocks: num(r.qty_blocks),
+    makeAnOffer: bool(r.make_an_offer),
+    parentProductId: parentProductIdNum ? parentProductIdNum : undefined,
+    subcategory2Raw: clean(r.subcategory_2) || undefined,
+    categoryPath: clean(r.category_path) || undefined,
+  };
+}
+
 // ─── Standard (non-legacy) mapping ─────────────────────────────────────────────
 // For future manual uploads using the clean template from generateCSVTemplate().
 function parseStandardRow(r: Record<string, unknown>, rowNum: number, warnings: ParseWarning[]): ParsedRow | null {
@@ -531,6 +688,8 @@ export async function parseUploadedFile(buffer: Buffer, filename: string): Promi
   const raw: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
 
   const isLegacyFormat = raw.length > 0 && ('products_id' in raw[0] || 'products_name' in raw[0]);
+  const isMatchedFormat = !isLegacyFormat && raw.length > 0 &&
+    ('category_path' in raw[0] || 'attributes.gemstoneName' in raw[0]);
 
   const rows: ParsedRow[] = [];
   const parseErrors: ParseError[] = [];
@@ -543,6 +702,8 @@ export async function parseUploadedFile(buffer: Buffer, filename: string): Promi
 
     const parsed = isLegacyFormat
       ? parseLegacyRow(r, rowNum, warnings)
+      : isMatchedFormat
+      ? parseMatchedRow(r, rowNum, warnings)
       : parseStandardRow(r, rowNum, warnings);
 
     if (!parsed) {

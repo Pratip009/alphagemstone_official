@@ -308,6 +308,13 @@ export interface IProduct extends Document {
   colorRaw?: string;
   clarityRaw?: string;
   gradeRaw?: string;
+  cutType?: string;
+  luster?: string;
+  hardness?: string;
+  treatment?: string;
+  origin?: string;
+  caratWeight?: number;
+  dimensions?: string;
 
   // Watch fields
   watchGender?:       WatchGender;
@@ -333,6 +340,18 @@ export interface IProduct extends Document {
   stock: number;
   isActive: boolean;
   description?: string;
+
+  // ── Fields from the "matched categories" legacy export ──────────────────
+  weight?: number;
+  msrp?: number;
+  manufacturerId?: string;
+  minOrder?: number;
+  maxOrder?: number;
+  qtyBlocks?: number;
+  makeAnOffer?: boolean;
+  parentProductId?: number;
+  subcategory2Raw?: string;
+  categoryPath?: string;
 
   // ── Memo fields ──────────────────────────────────────────────────────────
   // Most SKUs should never be memo-eligible — memo only makes sense for
@@ -390,7 +409,9 @@ const ProductSchema = new Schema<IProduct>(
     },
     size: {
       type: Number,
-      min: [0.01, 'Size must be at least 0.01 carat'],
+      // Legacy melee-diamond SKUs go down to ~0.002ct — the floor only
+      // guards against 0/negative, not against genuinely tiny stones.
+      min: [0.001, 'Size must be at least 0.001 carat'],
     },
     color: {
       type: [String],
@@ -413,6 +434,13 @@ const ProductSchema = new Schema<IProduct>(
     colorRaw:     { type: String, trim: true, maxlength: 100 },
     clarityRaw:   { type: String, trim: true, maxlength: 100 },
     gradeRaw:     { type: String, trim: true, maxlength: 100 },
+    cutType:      { type: String, trim: true, maxlength: 100 },
+    luster:       { type: String, trim: true, maxlength: 100 },
+    hardness:     { type: String, trim: true, maxlength: 100 },
+    treatment:    { type: String, trim: true, maxlength: 100 },
+    origin:       { type: String, trim: true, maxlength: 100 },
+    caratWeight:  { type: Number, min: [0, 'caratWeight cannot be negative'] },
+    dimensions:   { type: String, trim: true, maxlength: 100 },
 
     watchGender: {
       type: String,
@@ -492,6 +520,21 @@ const ProductSchema = new Schema<IProduct>(
       maxlength: [2000, 'Description cannot exceed 2000 characters'],
     },
 
+    // ── Fields from the "matched categories" legacy export ────────────────────
+    weight: { type: Number, min: [0, 'weight cannot be negative'] },
+    msrp: { type: Number, min: [0, 'msrp cannot be negative'] },
+    manufacturerId: { type: String, trim: true, maxlength: 50 },
+    minOrder: { type: Number, min: [0, 'minOrder cannot be negative'] },
+    maxOrder: { type: Number, min: [0, 'maxOrder cannot be negative'] },
+    qtyBlocks: { type: Number, min: [0, 'qtyBlocks cannot be negative'] },
+    makeAnOffer: { type: Boolean, default: false },
+    // 0 in the source export means "no parent" — the app only ever sets/reads
+    // this when > 0 (see fileParser.service.ts), so it's sparse rather than
+    // defaulted to 0 for every simple product.
+    parentProductId: { type: Number, index: true, sparse: true },
+    subcategory2Raw: { type: String, trim: true, maxlength: 150 },
+    categoryPath: { type: String, trim: true, maxlength: 300 },
+
     // ── Memo fields ─────────────────────────────────────────────────────────
     memoEligible: {
       type: Boolean,
@@ -562,6 +605,9 @@ ProductSchema.index({ watchCaseSize: 1 });
 // Gemstone / kind indexes
 ProductSchema.index({ productKind: 1 });
 ProductSchema.index({ gemstoneName: 1 });
+ProductSchema.index({ cutType: 1 });
+ProductSchema.index({ origin: 1 });
+ProductSchema.index({ treatment: 1 });
 
 // Common indexes
 ProductSchema.index({ price: 1 });
