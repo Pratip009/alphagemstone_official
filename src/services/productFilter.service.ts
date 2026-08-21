@@ -24,6 +24,14 @@ export interface ProductFilterParams {
   clarity?: string | string[];
   certification?: string | string[];
 
+  // Simple single-select dropdown filters (the simplified /products filter
+  // bar — SHAPE / SIZE / CLARITY / APPROX WEIGHT / NUMBER OF STONES). These
+  // are exact-value selects rather than the ranges below, and are kept
+  // separate from sizeMin/sizeMax so both filter UIs can coexist.
+  size?: string | string[];
+  approxWeight?: string | string[];
+  numberOfStones?: string | string[];
+
   // Diamond range filters
   priceMin?: string | number;
   priceMax?: string | number;
@@ -86,7 +94,6 @@ function toNumber(val: string | number | undefined): number | undefined {
   return isNaN(n) ? undefined : n;
 }
 
-// ─── Slug resolver ────────────────────────────────────────────────────────────
 // ─── Slug resolver ────────────────────────────────────────────────────────────
 const isObjectId = (val: string) => /^[a-f\d]{24}$/i.test(val);
 
@@ -158,6 +165,20 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
   const certifications = toArray(params.certification);
   if (certifications.length > 0) filter.certification = { $in: certifications };
 
+  // ── Simple exact-value select filters ───────────────────────────────────────
+  // (the simplified /products dropdown filter — single-select, but built on
+  // $in so a future multi-select wouldn't require any query changes)
+  const exactSizes = toArray(params.size).map(Number).filter((n) => !isNaN(n));
+  if (exactSizes.length > 0) {
+    filter.size = { ...(filter.size as object || {}), $in: exactSizes };
+  }
+
+  const approxWeights = toArray(params.approxWeight);
+  if (approxWeights.length > 0) filter.approxWeight = { $in: approxWeights };
+
+  const stoneCounts = toArray(params.numberOfStones).map(Number).filter((n) => !isNaN(n));
+  if (stoneCounts.length > 0) filter.numberOfStones = { $in: stoneCounts };
+
   // ── Diamond range filters ──────────────────────────────────────────────────
   const priceMin = toNumber(params.priceMin);
   const priceMax = toNumber(params.priceMax);
@@ -170,7 +191,7 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
   const sizeMin = toNumber(params.sizeMin);
   const sizeMax = toNumber(params.sizeMax);
   if (sizeMin !== undefined || sizeMax !== undefined) {
-    filter.size = {};
+    filter.size = { ...(filter.size as object || {}) };
     if (sizeMin !== undefined) filter.size.$gte = sizeMin;
     if (sizeMax !== undefined) filter.size.$lte = sizeMax;
   }
@@ -355,4 +376,69 @@ export function buildFacetsPipeline(
         : { ...diamondFacets, ...watchFacets, ...common };
 
   return [{ $match: baseFilter }, { $facet: facetBranches }];
+}
+
+// ─── Simple filter facets (cascading dropdowns) ────────────────────────────────
+// Powers the simplified /products filter bar: SHAPE / SIZE / CLARITY /
+// APPROX WEIGHT / NUMBER OF STONES. Each dropdown's option list is
+// "self-excluding" — computed from every OTHER active selection but never
+// the field's own, so e.g. picking a shape narrows the Size/Clarity/Approx
+// Weight/Number of Stones options to what's actually available for that
+// shape, without the Shape dropdown itself collapsing to one option.
+const SIMPLE_FILTER_FIELDS = ['shape', 'size', 'clarity', 'approxWeight', 'numberOfStones'] as const;
+export type SimpleFilterField = (typeof SIMPLE_FILTER_FIELDS)[number];
+
+// shape/clarity are stored as arrays on the product; size/approxWeight/
+// numberOfStones are scalars. Determines whether a branch needs an $unwind
+// before grouping, and how the "has a value" existence check is written.
+const ARRAY_FIELDS = new Set<SimpleFilterField>(['shape', 'clarity']);
+
+function simpleFieldSelection(field: SimpleFilterField, params: ProductFilterParams): string[] {
+  switch (field) {
+    case 'shape':          return toArray(params.shape);
+    case 'clarity':        return toArray(params.clarity);
+    case 'size':            return toArray(params.size);
+    case 'approxWeight':    return toArray(params.approxWeight);
+    case 'numberOfStones': return toArray(params.numberOfStones);
+  }
+}
+
+function baseSimpleFilter(params: ProductFilterParams): FilterQuery<IProduct> {
+  const filter: FilterQuery<IProduct> = { isActive: true };
+  if (params.category)    filter.category    = params.category;
+  if (params.subcategory) filter.subcategory = params.subcategory;
+  if (params.productKind) filter.productKind = params.productKind;
+  return filter;
+}
+
+export function buildSimpleFilterFacetsPipeline(params: ProductFilterParams) {
+  const branches: Record<string, object[]> = {};
+
+  SIMPLE_FILTER_FIELDS.forEach((field) => {
+    const filter = baseSimpleFilter(params) as Record<string, unknown>;
+
+    // Apply every other active selection, never this field's own.
+    SIMPLE_FILTER_FIELDS.forEach((other) => {
+      if (other === field) return;
+      const values = simpleFieldSelection(other, params);
+      if (values.length === 0) return;
+      const numeric = other === 'size' || other === 'numberOfStones';
+      const parsed = numeric ? values.map(Number).filter((n) => !isNaN(n)) : values;
+      if (parsed.length > 0) filter[other] = { $in: parsed };
+    });
+
+    // Only offer values that actually exist on at least one matching product.
+    filter[field] = ARRAY_FIELDS.has(field)
+      ? { $exists: true, $not: { $size: 0 } }
+      : { $exists: true, $nin: [null, ''] };
+
+    branches[field] = [
+      { $match: filter },
+      ...(ARRAY_FIELDS.has(field) ? [{ $unwind: `$${field}` }] : []),
+      { $group: { _id: `$${field}`, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ];
+  });
+
+  return [{ $facet: branches }];
 }

@@ -20,7 +20,8 @@
  * the app does) — nothing new to configure.
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import fs from "node:fs";
 import path from "node:path";
 import mongoose from "mongoose";

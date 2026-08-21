@@ -1,8 +1,9 @@
 import { connectDB } from "@/lib/db";
-import { listProducts, getProductFacets } from "@/services/product.service";
+import { listProducts, getProductFacets, getSimpleFilterFacets } from "@/services/product.service";
 import { ProductFilterParams } from "@/services/productFilter.service";
 import ProductCard from "@/components/products/ProductCard";
 import FilterBar from "@/components/filters/FilterBar";
+import SimpleProductFilter from "@/components/filters/SimpleProductFilter";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import { Suspense } from "react";
@@ -101,6 +102,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     priceMax:           sp.priceMax,
     sizeMin:            sp.sizeMin,
     sizeMax:            sp.sizeMax,
+    size:               sp.size,
+    approxWeight:       sp.approxWeight,
+    numberOfStones:     sp.numberOfStones,
     watchGender:        sp.watchGender   ?? sp.gender,
     watchBrand:         sp.watchBrand    ?? sp.brand,
     watchMovement:      sp.watchMovement ?? sp.movement,
@@ -281,14 +285,22 @@ async function FacetedFilterBar({
   params: ProductFilterParams;
   productType: ProductType;
 }) {
-  const facets = await getProductFacets(params, productType);
-  return <FilterBar productType={productType} facets={facets} />;
+  // Diamonds/gemstones get the simplified 5-dropdown filter (Shape, Size,
+  // Clarity, Approx Weight, Number of Stones — no price/color/availability).
+  // Watches keep the existing full filter bar unchanged.
+  if (productType === "watch") {
+    const facets = await getProductFacets(params, productType);
+    return <FilterBar productType={productType} facets={facets} />;
+  }
+
+  const facets = await getSimpleFilterFacets(params);
+  return <SimpleProductFilter facets={facets} />;
 }
 
 // ─── Active filter chips ──────────────────────────────────────────────────────
 function ActiveFilterChips({ searchParams }: { searchParams: Record<string, string> }) {
   const chipKeys = [
-    "shape","color","clarity",
+    "shape","color","clarity","size","approxWeight","numberOfStones",
     "watchBrand","brand",
     "watchMovement","movement",
     "watchGender","gender",

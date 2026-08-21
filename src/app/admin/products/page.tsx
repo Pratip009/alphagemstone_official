@@ -233,6 +233,8 @@ const EMPTY_DIAMOND_FORM = {
   colors: [] as string[],
   clarities: [] as string[],
   certifications: [] as string[],
+  approxWeight: "",
+  numberOfStones: "",
   stock: "",
   description: "",
   memoEligible: false,
@@ -764,8 +766,8 @@ function AddProductForm({
     try {
       let payload: Record<string, unknown>;
 
-      if (productType === "diamond") {
-        const { shapes, colors, clarities, certifications, productType: _pt, memoEligible, memoMinDays, memoMaxDays, ...rest } = diamondForm;
+            if (productType === "diamond") {
+        const { shapes, colors, clarities, certifications, numberOfStones, productType: _pt, memoEligible, memoMinDays, memoMaxDays, ...rest } = diamondForm;
         payload = {
           productType: "diamond",
           ...rest,
@@ -778,10 +780,12 @@ function AddProductForm({
           certification: certifications,
           images: imageUrls,
           memoEligible,
+          ...(numberOfStones !== "" ? { numberOfStones: Number(numberOfStones) } : {}),
           ...(memoEligible
             ? { memoMinDays: Number(memoMinDays), memoMaxDays: Number(memoMaxDays) }
             : {}),
         };
+        if (payload.approxWeight === "") delete payload.approxWeight;
       } else {
         const { productType: _pt, watchFeatures, memoEligible, memoMinDays, memoMaxDays, ...rest } = watchForm;
         payload = {
@@ -936,7 +940,7 @@ function AddProductForm({
               {/* ── Diamond-specific fields ── */}
               {productType === "diamond" && (
                 <>
-                  <div>
+                                    <div>
                     <label className="ap-label">Size (Carat) *</label>
                     <input
                       type="number"
@@ -952,7 +956,32 @@ function AddProductForm({
                     />
                   </div>
 
-                  <div />
+                  <div>
+                    <label className="ap-label">Approx Weight</label>
+                    <input
+                      className="ap-input"
+                      value={(diamondForm as DiamondForm).approxWeight}
+                      onChange={(e) =>
+                        setDiamondForm((prev) => ({ ...prev, approxWeight: e.target.value }))
+                      }
+                      placeholder="e.g. 5.00 - 10.00 ct"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="ap-label">Number Of Stones</label>
+                    <input
+                      type="number"
+                      className="ap-input"
+                      value={(diamondForm as DiamondForm).numberOfStones}
+                      onChange={(e) =>
+                        setDiamondForm((prev) => ({ ...prev, numberOfStones: e.target.value }))
+                      }
+                      placeholder="e.g. 12"
+                      min="0"
+                      step="1"
+                    />
+                  </div>
 
                   <PillGroup
                     label="Shape"

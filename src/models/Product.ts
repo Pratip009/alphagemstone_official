@@ -85,6 +85,10 @@ export interface IProduct extends Document {
   clarity?: Clarity[];
   certification?: Certification[];
 
+  // Simple product-page filter fields — see schema comment below.
+  approxWeight?: string;
+  numberOfStones?: number;
+
   gemstoneName?: string;
   shapeRaw?: string;
   colorRaw?: string;
@@ -210,6 +214,15 @@ const ProductSchema = new Schema<IProduct>(
       enum: { values: CERTIFICATIONS, message: 'Invalid certification: {VALUE}' },
       default: [],
     },
+
+    // ── Simple product-page filter fields ──────────────────────────────────
+    // Free-text/numeric, admin-entered per product (not a fixed vocabulary
+    // like shape/clarity) — power the "Approx Weight" and "Number of
+    // Stones" dropdowns on the simplified /products filter. Distinct
+    // values in use are read back from the catalogue to populate each
+    // dropdown, so there's nothing to keep in sync here.
+    approxWeight:   { type: String, trim: true, maxlength: 100 },
+    numberOfStones: { type: Number, min: [0, 'numberOfStones cannot be negative'] },
 
     gemstoneName: { type: String, trim: true, maxlength: 100 },
     shapeRaw:     { type: String, trim: true, maxlength: 100 },

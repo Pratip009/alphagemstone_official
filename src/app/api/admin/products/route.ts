@@ -40,6 +40,11 @@ const productSchema = z.object({
   clarity: z.array(z.enum(CLARITIES)).min(1).optional(),
   certification: z.array(z.enum(CERTIFICATIONS)).optional().default([]),
 
+  // Simple product-page filter fields — free text/numeric, not a fixed
+  // vocabulary (see the Product model schema comment for why).
+  approxWeight: z.string().max(100).optional().transform((val) => (val === "" ? undefined : val)),
+  numberOfStones: z.number().int().min(0).optional(),
+
   // ── Watch fields (optional at schema level) ────────────────────────────────
   watchGender: z.enum(WATCH_GENDERS).optional(),
   watchBrand: z.enum(WATCH_BRANDS).optional(),

@@ -4,6 +4,7 @@ import '@/lib/registerModels';
 import {
   buildProductFilterQuery,
   buildFacetsPipeline,
+  buildSimpleFilterFacetsPipeline,
   resolveSlugFilters,
   ProductFilterParams,
 } from './productFilter.service';
@@ -213,6 +214,37 @@ export async function getProductFacets(
   const pipeline = buildFacetsPipeline(query, kind) as Parameters<typeof Product.aggregate>[0];
   const [result] = await Product.aggregate(pipeline);
   return result;
+}
+
+// Cascading option lists for the simplified /products dropdown filter
+// (SHAPE / SIZE / CLARITY / APPROX WEIGHT / NUMBER OF STONES). See
+// buildSimpleFilterFacetsPipeline for the self-excluding logic.
+export interface SimpleFilterFacetValue { _id: string | number; count: number }
+export interface SimpleFilterFacets {
+  shape: SimpleFilterFacetValue[];
+  size: SimpleFilterFacetValue[];
+  clarity: SimpleFilterFacetValue[];
+  approxWeight: SimpleFilterFacetValue[];
+  numberOfStones: SimpleFilterFacetValue[];
+}
+
+export async function getSimpleFilterFacets(
+  params: ProductFilterParams,
+): Promise<SimpleFilterFacets> {
+  const resolved = await resolveSlugFilters({
+    category: params.category,
+    subcategory: params.subcategory,
+    productKind: params.productKind,
+  });
+
+  const pipeline = buildSimpleFilterFacetsPipeline({
+    ...params,
+    category: resolved.category,
+    subcategory: resolved.subcategory,
+  }) as Parameters<typeof Product.aggregate>[0];
+
+  const [result] = await Product.aggregate(pipeline);
+  return (result ?? { shape: [], size: [], clarity: [], approxWeight: [], numberOfStones: [] }) as SimpleFilterFacets;
 }
 
 export async function getProductById(id: string) {
