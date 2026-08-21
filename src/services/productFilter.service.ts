@@ -385,17 +385,18 @@ export function buildFacetsPipeline(
 // the field's own, so e.g. picking a shape narrows the Size/Clarity/Approx
 // Weight/Number of Stones options to what's actually available for that
 // shape, without the Shape dropdown itself collapsing to one option.
-const SIMPLE_FILTER_FIELDS = ['shape', 'size', 'clarity', 'approxWeight', 'numberOfStones'] as const;
+const SIMPLE_FILTER_FIELDS = ['shape', 'size', 'color', 'clarity', 'approxWeight', 'numberOfStones'] as const;
 export type SimpleFilterField = (typeof SIMPLE_FILTER_FIELDS)[number];
 
-// shape/clarity are stored as arrays on the product; size/approxWeight/
+// shape/color/clarity are stored as arrays on the product; size/approxWeight/
 // numberOfStones are scalars. Determines whether a branch needs an $unwind
 // before grouping, and how the "has a value" existence check is written.
-const ARRAY_FIELDS = new Set<SimpleFilterField>(['shape', 'clarity']);
+const ARRAY_FIELDS = new Set<SimpleFilterField>(['shape', 'color', 'clarity']);
 
 function simpleFieldSelection(field: SimpleFilterField, params: ProductFilterParams): string[] {
   switch (field) {
     case 'shape':          return toArray(params.shape);
+    case 'color':           return toArray(params.color);
     case 'clarity':        return toArray(params.clarity);
     case 'size':            return toArray(params.size);
     case 'approxWeight':    return toArray(params.approxWeight);

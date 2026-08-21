@@ -4,10 +4,12 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import type { SimpleFilterFacets } from '@/services/product.service';
 
 /* ---------------------------------------------------------------------- */
-/*  Simple product filter — five plain dropdowns, nothing else.           */
-/*  No price, no color, no availability, no icons. Selecting one value    */
-/*  narrows every other dropdown to only the options still available      */
-/*  (cascading facets computed server-side, see productFilter.service).   */
+/*  Simple product filter — six plain dropdowns, nothing else.            */
+/*  No price, no availability, no icons. Selecting one value narrows      */
+/*  every other dropdown to only the options still available for that    */
+/*  selection (cascading facets computed server-side, self-excluding —    */
+/*  see buildSimpleFilterFacetsPipeline in productFilter.service). Every  */
+/*  option list comes straight from the DB; nothing here is static.       */
 /* ---------------------------------------------------------------------- */
 
 const T = {
@@ -18,13 +20,14 @@ const T = {
 };
 
 interface DropdownField {
-  key: 'shape' | 'size' | 'clarity' | 'approxWeight' | 'numberOfStones';
+  key: 'shape' | 'size' | 'color' | 'clarity' | 'approxWeight' | 'numberOfStones';
   label: string;
 }
 
 const FIELDS: DropdownField[] = [
   { key: 'shape',          label: 'Shape' },
   { key: 'size',            label: 'Size' },
+  { key: 'color',           label: 'Color' },
   { key: 'clarity',        label: 'Clarity' },
   { key: 'approxWeight',    label: 'Approx Weight' },
   { key: 'numberOfStones', label: 'Number Of Stones' },

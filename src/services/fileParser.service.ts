@@ -26,6 +26,12 @@ export interface ParsedRow {
   clarity?: Clarity[];
   clarityRaw?: string;
   gradeRaw?: string;
+  // Simple product-page filter fields (see Product.ts) — previously parsed
+  // into legacyAttributes only and never reached the actual schema fields,
+  // which is why the "Approx Weight" / "Number Of Stones" filter dropdowns
+  // came back empty for every product.
+  approxWeight?: string;
+  numberOfStones?: number;
   gemstoneName?: string;
   cutType?: string;
   luster?: string;
@@ -580,6 +586,7 @@ function parseLegacyRow(r: Record<string, unknown>, rowNum: number, warnings: Pa
     clarity: clarityNormalized ? [clarityNormalized] : undefined,
     clarityRaw: clarityCode || clarityGradeText || undefined,
     gradeRaw: clean(r.grade) || undefined,
+    approxWeight: clean(r.approx_weight) || undefined,
     gemstoneName: gemstoneNameRaw || undefined,
 
     watchBrand: normalizeWatchBrand(watchBrandRaw, warnings, rowNum),
@@ -770,8 +777,12 @@ function parseStandardRow(r: Record<string, unknown>, rowNum: number, warnings: 
     shape: shapeRaw ? [normalizeShape(shapeRaw)!] : undefined,
     shapeRaw: shapeRaw || undefined,
     size: num(r.size),
+    color: normalizeColor(clean(r.color)) ? [normalizeColor(clean(r.color))!] : undefined,
     colorRaw: clean(r.color) || undefined,
+    clarity: normalizeClarity(clean(r.clarity)) ? [normalizeClarity(clean(r.clarity))!] : undefined,
     clarityRaw: clean(r.clarity) || undefined,
+    approxWeight: clean(r.approxWeight) || undefined,
+    numberOfStones: num(r.numberOfStones),
     gemstoneName: gemstoneNameRaw || undefined,
     watchBrand: normalizeWatchBrand(watchBrandRaw, warnings, rowNum),
     watchModel: clean(r.watchModel) || undefined,

@@ -217,12 +217,13 @@ export async function getProductFacets(
 }
 
 // Cascading option lists for the simplified /products dropdown filter
-// (SHAPE / SIZE / CLARITY / APPROX WEIGHT / NUMBER OF STONES). See
+// (SHAPE / SIZE / COLOR / CLARITY / APPROX WEIGHT / NUMBER OF STONES). See
 // buildSimpleFilterFacetsPipeline for the self-excluding logic.
 export interface SimpleFilterFacetValue { _id: string | number; count: number }
 export interface SimpleFilterFacets {
   shape: SimpleFilterFacetValue[];
   size: SimpleFilterFacetValue[];
+  color: SimpleFilterFacetValue[];
   clarity: SimpleFilterFacetValue[];
   approxWeight: SimpleFilterFacetValue[];
   numberOfStones: SimpleFilterFacetValue[];
@@ -244,7 +245,7 @@ export async function getSimpleFilterFacets(
   }) as Parameters<typeof Product.aggregate>[0];
 
   const [result] = await Product.aggregate(pipeline);
-  return (result ?? { shape: [], size: [], clarity: [], approxWeight: [], numberOfStones: [] }) as SimpleFilterFacets;
+  return (result ?? { shape: [], size: [], color: [], clarity: [], approxWeight: [], numberOfStones: [] }) as SimpleFilterFacets;
 }
 
 export async function getProductById(id: string) {

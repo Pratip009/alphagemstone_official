@@ -285,8 +285,8 @@ async function FacetedFilterBar({
   params: ProductFilterParams;
   productType: ProductType;
 }) {
-  // Diamonds/gemstones get the simplified 5-dropdown filter (Shape, Size,
-  // Clarity, Approx Weight, Number of Stones — no price/color/availability).
+  // Diamonds/gemstones get the simplified 6-dropdown filter (Shape, Size,
+  // Color, Clarity, Approx Weight, Number of Stones — no price/availability).
   // Watches keep the existing full filter bar unchanged.
   if (productType === "watch") {
     const facets = await getProductFacets(params, productType);
