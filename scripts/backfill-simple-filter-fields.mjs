@@ -1,37 +1,40 @@
 /**
  * Backfill script — run with: node scripts/backfill-simple-filter-fields.mjs
- * Requires MONGODB_URI in environment or .env file.
+ * Requires MONGODB_URI in environment or .env / .env.local file.
  *
  * Why this exists
  * ----------------
  * The /products "Simple Filter" bar (Shape / Size / Color / Clarity /
- * Approx Weight / Number Of Stones) reads its dropdown options from the
- * product.color / product.clarity / product.approxWeight / product.numberOfStones
- * fields. Auditing the current catalogue shows:
+ * Approx Weight / Number Of Stones) reads its dropdown options straight off
+ * product.shape / .size / .color / .clarity / .approxWeight / .numberOfStones.
+ * Verified against the live `gemstone-shop` DB (18,514 active products) and
+ * the source CSV (`products_with_matched_categories_cleaned.csv`):
  *
- *   - shape / size  : populated on ~85% of diamonds & gemstones (fine)
- *   - color         : 0% populated, even though colorRaw has data on ~66%
- *                     of diamonds — the normalization step that turns
- *                     colorRaw -> color was never run against this data
- *   - clarity       : same story, ~75% of diamonds have clarityRaw but 0%
- *                     have clarity
- *   - approxWeight  : 0% populated on the `approxWeight` field itself, but
- *                     ~50% of diamonds DO have the raw text sitting in
- *                     legacyAttributes.approxWeight (a parser bug shoved it
- *                     into the generic legacy bag instead of the real field
- *                     — now fixed in fileParser.service.ts for future
- *                     imports; this script backfills existing rows)
- *   - numberOfStones: 0% populated and there is no raw source column for it
- *                     anywhere in the CSV imports — this field has only ever
- *                     been set by hand via the admin product editor, so it
- *                     is NOT backfilled here. Either enter it per-product in
- *                     admin, or drop that dropdown from the filter bar until
- *                     real data exists for it.
+ *   - shape / size / color / clarity : already populated and working for
+ *     the bulk of the catalogue. Not the reason those dropdowns were empty.
+ *   - clarity coverage can still roughly DOUBLE though (~4k -> ~9.4k rows).
+ *     `attributes.clarity` in the CSV only covers diamonds. Gemstone
+ *     clarity/quality-grade text ("VS1/SI1", "Opaque", "Eye Clean", "AAA",
+ *     "Commercial"...) ships in the same export under an unlabeled column,
+ *     `additional_attributes.extra_field_6` — it landed in
+ *     legacyAttributes.extra_field_6 on import and was never read as
+ *     clarity. Now mapped for future imports (fileParser.service.ts) and
+ *     backfilled here for existing docs.
+ *   - numberOfStones: 0% populated. No column in the CSV is labeled "number
+ *     of stones", but additional_attributes.extra_field_15 holds exactly
+ *     that ("10 piece", "5 piece", "1", "2"...) for ~3.6k rows — same
+ *     unlabeled-column situation as clarity above. Backfilled from
+ *     legacyAttributes.extra_field_15 (leading integer extracted).
+ *   - approxWeight: 0% populated, and legacyAttributes.approxWeight is ALSO
+ *     0% on this DB (that source existed in an older backup file, not this
+ *     one — false lead, ignore). The real, already-populated source is the
+ *     numeric `size` field itself (77% filled from attributes.caratWeight
+ *     on import) — approxWeight is backfilled as `"<size> ct"` text so the
+ *     dropdown has real values without needing a CSV re-import.
  *
  * This script is idempotent and non-destructive: it only ever fills in a
- * field that is currently empty/missing, using data that is already on the
- * document (colorRaw, clarityRaw, legacyAttributes.approxWeight). Nothing
- * is overwritten or deleted.
+ * field that is currently empty/missing, using data already on the
+ * document. Nothing existing is overwritten or deleted.
  */
 
 import mongoose from 'mongoose';
@@ -44,7 +47,7 @@ config({ path: '.env.local', override: true });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-  console.error('MONGODB_URI is not set (env or .env file). Aborting.');
+  console.error('MONGODB_URI is not set (env, .env, or .env.local). Aborting.');
   process.exit(1);
 }
 
@@ -116,8 +119,7 @@ const ProductSchema = new mongoose.Schema({}, { strict: false, collection: 'prod
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
 
 // Treats missing, null, '', and [] all as "empty" — regardless of whether
-// the field is stored as a bare value or an array (schema says array, but
-// we don't trust that every doc in the wild actually matches the schema).
+// the field is stored as a bare value or an array.
 function isEmpty(val) {
   if (val === undefined || val === null || val === '') return true;
   if (Array.isArray(val) && val.length === 0) return true;
@@ -129,66 +131,105 @@ async function run() {
   console.log('Connected to db:', mongoose.connection.name);
 
   const totalProducts = await Product.countDocuments({});
-  const withColorRaw = await Product.countDocuments({ colorRaw: { $exists: true, $nin: [null, ''] } });
-  const withClarityRaw = await Product.countDocuments({ clarityRaw: { $exists: true, $nin: [null, ''] } });
-  const withLegacyApproxWeight = await Product.countDocuments({ 'legacyAttributes.approxWeight': { $exists: true, $nin: [null, ''] } });
-  console.log('--- Diagnostics ---');
-  console.log('Total products in collection:', totalProducts);
-  console.log('Products with colorRaw set:', withColorRaw);
-  console.log('Products with clarityRaw set:', withClarityRaw);
-  console.log('Products with legacyAttributes.approxWeight set:', withLegacyApproxWeight);
-  console.log('-------------------');
-
+  console.log('Total products:', totalProducts);
   if (totalProducts === 0) {
-    console.error(
-      'This connection sees 0 documents in the "products" collection. ' +
-      'Check the db name in MONGODB_URI (currently: ' + mongoose.connection.name + ') ' +
-      'and confirm the collection is actually called "products".'
-    );
+    console.error('0 documents found — check MONGODB_URI db name / collection name.');
     await mongoose.disconnect();
     return;
   }
 
-  const stats = { colorSet: 0, claritySet: 0, approxWeightSet: 0, scanned: 0, updated: 0 };
+  const stats = {
+    scanned: 0,
+    updated: 0,
+    colorSet: 0,
+    claritySet: 0,
+    clarityFromExtraField6: 0,
+    approxWeightSet: 0,
+    numberOfStonesSet: 0,
+  };
 
-  // Deliberately scans every product rather than pre-filtering server-side
-  // (a previous version's $in-based filter query matched 0 docs — array
-  // fields + null/[]/undefined in $in don't combine reliably across driver
-  // versions). Scanning ~30k docs and deciding in JS is slower but correct.
   const cursor = Product.find({}).cursor();
+  let bulkOps = [];
+  const BATCH_SIZE = 500;
+
+  async function flush() {
+    if (bulkOps.length === 0) return;
+    await Product.bulkWrite(bulkOps, { ordered: false });
+    bulkOps = [];
+  }
 
   for await (const doc of cursor) {
     stats.scanned++;
     const update = {};
+    const legacy = doc.legacyAttributes || {};
 
+    // color: from colorRaw, if missing
     if (isEmpty(doc.color) && !isEmpty(doc.colorRaw)) {
       const c = normalizeColor(doc.colorRaw);
       if (c) { update.color = [c]; stats.colorSet++; }
     }
 
-    if (isEmpty(doc.clarity) && !isEmpty(doc.clarityRaw)) {
-      const c = normalizeClarity(doc.clarityRaw);
-      if (c) { update.clarity = [c]; stats.claritySet++; }
+    // clarity: prefer colorRaw's sibling clarityRaw; fall back to the
+    // unlabeled extra_field_6 column that also carries clarity/grade text
+    // for gemstones (see header comment).
+    if (isEmpty(doc.clarity)) {
+      let clarityRaw = doc.clarityRaw;
+      let fromExtra = false;
+      if (isEmpty(clarityRaw) && !isEmpty(legacy.extra_field_6)) {
+        clarityRaw = legacy.extra_field_6;
+        fromExtra = true;
+      }
+      if (!isEmpty(clarityRaw)) {
+        const c = normalizeClarity(clarityRaw);
+        if (c) {
+          update.clarity = [c];
+          stats.claritySet++;
+          if (fromExtra) {
+            stats.clarityFromExtraField6++;
+            if (isEmpty(doc.clarityRaw)) update.clarityRaw = clarityRaw;
+          }
+        }
+      }
     }
 
-    const legacyApproxWeight = doc.legacyAttributes?.approxWeight ?? doc.legacyAttributes?.get?.('approxWeight');
-    if (isEmpty(doc.approxWeight) && !isEmpty(legacyApproxWeight)) {
-      update.approxWeight = legacyApproxWeight;
+    // approxWeight: derive display text from the already-populated numeric
+    // `size` field (legacyAttributes.approxWeight is empty on this DB).
+    if (isEmpty(doc.approxWeight) && !isEmpty(doc.size)) {
+      update.approxWeight = `${doc.size} ct`;
       stats.approxWeightSet++;
     }
 
+    // numberOfStones: from the unlabeled extra_field_15 column
+    // ("10 piece", "5 piece", "1", "2"...).
+    if (isEmpty(doc.numberOfStones) && !isEmpty(legacy.extra_field_15)) {
+      const match = String(legacy.extra_field_15).match(/\d+/);
+      if (match) {
+        update.numberOfStones = Number(match[0]);
+        stats.numberOfStonesSet++;
+      }
+    }
+
     if (Object.keys(update).length > 0) {
-      await Product.updateOne({ _id: doc._id }, { $set: update });
+      bulkOps.push({ updateOne: { filter: { _id: doc._id }, update: { $set: update } } });
       stats.updated++;
+    }
+
+    if (bulkOps.length >= BATCH_SIZE) await flush();
+
+    if (stats.scanned % 2000 === 0) {
+      console.log(`...scanned ${stats.scanned}, updated ${stats.updated} so far`);
     }
   }
 
+  await flush();
+
+  console.log('\n--- Results ---');
   console.log('Scanned:', stats.scanned);
   console.log('Documents updated:', stats.updated);
   console.log('color backfilled:', stats.colorSet);
-  console.log('clarity backfilled:', stats.claritySet);
+  console.log('clarity backfilled:', stats.claritySet, `(of which ${stats.clarityFromExtraField6} came from extra_field_6)`);
   console.log('approxWeight backfilled:', stats.approxWeightSet);
-  console.log('\nNote: numberOfStones was NOT touched — there is no raw source data for it in the current catalogue.');
+  console.log('numberOfStones backfilled:', stats.numberOfStonesSet);
 
   await mongoose.disconnect();
 }

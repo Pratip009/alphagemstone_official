@@ -117,6 +117,13 @@ export interface IProduct extends Document {
   legacyAttributes?: Record<string, string>;
   legacyProductId?: number;
   legacySku?: string;
+  // Numeric category_id(s) from the legacy catalogue export
+  // (products.csv `category_id` / `category_ids`). This is the join key
+  // used by the CSV-driven category filter system (CategoryFilter model /
+  // categoryFilter.service.ts) to scope filters to a category without
+  // depending on the app's own Category/Subcategory taxonomy, which
+  // collapses many legacy categories into fewer real subcategories.
+  legacyCategoryId?: number[];
 
   metaTitle?: string;
   metaDescription?: string;
@@ -287,6 +294,11 @@ const ProductSchema = new Schema<IProduct>(
       unique: true,
     },
     legacySku: { type: String, trim: true, maxlength: 100 },
+    legacyCategoryId: {
+      type: [Number],
+      default: undefined,
+      index: true,
+    },
 
     metaTitle: { type: String, trim: true, maxlength: 200 },
     metaDescription: { type: String, trim: true, maxlength: 500 },
@@ -423,6 +435,18 @@ ProductSchema.index({ category: 1, subcategory: 1, isActive: 1, createdAt: -1 })
 ProductSchema.index({ category: 1, isActive: 1, createdAt: -1 });
 
 ProductSchema.index({ shape: 1, size: 1 });
+
+// CSV-driven category filter system — every filtered category browse now
+// queries by legacyCategoryId first (it's the precise join key back to the
+// CSV filter config), narrowed by isActive. Compound so Mongo can satisfy
+// the common "category + in stock/active" browse without an in-memory sort.
+ProductSchema.index({ legacyCategoryId: 1, isActive: 1 });
+// Supports the dynamic-filter facet pipeline, which always groups by one
+// of these free-text attribute fields scoped to a legacyCategoryId.
+ProductSchema.index({ legacyCategoryId: 1, shapeRaw: 1 });
+ProductSchema.index({ legacyCategoryId: 1, colorRaw: 1 });
+ProductSchema.index({ legacyCategoryId: 1, clarityRaw: 1 });
+ProductSchema.index({ legacyCategoryId: 1, caratWeight: 1 });
 ProductSchema.index({ name: 'text', description: 'text' });
 
 // Memo index

@@ -52,6 +52,7 @@ export interface ParsedRow {
   legacyAttributes?: Record<string, string>;
   legacyProductId?: number;
   legacySku?: string;
+  legacyCategoryId?: number[];
 
   // ── "matched categories" export fields ─────────────────────────────────
   weight?: number;
@@ -677,6 +678,21 @@ function parseMatchedRow(r: Record<string, unknown>, rowNum: number, warnings: P
   }
   const categoryIdsRaw = clean(r.category_ids);
   if (categoryIdsRaw) legacyAttributes.legacyCategoryIds = categoryIdsRaw;
+
+  // ── legacyCategoryId — join key for the CSV-driven category filter system ──
+  // Prefer the single `category_id` column (matches final_category_filters.csv
+  // category_id exactly); fall back to parsing the `category_ids` /
+  // `category_ids_resolved` JSON-ish array text (e.g. ["206"]) when
+  // category_id is missing, and de-duplicate.
+  const legacyCategoryIdSet = new Set<number>();
+  const primaryCategoryId = num(r.category_id);
+  if (primaryCategoryId !== undefined) legacyCategoryIdSet.add(Math.round(primaryCategoryId));
+  for (const raw of [categoryIdsRaw, clean(r.category_ids_resolved)]) {
+    if (!raw) continue;
+    const matches = raw.match(/\d+/g);
+    if (matches) matches.forEach((m) => legacyCategoryIdSet.add(parseInt(m, 10)));
+  }
+  const legacyCategoryId = legacyCategoryIdSet.size ? Array.from(legacyCategoryIdSet) : undefined;
   const categoryPathsAll = clean(r.category_paths_all);
   if (categoryPathsAll && categoryPathsAll !== clean(r.category_path)) {
     legacyAttributes.categoryPathsAll = categoryPathsAll;
@@ -727,6 +743,7 @@ function parseMatchedRow(r: Record<string, unknown>, rowNum: number, warnings: P
     legacyAttributes: Object.keys(legacyAttributes).length ? legacyAttributes : undefined,
     legacyProductId: num(r.product_id),
     legacySku: clean(r.model) || undefined,
+    legacyCategoryId,
 
     weight: num(r.weight),
     msrp: num(r.msrp),

@@ -8,6 +8,13 @@ import {
   resolveSlugFilters,
   ProductFilterParams,
 } from './productFilter.service';
+import {
+  applyCategoryFilterSelection,
+  getApplicableFilterDefinitions,
+  getCategoryFilterFacets,
+  CategoryFilterSelection,
+  CategoryFilterGroup,
+} from './categoryFilter.service';
 
 export async function listProducts(params: ProductFilterParams) {
   // Resolve category/subcategory slugs → ObjectIds before building the query
@@ -26,6 +33,47 @@ export async function listProducts(params: ProductFilterParams) {
   ]);
 
   return { products, total, page, limit };
+}
+
+// ─── CSV-driven, category-specific filtering ───────────────────────────────
+// Extends listProducts with the final_category_filters.csv-backed dynamic
+// filter system: applies the customer's selections (AND across filters, OR
+// within a filter's own values) server-side via a Mongo query — never loads
+// the full catalogue into the browser — and returns the applicable filter
+// groups with live, currently-accurate counts alongside the page of
+// products. Category/subcategory scoping and every other existing param
+// (search, sort, pagination, price/size ranges, etc.) behave exactly as in
+// listProducts; this only adds the extra $and clause for the CSV filters.
+export async function listProductsWithCategoryFilters(
+  params: ProductFilterParams,
+  categorySelection: CategoryFilterSelection
+) {
+  const resolved = await resolveSlugFilters(params);
+  const { query, sort, page, limit, skip } = buildProductFilterQuery(resolved);
+
+  const finalQuery = applyCategoryFilterSelection(query, categorySelection);
+
+  const [products, total, definitions] = await Promise.all([
+    Product.find(finalQuery)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate('category', 'name slug')
+      .populate('subcategory', 'name slug')
+      .lean(),
+    Product.countDocuments(finalQuery),
+    getApplicableFilterDefinitions({
+      categoryId: resolved.category,
+      subcategoryId: resolved.subcategory,
+    }),
+  ]);
+
+  let categoryFilters: CategoryFilterGroup[] = [];
+  if (definitions.length > 0) {
+    categoryFilters = await getCategoryFilterFacets(query, definitions, categorySelection);
+  }
+
+  return { products, total, page, limit, categoryFilters };
 }
 
 // ─── Admin listing ──────────────────────────────────────────────────────────

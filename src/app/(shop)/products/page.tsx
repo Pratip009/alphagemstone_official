@@ -1,9 +1,11 @@
 import { connectDB } from "@/lib/db";
-import { listProducts, getProductFacets, getSimpleFilterFacets } from "@/services/product.service";
+import { listProducts, listProductsWithCategoryFilters, getProductFacets, getSimpleFilterFacets } from "@/services/product.service";
 import { ProductFilterParams } from "@/services/productFilter.service";
+import { parseCategoryFilterSelectionFromObject } from "@/services/categoryFilter.service";
 import ProductCard from "@/components/products/ProductCard";
 import FilterBar from "@/components/filters/FilterBar";
 import SimpleProductFilter from "@/components/filters/SimpleProductFilter";
+import DynamicCategoryFilters from "@/components/filters/DynamicCategoryFilters";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import { Suspense } from "react";
@@ -128,7 +130,13 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   // full-page skeleton stayed up until BOTH finished — in practice, until
   // the much slower facets query finished. That work now happens inside
   // <FacetedFilterBar>, in its own Suspense boundary below.
-  const { products, total, page, limit } = await listProducts(params);
+  // CSV-driven, category-specific filters (final_category_filters.csv) —
+  // only meaningfully scoped once a subcategory (or category) is selected,
+  // but harmless/no-op otherwise since getApplicableFilterDefinitions
+  // returns [] with no category/subcategory in scope.
+  const categorySelection = parseCategoryFilterSelectionFromObject(sp);
+  const { products, total, page, limit, categoryFilters } =
+    await listProductsWithCategoryFilters(params, categorySelection);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -164,6 +172,13 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           </div>
 
           <div className="flex gap-8 xl:gap-12">
+
+            {/* ── CSV-driven category filters (final_category_filters.csv) ──
+                Only renders once a category/subcategory is in scope and has
+                applicable filter definitions — empty otherwise. */}
+            {categoryFilters.length > 0 && (
+              <DynamicCategoryFilters groups={categoryFilters} />
+            )}
 
             {/* ── Main content ── */}
             <main className="flex-1 min-w-0">
