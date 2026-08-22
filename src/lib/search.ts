@@ -53,6 +53,35 @@ export function extractCarat(q: string): number | null {
 /** How close two carat weights need to be to count as a match, in carats. */
 export const CARAT_MATCH_TOLERANCE = 0.02;
 
+/**
+ * Physical item weight (grams) — a distinct concept from carat weight.
+ * `Product.weight` holds this (e.g. a ring's metal weight from the legacy
+ * `weight` column), so a bare carat-style query like "5" would otherwise
+ * only ever be checked against `size`/`caratWeight` and never against this
+ * field. Requires an explicit unit ("g"/"gm"/"gram(s)") so it never
+ * collides with a bare-number carat query — "0.35" alone still means
+ * carats, not grams.
+ *
+ * Matches: "5g", "5 g", "5gm", "5gms", "5 gram", "5.25 grams".
+ * Returns null when the query doesn't look like a gram-weight spec.
+ */
+export function extractWeight(q: string): number | null {
+  const lq = q.trim().toLowerCase();
+  const m = lq.match(/(\d+(?:\.\d+)?)\s*(gm?s?|grams?)\b/);
+  if (m) return parseFloat(m[1]);
+  return null;
+}
+
+/**
+ * Weight tolerance scales with the value instead of a fixed constant —
+ * a 1g stud earring and a 40g bangle need very different absolute
+ * windows to feel like "close enough" matches. Floored at 0.2g so tiny
+ * weights still get a usable window.
+ */
+export function weightTolerance(weight: number): number {
+  return Math.max(0.2, weight * 0.05);
+}
+
 export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

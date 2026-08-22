@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 // e.g. if your connection helper is `@/lib/mongodb` or `connectDB`, swap it in.
 import db from "@/lib/db";
 import Product from "@/models/Product";
-import { extractCarat, escapeRegex, CARAT_MATCH_TOLERANCE } from "@/lib/search";
+import {
+  extractCarat, extractWeight, escapeRegex,
+  CARAT_MATCH_TOLERANCE, weightTolerance,
+} from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,15 @@ export const dynamic = "force-dynamic";
 // searchable text fields here (and to the `.select()` projection below)
 // rather than editing the query logic — this is the single source of
 // truth for "what counts as a match."
+//
+// `legacySku` and `watchModel` are what customers mean by "model number" —
+// legacySku is populated straight from the legacy catalogue's `model` /
+// `products_model` column for every product kind, not just watches (see
+// parseLegacyRow/parseMatchedRow in fileParser.service.ts), so a plain
+// substring match on these two already covers model-number search; no
+// special parsing needed the way carat/weight need numeric handling below.
+// `approxWeight` is free text (e.g. "1/4 to 1/2 ct") that can contain the
+// exact phrase a customer types, so it's searched as text too.
 const SEARCHABLE_FIELDS = [
   "name",
   "watchBrand",
@@ -18,6 +30,7 @@ const SEARCHABLE_FIELDS = [
   "gemstoneName",
   "legacySku",
   "description",
+  "approxWeight",
 ] as const;
 
 export async function GET(req: NextRequest) {
@@ -29,6 +42,7 @@ export async function GET(req: NextRequest) {
   await db();
 
   const carat = extractCarat(q);
+  const gramWeight = extractWeight(q);
 
   // Tokenize into words so multi-word queries don't require an exact
   // substring match in one specific order. Previously the whole query
@@ -61,12 +75,28 @@ export async function GET(req: NextRequest) {
     wholePhraseClause,
   ];
 
-  // "0.35 Carat" / "0.35ct" / bare "0.35" — match by weight, not by
+  // "0.35 Carat" / "0.35ct" / bare "0.35" — match by carat weight, not by
   // substring, since no text field literally contains the phrase typed.
+  //
+  // Two different fields can hold carat weight depending on product kind:
+  // `size` is only ever populated for productKind "diamond"/"gemstone",
+  // but `caratWeight` is populated on the same rows AND on jewelry rows
+  // that carry stone weight info too (see parseMatchedRow in
+  // fileParser.service.ts) — a jewelry piece with a "1.5 carat diamond"
+  // has that 1.5 sitting in `caratWeight` with `size` left undefined.
+  // Checking only `size` silently missed every such jewelry item.
   if (carat !== null) {
-    or.push({
-      size: { $gte: carat - CARAT_MATCH_TOLERANCE, $lte: carat + CARAT_MATCH_TOLERANCE },
-    });
+    const range = { $gte: carat - CARAT_MATCH_TOLERANCE, $lte: carat + CARAT_MATCH_TOLERANCE };
+    or.push({ size: range });
+    or.push({ caratWeight: range });
+  }
+
+  // "5g" / "5 grams" — physical item weight, a different field and a
+  // different unit from carat. Only fires on an explicit gram unit so it
+  // never collides with a bare-number carat query.
+  if (gramWeight !== null) {
+    const tol = weightTolerance(gramWeight);
+    or.push({ weight: { $gte: gramWeight - tol, $lte: gramWeight + tol } });
   }
 
   const products = await Product.find({
@@ -74,8 +104,14 @@ export async function GET(req: NextRequest) {
     $or: or,
   })
     .select(
-      "name slug price images image category productKind watchBrand watchModel gemstoneName legacySku description size shape color clarity certification"
+      "name price images image category productKind watchBrand watchModel gemstoneName legacySku description size caratWeight weight approxWeight shape color clarity certification"
     )
+    // The Product schema has no `slug` field, so it was never actually
+    // returned — the client fell back to a fuzzy `/products?search=` link
+    // for every result instead of going straight to the product. Populating
+    // `category` here (previously left as a bare ObjectId) also fixes the
+    // category name shown under each result in the dropdown.
+    .populate("category", "name slug")
     .limit(limit)
     .lean();
 

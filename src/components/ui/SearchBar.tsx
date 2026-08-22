@@ -7,7 +7,9 @@ import {
   WATCH_BRANDS, WATCH_MOVEMENTS, WATCH_STRAP_TYPES, WATCH_CASE_MATERIALS,
   WATCH_DIAL_COLORS, WATCH_FEATURES, WATCH_STYLES, WATCH_GENDERS, WATCH_CASE_SIZES,
 } from "@/lib/productAttributes";
-import { fuzzyScore, extractCarat, CARAT_MATCH_TOLERANCE } from '@/lib/search';
+import {
+  fuzzyScore, extractCarat, extractWeight, CARAT_MATCH_TOLERANCE, weightTolerance,
+} from '@/lib/search';
 
 // ── Watch detection ───────────────────────────────────────────────────────────
 const WATCH_KINDS = new Set<AttrMatch["kind"]>([
@@ -100,12 +102,17 @@ interface SearchProduct {
   productKind?: "diamond" | "gemstone" | "watch" | "jewelry";
   watchBrand?: string; watchModel?: string; gemstoneName?: string; legacySku?: string; description?: string;
   size?: number; shape?: string[]; color?: string[]; clarity?: string[]; certification?: string[];
+  // caratWeight/weight/approxWeight — see server route.ts and scoreProduct()
+  // below for why carat and gram weight are matched against separate fields.
+  caratWeight?: number; weight?: number; approxWeight?: string;
 }
 
 // "description" added — previously the server never returned this field and the
 // client never scored it, so any product only findable via its description text
 // was invisible in search regardless of how good the query was.
-type MatchedField = "name" | "brand" | "model" | "gem" | "sku" | "carat" | "description";
+// "weight" added — gram-based physical weight (e.g. "5g"), distinct from
+// carat weight, matched against Product.weight rather than size/caratWeight.
+type MatchedField = "name" | "brand" | "model" | "gem" | "sku" | "carat" | "weight" | "description";
 
 type ResultItem =
   | { type: "category"; item: SearchCategory }
@@ -153,14 +160,32 @@ async function fetchProducts(q: string, signal: AbortSignal): Promise<SearchProd
   return list.filter((p) => p.isActive !== false);
 }
 
-/** Rank a single product against the query across every searchable field, including carat weight. */
-function scoreProduct(prod: SearchProduct, lq: string, carat: number | null): { score: number; matchedOn: string; matchedField: MatchedField } | null {
+/**
+ * Rank a single product against the query across every searchable field,
+ * including carat weight, physical (gram) weight, and model number.
+ *
+ * "Model number" needs no special numeric handling — it lives in
+ * `watchModel` (watches) and `legacySku` (every product kind, populated
+ * from the legacy catalogue's `model` column — see fileParser.service.ts),
+ * so it's just another text candidate below and a plain fuzzy/substring
+ * match already finds it, digits and all.
+ */
+function scoreProduct(
+  prod: SearchProduct,
+  lq: string,
+  carat: number | null,
+  gramWeight: number | null,
+): { score: number; matchedOn: string; matchedField: MatchedField } | null {
   const candidates: { field: MatchedField; text: string | undefined; weight: number }[] = [
     { field: "name", text: prod.name, weight: 1 },
     { field: "brand", text: prod.watchBrand, weight: 0.95 },
     { field: "model", text: prod.watchModel, weight: 0.9 },
     { field: "gem", text: prod.gemstoneName, weight: 0.85 },
     { field: "sku", text: prod.legacySku, weight: 0.6 },
+    // approxWeight is free text (e.g. "1/4 to 1/2 ct") that can contain the
+    // exact phrase someone types, so it's worth a plain text match too —
+    // separate from the numeric carat/weight matching below.
+    { field: "weight", text: prod.approxWeight, weight: 0.55 },
     // Description is long free text, so it's weighted lowest — a name/brand
     // match should always outrank a product that only mentions the query
     // somewhere in its description copy.
@@ -171,15 +196,36 @@ function scoreProduct(prod: SearchProduct, lq: string, carat: number | null): { 
     const s = fuzzyScore(c.text, lq) * c.weight;
     if (s > 0 && (!best || s > best.score)) best = { matchedField: c.field, score: s, matchedOn: c.text as string };
   }
-  // Carat is numeric, not textual — "0.35 Carat" won't literally appear in any
-  // field, so it's matched by proximity to `size` instead of substring search.
-  if (carat !== null && prod.size != null) {
-    const diff = Math.abs(prod.size - carat);
-    if (diff <= CARAT_MATCH_TOLERANCE) {
-      const caratScore = 96 - diff * 200; // exact weight ranks above a merely-close one
-      if (!best || caratScore > best.score) best = { matchedField: "carat", score: caratScore, matchedOn: `${prod.size} ct` };
+
+  // Carat is numeric, not textual — "0.35 Carat" won't literally appear in
+  // any field, so it's matched by proximity instead of substring search.
+  // Two different fields can hold it depending on product kind: `size` is
+  // only populated for diamonds/gemstones, while `caratWeight` is also
+  // populated on jewelry rows that carry stone-weight info even though
+  // `size` is left undefined for those — check both, prefer the closer one.
+  if (carat !== null) {
+    for (const [field, val] of [["size", prod.size], ["caratWeight", prod.caratWeight]] as const) {
+      if (val == null) continue;
+      const diff = Math.abs(val - carat);
+      if (diff <= CARAT_MATCH_TOLERANCE) {
+        const caratScore = 96 - diff * 200; // exact weight ranks above a merely-close one
+        if (!best || caratScore > best.score) best = { matchedField: "carat", score: caratScore, matchedOn: `${val} ct` };
+      }
     }
   }
+
+  // Physical item weight in grams ("5g") — a different field and unit from
+  // carat, only checked when the query has an explicit gram unit so it
+  // never collides with a bare-number carat query like "0.35".
+  if (gramWeight !== null && prod.weight != null) {
+    const tol = weightTolerance(gramWeight);
+    const diff = Math.abs(prod.weight - gramWeight);
+    if (diff <= tol) {
+      const wScore = 90 - (diff / tol) * 20; // exact weight ranks above a merely-close one
+      if (!best || wScore > best.score) best = { matchedField: "weight", score: wScore, matchedOn: `${prod.weight} g` };
+    }
+  }
+
   return best;
 }
 
@@ -434,6 +480,7 @@ export default function SearchBar({
       abortRef.current = controller;
       const myReq = ++reqIdRef.current;
       const carat = extractCarat(q);
+      const gramWeight = extractWeight(q);
       const lq = q.toLowerCase();
 
       fetchProducts(q, controller.signal)
@@ -441,7 +488,7 @@ export default function SearchBar({
           if (myReq !== reqIdRef.current) return; // a newer keystroke already superseded this request
           const scored: ResultItem[] = prods
             .map((p) => {
-              const s = scoreProduct(p, lq, carat);
+              const s = scoreProduct(p, lq, carat, gramWeight);
               return s ? ({ type: "product", item: p, score: s.score, matchedOn: s.matchedOn, matchedField: s.matchedField } as ResultItem) : null;
             })
             .filter((r): r is ResultItem => r !== null)
@@ -484,13 +531,12 @@ export default function SearchBar({
 
     } else if (r.type === "product") {
       setQuery("");
-      if (r.item.slug) {
-        router.push(`/products/${r.item.slug}`);
-      } else {
-        const kind = classifyKind(r.item);
-        const catParam = kind === "watch" ? "&category=watches" : kind === "jewelry" ? "&category=jewelry" : "";
-        router.push(`/products?search=${encodeURIComponent(r.item.name)}${catParam}`);
-      }
+      // Product detail page is keyed on Mongo _id (see getProductById), and
+      // the Product schema has no `slug` field, so `slug` here is always
+      // undefined — routing on it silently 404'd. Every other product link
+      // in the app (ProductCard, Specialsmarquee, etc.) already uses _id,
+      // so match that instead of falling back to a fuzzy search listing.
+      router.push(`/products/${r.item._id}`);
 
     } else if (r.type === "attr") {
       setQuery("");
@@ -876,10 +922,11 @@ export default function SearchBar({
                         const catName = typeof prod.category === "object" ? prod.category?.name : prod.category;
                         const matchNote =
                           r.matchedField === "brand" ? `Brand: ${r.matchedOn}` :
-                          r.matchedField === "model" ? `Model: ${r.matchedOn}` :
+                          r.matchedField === "model" ? `Model #: ${r.matchedOn}` :
                           r.matchedField === "gem" ? `Stone: ${r.matchedOn}` :
-                          r.matchedField === "sku" ? `SKU: ${r.matchedOn}` :
+                          r.matchedField === "sku" ? `Model #: ${r.matchedOn}` :
                           r.matchedField === "carat" ? `Carat: ${r.matchedOn}` :
+                          r.matchedField === "weight" ? `Weight: ${r.matchedOn}` :
                           r.matchedField === "description" ? `In description` : null;
                         return (
                           <button key={prod._id} id={`${listboxId}-opt-${idx}`} role="option" aria-selected={activeIdx === idx}
