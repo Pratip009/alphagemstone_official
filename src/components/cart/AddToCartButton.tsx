@@ -46,27 +46,62 @@ export default function AddToCartButton({
 
   if (!inStock) {
     return (
-      <button disabled className="w-full py-3 rounded bg-neutral-800 text-neutral-600 cursor-not-allowed font-medium">
+      <button
+        disabled
+        className="w-full py-2.5 border font-bold cursor-not-allowed"
+        style={{
+          borderColor: '#c3cfe6',
+          background: '#eef1f7',
+          color: '#9aa4bd',
+          fontSize: 11,
+          borderRadius: 2,
+        }}
+      >
         Out of Stock
       </button>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <label className="label">Qty</label>
-        <div className="flex items-center border border-neutral-700 rounded">
+    <div>
+      <div className="flex items-center gap-3" style={{ marginBottom: 10 }}>
+        <div
+          className="flex items-center"
+          style={{ border: '1px solid #a9b8d9', borderRadius: 2 }}
+        >
           <button
             onClick={() => setQty(Math.max(1, qty - 1))}
-            className="px-3 py-1.5 text-neutral-400 hover:text-white"
+            style={{
+              padding: '5px 10px',
+              color: '#3d5382',
+              background: '#f6f8fc',
+              fontSize: 12,
+              fontWeight: 'bold',
+            }}
           >
             −
           </button>
-          <span className="px-4 py-1.5 text-sm border-x border-neutral-700">{qty}</span>
+          <span
+            style={{
+              padding: '5px 14px',
+              fontSize: 12,
+              fontWeight: 'bold',
+              borderLeft: '1px solid #a9b8d9',
+              borderRight: '1px solid #a9b8d9',
+              color: '#222',
+            }}
+          >
+            {qty}
+          </span>
           <button
             onClick={() => setQty(qty + 1)}
-            className="px-3 py-1.5 text-neutral-400 hover:text-white"
+            style={{
+              padding: '5px 10px',
+              color: '#3d5382',
+              background: '#f6f8fc',
+              fontSize: 12,
+              fontWeight: 'bold',
+            }}
           >
             +
           </button>
@@ -75,18 +110,35 @@ export default function AddToCartButton({
       <button
         onClick={handleAdd}
         disabled={loading || authLoading}  // ✅ disable during auth load too
-        className={`w-full py-3 rounded font-semibold transition-all ${
-          added
-            ? 'bg-green-600 text-white'
-            : 'bg-amber-500 hover:bg-amber-400 text-black'
-        }`}
+        className="w-full font-bold transition-all"
+        style={{
+          padding: '9px 10px',
+          borderRadius: 2,
+          fontSize: 11,
+          marginBottom: 8,
+          border: '1px solid #7f96c4',
+          background: added
+            ? '#227722'
+            : 'linear-gradient(to bottom, #c3d1ec, #8ea1cf)',
+          color: '#fff',
+        }}
       >
         {/* ✅ Show loading state during auth check too */}
-        {authLoading ? 'Loading…' : loading ? 'Adding…' : added ? '✓ Added to Cart' : 'Add to Cart'}
+        {authLoading ? 'Loading…' : loading ? 'Adding…' : added ? '✓ Added to Cart' : 'Add To Cart'}
       </button>
       <button
         onClick={() => router.push('/cart')}
-        className="w-full btn-secondary py-2.5 text-center text-sm"
+        className="w-full text-center"
+        style={{
+          padding: '7px 10px',
+          borderRadius: 2,
+          fontSize: 11,
+          fontWeight: 'bold',
+          border: '1px solid #a9b8d9',
+          background: '#fff',
+          color: '#2f3f60',
+          marginBottom: 8,
+        }}
       >
         View Cart
       </button>

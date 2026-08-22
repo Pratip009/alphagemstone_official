@@ -3,7 +3,6 @@ import { connectDB } from "@/lib/db";
 import { getProductById } from "@/services/product.service";
 import Product from "@/models/Product";
 import AddToCartButton from "@/components/cart/AddToCartButton";
-import ProductGallery from "@/components/products/ProductGallery";
 import Link from "next/link";
 import WishlistButton from "@/components/wishlist/WishlistButton";
 import RecordRecentlyViewed from "@/components/products/RecordRecentlyViewed";
@@ -35,6 +34,27 @@ type ProductDoc = {
   // enum (cut, luster, hardness, treatment, origin, metal, ring size,
   // carat/size ranges, approx weight, dimensions, etc.)
   legacyAttributes?: Record<string, string>;
+
+  // Typed attribute fields from the schema (preferred over the equivalent
+  // free-text legacyAttributes entry when present)
+  approxWeight?: string;
+  numberOfStones?: number;
+  cutType?: string;
+  luster?: string;
+  hardness?: string;
+  treatment?: string;
+  origin?: string;
+  caratWeight?: number;
+  dimensions?: string;
+
+  // Legacy "matched categories" export fields
+  weight?: number;
+  msrp?: number;
+  manufacturerId?: string;
+  minOrder?: number;
+  maxOrder?: number;
+  qtyBlocks?: number;
+  makeAnOffer?: boolean;
 
   // Watch
   watchBrand?: string;
@@ -185,33 +205,35 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
     push("Item", "Diamond");
     push("Polish", attr("polish"));
     push("Shape", p.shapeRaw || capitalize(p.shape));
-    push("Cut", attr("cut"));
+    push("Cut", p.cutType || attr("cut"));
     push("Color", p.colorRaw || display(p.color));
-    push("Size", attr("dimensions"));
+    push("Size", p.dimensions || attr("dimensions"));
     push("Depth", attr("depth"));
-    push("Treatment", attr("treatment"));
+    push("Treatment", p.treatment || attr("treatment"));
     push("Clarity", p.clarityRaw || display(p.clarity));
     const cert = certDisplay(p.certification);
     if (cert !== "—") push("Certification", cert);
-    const diamondApproxWeightAttr = attr("approxWeight");
+    const diamondApproxWeightAttr = p.approxWeight || attr("approxWeight");
     push(
       "Approx Weight",
       diamondApproxWeightAttr
         ? `${diamondApproxWeightAttr} ct.`
-        : p.size
-          ? `${p.size} ct.`
-          : undefined,
+        : p.caratWeight
+          ? `${p.caratWeight} ct.`
+          : p.size
+            ? `${p.size} ct.`
+            : undefined,
     );
   } else if (kind === "gemstone") {
     push("Name", p.gemstoneName || p.name);
     push("Shape", p.shapeRaw || capitalize(p.shape));
-    push("Cut", attr("cut"));
+    push("Cut", p.cutType || attr("cut"));
     push("Color", p.colorRaw || display(p.color));
-    push("Origin", attr("origin"));
-    push("Size", attr("dimensions"));
-    push("Luster", attr("luster"));
-    push("Treatment", attr("treatment"));
-    push("Hardness", attr("hardness"));
+    push("Origin", p.origin || attr("origin"));
+    push("Size", p.dimensions || attr("dimensions"));
+    push("Luster", p.luster || attr("luster"));
+    push("Treatment", p.treatment || attr("treatment"));
+    push("Hardness", p.hardness || attr("hardness"));
     push("Clarity", p.clarityRaw || display(p.clarity));
     // attr() must be called unconditionally here — if it only runs on the
     // right side of `||` (i.e. only when p.gradeRaw is empty), the 'grade'
@@ -220,14 +242,16 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
     // producing a duplicate "Grade" row (and a React duplicate-key error).
     const gradeAttr = attr("grade");
     push("Grade", p.gradeRaw || gradeAttr);
-    const approxWeightAttr = attr("approxWeight");
+    const approxWeightAttr = p.approxWeight || attr("approxWeight");
     push(
       "Approx Weight",
       approxWeightAttr
         ? `${approxWeightAttr} ct.`
-        : p.size
-          ? `${p.size} ct.`
-          : undefined,
+        : p.caratWeight
+          ? `${p.caratWeight} ct.`
+          : p.size
+            ? `${p.size} ct.`
+            : undefined,
     );
   } else if (kind === "watch") {
     push("Brand", p.watchBrand);
@@ -250,6 +274,16 @@ function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
     push("Shape", p.shapeRaw || capitalize(p.shape));
     push("Color", p.colorRaw || display(p.color));
   }
+
+  // Fields captured on every product kind from the legacy "matched
+  // categories" export, not just diamonds/gemstones/watches.
+  push("Number of Stones", p.numberOfStones);
+  push("Item Weight", p.weight ? `${p.weight} g` : undefined);
+  push("Manufacturer", p.manufacturerId);
+  if (p.minOrder && p.minOrder > 1) {
+    push("Minimum Order Qty", p.minOrder);
+  }
+  if (p.makeAnOffer) push("Make An Offer", "Available on this item");
 
   // Anything still sitting in legacyAttributes that wasn't already pulled
   // out above — keeps the page honest instead of quietly dropping data
@@ -386,6 +420,101 @@ function kindIcon(kind: ProductKind) {
   if (kind === "gemstone") return <GemstoneIcon />;
   return <JewelryIcon />;
 }
+
+// ─── Small decorative icons for the legacy sidebar panels ──────────────────
+function FacebookIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M15 8h2V4h-2a4 4 0 0 0-4 4v2H9v4h2v6h4v-6h2.5l.5-4H15V8z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function XIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 4l16 16M20 4L4 20"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+function BellIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.73 21a2 2 0 0 1-3.46 0"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+function QuestionIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.36-1 1-1 1.7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="17" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+function PrinterIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function MailIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M3.5 6.5l8.5 6 8.5-6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const LEARNING_CENTER_LINKS = [
+  "Shipping and Returns",
+  "Privacy Policy",
+  "SSL Certificate",
+  "Customer Support",
+  "Contact Us",
+  "FAQ",
+  "Testimonials",
+  "Ring Sizes",
+];
 
 // ─── Related products ─────────────────────────────────────────────────────────
 async function getRelatedProducts(
@@ -529,38 +658,7 @@ const TRUST_ITEMS = [
   },
 ];
 
-const INFO_SECTIONS = [
-  {
-    title: "Learning Center",
-    links: [
-      "Diamond Guide",
-      "4Cs Explained",
-      "Ring Size Chart",
-      "Metal Guide",
-      "Setting Styles",
-    ],
-  },
-  {
-    title: "Customer Care",
-    links: [
-      "Contact Us",
-      "FAQ",
-      "Shipping & Returns",
-      "Privacy Policy",
-      "Customer Support",
-    ],
-  },
-  {
-    title: "Our Promise",
-    links: [
-      "Testimonials",
-      "Sustainability",
-      "Certifications",
-      "About Us",
-      "Press",
-    ],
-  },
-];
+
 
 const TESTIMONIALS = [
   {
@@ -604,17 +702,9 @@ export default async function ProductDetailPage({
 
   const related = await getRelatedProducts(p, String(p._id), 4);
 
-  // Gallery images — if fewer than 4 real photos exist, repeat the main
-  // photo to fill the strip instead of letting the gallery fall back to
-  // its own dummy placeholder images.
-  const galleryImages = (() => {
-    const imgs = (p.images ?? []).filter(Boolean);
-    if (imgs.length === 0) return imgs;
-    if (imgs.length >= 4) return imgs;
-    const padded = [...imgs];
-    while (padded.length < 4) padded.push(imgs[0]);
-    return padded;
-  })();
+  // Single main product photo — the legacy layout shows one image only,
+  // no thumbnail strip.
+  const mainImage = (p.images ?? []).filter(Boolean)[0] ?? null;
 
   // Dynamic, per-kind spec sheet — see buildSpecs() above. Diamonds get
   // diamond fields (polish/cut/color/clarity/depth/...), gemstones get
@@ -647,122 +737,192 @@ export default async function ProductDetailPage({
         ? "Fine Diamond"
         : p.category?.name || "Fine Jewelry";
 
+  // Market Retail Price / Savings — only shown when msrp is actually set on
+  // the product and is genuinely higher than the selling price, so nothing
+  // here is a fabricated comparison.
+  const hasMsrpSavings =
+    typeof p.msrp === "number" && p.msrp > p.price;
+  const savingsAmount = hasMsrpSavings ? (p.msrp as number) - p.price : 0;
+  const savingsPct = hasMsrpSavings
+    ? Math.round((savingsAmount / (p.msrp as number)) * 100)
+    : 0;
+
   return (
     <>
       <RecordRecentlyViewed productId={String(p._id)} inStock={p.stock > 0} />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap"
-        rel="stylesheet"
-      />
 
       <style>{`
         :root {
-          --gold: #b8955a;
-          --gold-light: #d4b483;
-          --gold-pale: #f5efe6;
-          --ink: #111010;
-          --muted: #8a8178;
-          --border: #e8e2da;
-          --bg: #ffffff;
-          --bg-off: #faf8f5;
+          --lg-bar-1: #dbe6f8;
+          --lg-bar-2: #4f6bab;
+          --lg-bar-mid: #7f9bd4;
+          --lg-border: #ccd7ee;
+          --lg-border-soft: #e2e9f7;
+          --lg-blue: #24406f;
+          --lg-blue-deep: #182c50;
+          --lg-link: #2455a4;
+          --lg-red: #c8102e;
+          --lg-red-deep: #9c0b23;
+          --lg-text: #2b2f38;
+          --lg-muted: #6b7590;
+          --lg-bg: #ffffff;
+          --lg-panel: #f7f9fd;
+          --lg-panel-alt: #eef2fb;
+          --lg-zebra: #f1f4fb;
+          --lg-shadow-sm: 0 1px 2px rgba(24,44,80,0.06), 0 1px 1px rgba(24,44,80,0.04);
+          --lg-shadow-md: 0 6px 20px rgba(24,44,80,0.09), 0 2px 6px rgba(24,44,80,0.06);
+          --lg-shadow-lg: 0 18px 40px rgba(24,44,80,0.14), 0 4px 12px rgba(24,44,80,0.08);
         }
         * { box-sizing: border-box; }
-        .pd-page { font-family: 'Google Sans Flex', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
-        .pd-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding: 20px 0 32px; flex-wrap: wrap; }
-        .pd-breadcrumb a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
-        .pd-breadcrumb a:hover { color: var(--gold); }
-        .pd-breadcrumb span.sep { color: var(--border); font-size: 12px; }
-        .pd-breadcrumb span.current { color: var(--ink); }
-        .pd-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; padding-bottom: 80px; border-bottom: 1px solid var(--border); }
-        @media (max-width: 768px) { .pd-hero { grid-template-columns: 1fr; gap: 32px; } }
-        .pd-type-label { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; padding: 4px 10px; border-radius: 2px; margin-bottom: 14px; }
-        .pd-type-label.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
-        .pd-type-label.diamond { background: #fdf4ff; color: #7e22ce; border: 0.5px solid rgba(126,34,206,0.2); }
-        .pd-type-label.gemstone { background: #ecfdf5; color: #047857; border: 0.5px solid rgba(4,120,87,0.2); }
-        .pd-type-label.jewelry { background: #fff7ed; color: #c2410c; border: 0.5px solid rgba(194,65,12,0.2); }
-        .pd-category-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-        .pd-category-label::before { content: ''; display: inline-block; width: 28px; height: 0.5px; background: var(--gold); }
-        .pd-title { font-family: 'Google Sans Flex', sans-serif; font-size: clamp(26px, 4vw, 40px); font-weight: 500; line-height: 1.15; color: var(--ink); margin: 0 0 10px; letter-spacing: -0.01em; }
-        .pd-subtitle { font-family: 'Google Sans Flex', sans-serif; font-size: 13px; font-style: italic; color: var(--muted); margin-bottom: 32px; }
-        .pd-price-block { display: flex; align-items: flex-start; gap: 0; padding: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 32px; position: relative; }
-        .pd-price-block::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 60px; height: 1px; background: var(--gold); }
-        .pd-currency { font-family: 'Google Sans Flex', sans-serif; font-size: 18px; color: var(--gold); margin-top: 6px; margin-right: 2px; }
-        .pd-price-num { font-family: 'Google Sans Flex', sans-serif; font-size: 48px; font-weight: 400; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
-        .pd-price-meta { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: auto; margin-bottom: 6px; margin-left: 12px; line-height: 1.6; }
-        .pd-specs { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
-        .pd-specs tr { border-bottom: 1px solid var(--border); }
-        .pd-specs tr:last-child { border-bottom: none; }
-        .pd-specs td { padding: 11px 0; font-size: 12px; }
-        .pd-specs td:first-child { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); width: 45%; font-weight: 500; }
-        .pd-specs td:last-child { text-align: right; font-size: 13px; font-weight: 500; color: var(--ink); }
-        .pd-specs td.highlight { color: #4a8a5a; }
-        .pd-description { font-size: 13px; line-height: 1.85; color: var(--muted); padding: 20px 0 24px; border-top: 1px solid var(--border); margin-bottom: 8px; }
-        .pd-stock { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
-        .pd-stock-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-        .pd-stock-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
-        .pd-btn-primary { width: 100%; background: var(--ink); color: #fff; border: none; padding: 16px 24px; font-family: "Elms Sans", sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: background 0.25s; margin-bottom: 10px; }
-        .pd-btn-primary:hover { background: #2a2a2a; }
-        .pd-btn-secondary { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 14px 24px; font-family: "Elms Sans", sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: border-color 0.25s, color 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .pd-btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
-        .pd-mini-trust { display: flex; gap: 20px; padding-top: 20px; border-top: 1px solid var(--border); margin-top: 16px; flex-wrap: wrap; }
-        .pd-mini-trust-item { display: flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
-        .pd-mini-trust-item svg { color: var(--gold); flex-shrink: 0; }
-        .pd-trust-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--border); margin: 64px 0; background: var(--bg-off); }
+        .pd-page { font-family: Elms Sans; background: linear-gradient(180deg, #fbfcfe 0%, #ffffff 260px); color: var(--lg-text); min-height: 100vh; font-size: 12px; -webkit-font-smoothing: antialiased; }
+        .pd-shell { width: 100%; margin: 0; padding: 22px 40px 70px; }
+        @media (max-width: 700px) { .pd-shell { padding: 16px 16px 50px; } }
+
+        .pd-breadcrumb { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--lg-muted); padding: 0 0 18px; flex-wrap: wrap; letter-spacing: 0.01em; }
+        .pd-breadcrumb a { color: var(--lg-link); text-decoration: none; transition: color 0.15s; }
+        .pd-breadcrumb a:hover { color: var(--lg-blue-deep); text-decoration: underline; }
+        .pd-breadcrumb span.sep { color: #b7c3de; }
+        .pd-breadcrumb span.current { color: var(--lg-blue); font-weight: 600; }
+
+        /* ── 3-column legacy layout ── */
+        .pd-columns { display: grid; grid-template-columns: 260px 1fr 300px; gap: 40px; align-items: start; }
+        @media (max-width: 1100px) { .pd-columns { grid-template-columns: 220px 1fr 240px; gap: 26px; } }
+        @media (max-width: 860px) { .pd-columns { grid-template-columns: 1fr; } }
+
+        /* ── shared "title bar" panel ── */
+        .pd-bar { position: relative; background: linear-gradient(160deg, var(--lg-bar-1) 0%, var(--lg-bar-mid) 46%, var(--lg-bar-2) 100%); border: 1px solid #5f7ab8; color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; padding: 9px 14px; border-radius: 6px 6px 0 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), var(--lg-shadow-sm); text-shadow: 0 1px 1px rgba(20,30,60,0.25); }
+        .pd-panel { border: 1px solid var(--lg-border); border-top: none; background: var(--lg-bg); margin-bottom: 22px; border-radius: 0 0 6px 6px; box-shadow: var(--lg-shadow-sm); overflow: hidden; }
+        .pd-panel-pad { padding: 10px 12px; }
+
+        /* ── left column: main image ── */
+        .pd-main-image { position: relative; width: 100%; aspect-ratio: 1 / 1; background: linear-gradient(160deg, #f5f7fc, #eef1f9); border: 1px solid var(--lg-border); overflow: hidden; border-radius: 8px; box-shadow: var(--lg-shadow-md); }
+        .pd-main-image img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s cubic-bezier(0.16,1,0.3,1); }
+        .pd-main-image:hover img { transform: scale(1.045); }
+        .pd-main-image-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--lg-border); font-size: 40px; }
+        .pd-enlarge { text-align: center; font-size: 11px; margin: 10px 0 22px; }
+        .pd-enlarge a { color: var(--lg-link); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; letter-spacing: 0.02em; transition: color 0.15s; }
+        .pd-enlarge a:hover { color: var(--lg-blue-deep); }
+
+        /* ── left column: notification / learning center / complimentary ── */
+        .pd-side-row { display: flex; align-items: flex-start; gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--lg-border-soft); font-size: 11px; transition: background 0.15s; }
+        .pd-side-row:hover { background: var(--lg-zebra); }
+        .pd-side-row:last-child { border-bottom: none; }
+        .pd-side-row svg { color: var(--lg-blue); flex-shrink: 0; margin-top: 1px; }
+        .pd-side-row a, .pd-side-row span.txt { color: var(--lg-link); text-decoration: none; line-height: 1.45; }
+        .pd-side-row a:hover { text-decoration: underline; }
+        .pd-side-row.muted span.txt { color: var(--lg-muted); }
+        .pd-share-row { padding: 10px 13px; border-bottom: 1px solid var(--lg-border-soft); font-size: 11px; color: var(--lg-muted); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .pd-share-icons { display: flex; gap: 5px; }
+        .pd-share-icons a { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: var(--lg-panel); border: 1px solid var(--lg-border); color: var(--lg-blue); text-decoration: none; transition: background 0.15s, color 0.15s, transform 0.15s; }
+        .pd-share-icons a:hover { background: var(--lg-blue); color: #fff; transform: translateY(-1px); }
+
+        .pd-learning-list { list-style: none; margin: 0; padding: 6px 0; }
+        .pd-learning-list li { border-bottom: 1px solid var(--lg-border-soft); }
+        .pd-learning-list li:last-child { border-bottom: none; }
+        .pd-learning-list li a { display: flex; align-items: center; gap: 7px; padding: 8px 13px; color: var(--lg-link); text-decoration: none; font-size: 11px; transition: background 0.15s, padding-left 0.15s; }
+        .pd-learning-list li a::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--lg-bar-2); flex-shrink: 0; }
+        .pd-learning-list li a:hover { background: var(--lg-zebra); padding-left: 16px; }
+
+        .pd-complimentary-list { list-style: none; margin: 0; padding: 10px 13px; }
+        .pd-complimentary-list li { font-size: 11px; color: var(--lg-red-deep); font-weight: 700; padding: 4px 0; display: flex; align-items: center; gap: 7px; }
+        .pd-complimentary-list li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--lg-red); flex-shrink: 0; }
+
+        /* ── center column ── */
+        .pd-title { font-family: Elms Sans; font-size: 25px; font-weight: 700; line-height: 1.28; color: var(--lg-blue-deep); margin: 0 0 6px; letter-spacing: -0.01em; }
+        .pd-code { font-size: 11px; color: var(--lg-muted); margin-bottom: 14px; letter-spacing: 0.04em; }
+        .pd-desc { font-size: 12.5px; color: #4a5266; line-height: 1.7; margin-bottom: 18px; }
+
+        .pd-price-legacy { border: 1px solid var(--lg-border); border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; background: linear-gradient(160deg, #fbfcff, #f4f7fd); box-shadow: var(--lg-shadow-sm); }
+        .pd-price-row { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; }
+        .pd-price-row .label { font-weight: 600; color: #45506b; font-size: 11px; letter-spacing: 0.03em; text-transform: uppercase; }
+        .pd-price-row.alpha { padding: 6px 0; margin: 4px 0; border-top: 1px dashed var(--lg-border); border-bottom: 1px dashed var(--lg-border); }
+        .pd-price-row.alpha .label { color: var(--lg-red-deep); font-size: 12px; }
+        .pd-price-row.alpha .value { color: var(--lg-red); font-size: 26px; font-weight: 800; letter-spacing: -0.01em; text-shadow: 0 1px 0 rgba(255,255,255,0.6); }
+        .pd-price-row .value { font-weight: 700; color: #222; font-size: 12px; }
+        .pd-min-qty { font-size: 11px; font-weight: 600; color: #45506b; margin-bottom: 12px; }
+
+        .pd-stock-legacy { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; margin-bottom: 16px; letter-spacing: 0.02em; }
+        .pd-stock-legacy .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(34,119,34,0.15); }
+
+        .pd-qty-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 12px; font-weight: 700; color: #222; text-transform: uppercase; letter-spacing: 0.04em; }
+
+        .pd-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .pd-btn-line { display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(160deg, #f1f4fb, #dde5f5); border: 1px solid #a9b8d9; color: #2f3f60; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; padding: 10px 12px; text-decoration: none; cursor: pointer; border-radius: 6px; box-shadow: var(--lg-shadow-sm); transition: transform 0.15s, box-shadow 0.15s, background 0.2s; }
+        .pd-btn-line:hover { background: linear-gradient(160deg, #e6ecfa, #c8d4ec); transform: translateY(-1px); box-shadow: var(--lg-shadow-md); }
+        .pd-btn-secondary-legacy { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; background: #fff; border: 1px solid #a9b8d9; color: #2f3f60; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; padding: 10px 12px; cursor: pointer; border-radius: 6px; margin-bottom: 10px; box-shadow: var(--lg-shadow-sm); transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s; }
+        .pd-btn-secondary-legacy:hover { background: var(--lg-panel); border-color: var(--lg-blue); transform: translateY(-1px); box-shadow: var(--lg-shadow-md); }
+        .pd-btn-tertiary-legacy { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; background: transparent; border: 1px dashed #c3cfe6; color: var(--lg-muted); font-size: 10px; padding: 6px 10px; cursor: pointer; border-radius: 6px; margin-bottom: 14px; }
+
+        .pd-tell-friend { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-bottom: 26px; padding-top: 4px; }
+        .pd-tell-friend a { color: var(--lg-link); text-decoration: none; font-weight: 600; transition: color 0.15s; }
+        .pd-tell-friend a:hover { color: var(--lg-blue-deep); text-decoration: underline; }
+        .pd-tell-friend svg { color: var(--lg-blue); }
+
+        .pd-specs-legacy { width: 100%; border-collapse: collapse; }
+        .pd-specs-legacy tr:nth-child(odd) { background: var(--lg-zebra); }
+        .pd-specs-legacy tr { transition: background 0.15s; }
+        .pd-specs-legacy tr:hover { background: var(--lg-panel-alt); }
+        .pd-specs-legacy td { padding: 9px 14px; font-size: 12px; border-bottom: 1px solid var(--lg-border-soft); }
+        .pd-specs-legacy tr:last-child td { border-bottom: none; }
+        .pd-specs-legacy td:first-child { font-weight: 700; color: var(--lg-blue); width: 42%; letter-spacing: 0.02em; font-size: 10.5px; }
+        .pd-specs-legacy td:last-child { color: #333; font-weight: 500; }
+        .pd-specs-legacy td.highlight { color: #1c7a2e; font-weight: 700; }
+
+        .pd-reviews-empty { padding: 16px; font-size: 12px; color: var(--lg-muted); }
+        .pd-write-review { margin: 0 14px 14px; }
+
+        /* ── right column: related items ── */
+        .pd-related-heading { font-size: 11px; color: var(--lg-blue-deep); font-weight: 800; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--lg-bar-2); text-transform: uppercase; letter-spacing: 0.06em; }
+        .pd-related-list { display: flex; flex-direction: column; gap: 16px; }
+        .pd-related-item { display: block; text-decoration: none; text-align: center; border-radius: 8px; padding: 8px; transition: background 0.2s, box-shadow 0.2s, transform 0.2s; }
+        .pd-related-item:hover { background: #fff; box-shadow: var(--lg-shadow-md); transform: translateY(-2px); }
+        .pd-related-thumb { width: 100%; aspect-ratio: 1/1; background: linear-gradient(160deg, #f5f7fc, #eef1f9); border: 1px solid var(--lg-border); border-radius: 6px; margin-bottom: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .pd-related-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+        .pd-related-item:hover .pd-related-thumb img { transform: scale(1.08); }
+        .pd-related-item-name { font-size: 11px; color: var(--lg-link); line-height: 1.45; display: block; font-weight: 500; }
+        .pd-related-item:hover .pd-related-item-name { color: var(--lg-blue-deep); }
+        .pd-related-item-price { font-size: 12px; color: var(--lg-red); font-weight: 800; margin-top: 4px; }
+        .pd-related-empty-legacy { font-size: 11px; color: var(--lg-muted); }
+
+        /* ── lower sections, restyled to match legacy palette ── */
+        .pd-trust-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--lg-border); border-radius: 10px; margin: 48px 0; background: var(--lg-panel); overflow: hidden; box-shadow: var(--lg-shadow-sm); }
         @media (max-width: 768px) { .pd-trust-strip { grid-template-columns: repeat(2, 1fr); } }
-        .pd-trust-item { padding: 32px 24px; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; transition: background 0.2s; }
-        .pd-trust-item:last-child { border-right: none; }
+        .pd-trust-item { padding: 26px 18px; border-right: 1px solid var(--lg-border); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; transition: background 0.2s; }
         .pd-trust-item:hover { background: #fff; }
-        .pd-trust-icon { width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--gold); flex-shrink: 0; }
-        .pd-trust-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
-        .pd-trust-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
-        .pd-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-        .pd-section-title { font-family: "Elms Sans", sans-serif; font-size: 26px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
-        .pd-section-link { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; font-weight: 500; }
-        .pd-section-link:hover { color: var(--gold); }
-        .pd-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 80px; }
-        @media (max-width: 900px) { .pd-related-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 480px) { .pd-related-grid { grid-template-columns: 1fr; } }
-        .pd-related-card { text-decoration: none; color: inherit; display: block; cursor: pointer; }
-        .pd-related-img { aspect-ratio: 1/1; overflow: hidden; background: var(--bg-off); margin-bottom: 14px; position: relative; width: 100%; display: block; }
-        .pd-related-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s ease; }
-        .pd-related-card:hover .pd-related-img img { transform: scale(1.06); }
-        .pd-related-img-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0); transition: background 0.3s; }
-        .pd-related-card:hover .pd-related-img-overlay { background: rgba(0,0,0,0.06); }
-        .pd-related-name { font-family: "Elms Sans", sans-serif; font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; transition: color 0.2s; }
-        .pd-related-card:hover .pd-related-name { color: var(--gold); }
-        .pd-related-meta { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-        .pd-related-price { font-family: "Elms Sans", sans-serif; font-size: 16px; color: var(--ink); }
-        .pd-related-empty { grid-column: 1/-1; text-align: center; padding: 48px; color: var(--muted); font-size: 13px; letter-spacing: 0.06em; border: 1px dashed var(--border); }
-        .pd-related-type-pip { display: inline-flex; align-items: center; gap: 4px; font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; margin-bottom: 6px; }
-        .pd-related-type-pip.watch { background: #eff6ff; color: #1d4ed8; border: 0.5px solid rgba(29,78,216,0.2); }
-        .pd-related-type-pip.diamond { background: #fdf4ff; color: #7e22ce; border: 0.5px solid rgba(126,34,206,0.2); }
-        .pd-testimonials { background: var(--bg-off); padding: 64px 40px; margin: 0 -40px 64px; }
-        @media (max-width: 600px) { .pd-testimonials { margin: 0 -16px 64px; padding: 48px 16px; } }
-        .pd-testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 40px; }
+        .pd-trust-item:last-child { border-right: none; }
+        .pd-trust-icon { width: 42px; height: 42px; border-radius: 50%; background: #fff; border: 1px solid var(--lg-border); display: flex; align-items: center; justify-content: center; color: var(--lg-blue); flex-shrink: 0; box-shadow: var(--lg-shadow-sm); }
+        .pd-trust-label { font-size: 11px; font-weight: 700; color: var(--lg-blue-deep); letter-spacing: 0.02em; }
+        .pd-trust-sub { font-size: 10px; color: var(--lg-muted); }
+
+        .pd-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .pd-section-title { font-family: Elms Sans; font-size: 20px; font-weight: 700; color: var(--lg-blue-deep); }
+        .pd-section-link { font-size: 11px; color: var(--lg-link); text-decoration: none; font-weight: 600; }
+        .pd-section-link:hover { text-decoration: underline; }
+
+        .pd-testimonials { background: linear-gradient(160deg, var(--lg-panel), #eef2fb); padding: 36px 26px; margin: 48px 0; border: 1px solid var(--lg-border); border-radius: 12px; }
+        .pd-testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
         @media (max-width: 768px) { .pd-testimonial-grid { grid-template-columns: 1fr; } }
-        .pd-testimonial-card { background: #fff; padding: 32px 28px; border: 1px solid var(--border); }
-        .pd-testimonial-quote { font-family: "Elms Sans", sans-serif; font-size: 15px; font-style: italic; line-height: 1.65; color: var(--ink); margin-bottom: 20px; }
-        .pd-testimonial-quote::before { content: '"'; font-size: 48px; color: var(--gold-light); line-height: 1; display: block; margin-bottom: 4px; font-family: "Elms Sans", sans-serif; }
-        .pd-testimonial-author { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); }
-        .pd-testimonial-loc { font-size: 10px; color: var(--muted); margin-top: 2px; }
-        .pd-stars { display: flex; gap: 2px; margin-bottom: 12px; color: var(--gold); font-size: 12px; }
-        .pd-info-footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; padding: 56px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 40px; }
-        @media (max-width: 700px) { .pd-info-footer { grid-template-columns: 1fr; gap: 32px; } }
-        .pd-info-col-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; color: var(--ink); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
-        .pd-info-col-title::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
-        .pd-info-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-       .pd-info-col ul li a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.02em; transition: color 0.2s; display: flex; align-items: center; gap: 6px; }
-.pd-info-col ul li a::before { content: ''; display: inline-block; width: 12px; height: 0.5px; background: var(--border); transition: background 0.2s, width 0.2s; flex-shrink: 0; }
-.pd-info-col ul li a:hover { color: var(--ink); }
-.pd-info-col ul li a:hover::before { background: var(--gold); width: 18px; }
-        .pd-bottom-strip { display: flex; align-items: center; justify-content: space-between; padding-bottom: 40px; gap: 16px; flex-wrap: wrap; }
-        .pd-bottom-cert { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.08em; color: var(--muted); }
-        .pd-bottom-cert svg { color: var(--gold); }
-        .pd-copyright { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
+        .pd-testimonial-card { background: #fff; padding: 20px 18px; border: 1px solid var(--lg-border); border-radius: 10px; box-shadow: var(--lg-shadow-sm); transition: transform 0.2s, box-shadow 0.2s; }
+        .pd-testimonial-card:hover { transform: translateY(-3px); box-shadow: var(--lg-shadow-md); }
+        .pd-testimonial-quote { font-size: 12px; font-style: italic; line-height: 1.65; color: #333; margin-bottom: 12px; }
+        .pd-testimonial-author { font-size: 11px; font-weight: 700; color: var(--lg-blue-deep); }
+        .pd-testimonial-loc { font-size: 10px; color: var(--lg-muted); }
+        .pd-stars { display: flex; gap: 2px; margin-bottom: 10px; color: var(--lg-red); font-size: 12px; }
+
+        .pd-info-footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; padding: 34px 0; border-top: 1px solid var(--lg-border); border-bottom: 1px solid var(--lg-border); margin-bottom: 26px; }
+        @media (max-width: 700px) { .pd-info-footer { grid-template-columns: 1fr; gap: 20px; } }
+        .pd-info-col-title { font-size: 11px; font-weight: 800; color: var(--lg-blue-deep); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .pd-info-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 7px; }
+        .pd-info-col ul li a { font-size: 11px; color: var(--lg-link); text-decoration: none; transition: color 0.15s; }
+        .pd-info-col ul li a:hover { color: var(--lg-blue-deep); text-decoration: underline; }
+
+        .pd-bottom-strip { display: flex; align-items: center; justify-content: space-between; padding-bottom: 26px; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--lg-muted); }
+        .pd-bottom-cert { display: flex; align-items: center; gap: 7px; }
+        .pd-bottom-cert svg { color: var(--lg-blue); }
       `}</style>
 
       <div className="pd-page">
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
+        <div className="pd-shell">
           {/* Breadcrumb */}
           <nav className="pd-breadcrumb">
             <Link href="/">Home</Link>
@@ -784,86 +944,206 @@ export default async function ProductDetailPage({
             <span className="current">{p.name}</span>
           </nav>
 
-          {/* Hero */}
-          <div className="pd-hero">
-            <ProductGallery
-              images={galleryImages}
-              name={p.name}
-              certBadge={showCertBadge ? certBadge : null}
-              inStock={p.stock > 0}
-              shape={first(p.shape)}
-            />
-
+          <div className="pd-columns">
+            {/* ── LEFT COLUMN ── */}
             <div>
-              {/* Type pill — SVG icons, no emoji */}
-              <div className={`pd-type-label ${kind}`}>
-                {kindIcon(kind)}
-                {typeLabel}
+              <div className="pd-main-image">
+                {mainImage ? (
+                  <img
+                    src={optimizedImageUrl(mainImage, { width: 700 })}
+                    alt={p.name}
+                  />
+                ) : (
+                  <div className="pd-main-image-placeholder">◇</div>
+                )}
+
+                {showCertBadge && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      left: 10,
+                      background: "#f6f8fc",
+                      border: "1px solid #a9b8d9",
+                      color: "#3d5382",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      padding: "5px 10px",
+                      borderRadius: 5,
+                      boxShadow: "0 2px 6px rgba(24,44,80,0.12)",
+                    }}
+                  >
+                    {certBadge} Certified
+                  </div>
+                )}
+
+                {p.stock <= 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(246,248,252,0.85)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        border: "1px solid #c3cfe6",
+                        color: "#6b7899",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "0.15em",
+                        textTransform: "uppercase",
+                        padding: "7px 18px",
+                        borderRadius: 5,
+                        background: "#fff",
+                      }}
+                    >
+                      Unavailable
+                    </span>
+                  </div>
+                )}
               </div>
-
-              <p className="pd-category-label">
-                {p.category?.name ?? (watch ? "Watches" : "Fine Diamond")}
-                {p.subcategory?.name ? ` · ${p.subcategory.name}` : ""}
-              </p>
-
-              <h1 className="pd-title">{p.name}</h1>
-              {heroSubtitle && <p className="pd-subtitle">{heroSubtitle}</p>}
-
-              {/* Price */}
-              <div className="pd-price-block">
-                <span className="pd-currency">$</span>
-                <span className="pd-price-num">{p.price.toLocaleString()}</span>
-                <span className="pd-price-meta">
-                  USD
-                  <br />
-                  Free insured
-                  <br />
-                  shipping
-                </span>
-              </div>
-
-              {/* Specs — dynamic per productKind, see buildSpecs() */}
-              <table className="pd-specs">
-                <tbody>
-                  {specs.map(({ label, value, highlight }, i) => (
-                    <tr key={`${label}-${i}`}>
-                      <td>{label}</td>
-                      <td className={highlight ? "highlight" : ""}>{value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {p.description && (
-                <p className="pd-description">{p.description}</p>
+              {mainImage && (
+                <div className="pd-enlarge">
+                  <a href={mainImage} target="_blank" rel="noopener noreferrer">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    enlarge
+                  </a>
+                </div>
               )}
 
-              {/* Stock */}
-              <div className="pd-stock">
-                <div
-                  className="pd-stock-dot"
-                  style={{ background: p.stock > 0 ? "#4a8a5a" : "#c0392b" }}
-                />
+              <div className="pd-bar">Notification</div>
+              <div className="pd-panel">
+                <div className="pd-share-row">
+                  <span className="pd-share-icons">
+                    <a href="#" aria-label="Share on Facebook">
+                      <FacebookIcon />
+                    </a>
+                    <a href="#" aria-label="Share on X">
+                      <XIcon />
+                    </a>
+                  </span>
+                  Social bookmarks.
+                </div>
+                <div className="pd-side-row">
+                  <BellIcon />
+                  <a href="#">Notify me of updates to {p.name}</a>
+                </div>
+                <div className="pd-side-row">
+                  <QuestionIcon />
+                  <a href="#">Ask a question about this product...</a>
+                </div>
+                <div className="pd-side-row">
+                  <PrinterIcon />
+                  <a href="#">Printer Friendly Page</a>
+                </div>
+              </div>
+
+              <div className="pd-bar">Learning Center</div>
+              <div className="pd-panel">
+                <ul className="pd-learning-list">
+                  {LEARNING_CENTER_LINKS.map((link) => (
+                    <li key={link}>
+                      <a href="#">{link}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="pd-bar">Complimentary With Purchase</div>
+              <div className="pd-panel">
+                <ul className="pd-complimentary-list">
+                  <li>30-Day Returns</li>
+                  <li>Complimentary Gift</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* ── CENTER COLUMN ── */}
+            <div>
+              <h1 className="pd-title">{p.name}</h1>
+              <div className="pd-code">
+                [{String(p._id).slice(-10).toUpperCase()}]
+              </div>
+
+              {(heroSubtitle || p.description) && (
+                <p className="pd-desc">
+                  {p.description ||
+                    `Get the best price on this ${typeLabel.toLowerCase()}${
+                      heroSubtitle ? ` — ${heroSubtitle}` : ""
+                    }.`}
+                </p>
+              )}
+
+              <div className="pd-price-legacy">
+                {hasMsrpSavings && (
+                  <div className="pd-price-row">
+                    <span className="label">Market Retail Price:</span>
+                    <span className="value">
+                      ${(p.msrp as number).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                <div className="pd-price-row alpha">
+                  <span className="label">Alpha Price:</span>
+                  <span className="value">
+                    ${p.price.toLocaleString()}
+                  </span>
+                </div>
+                {hasMsrpSavings && (
+                  <div className="pd-price-row">
+                    <span className="label">Your Savings:</span>
+                    <span className="value">
+                      ${savingsAmount.toLocaleString()} ({savingsPct}%)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {p.minOrder && p.minOrder > 1 && (
+                <div className="pd-min-qty">
+                  Minimum Quantity: {p.minOrder}
+                </div>
+              )}
+
+              <div className="pd-stock-legacy">
                 <span
-                  className="pd-stock-label"
-                  style={{ color: p.stock > 0 ? "#4a8a5a" : "#c0392b" }}
-                >
+                  className="dot"
+                  style={{ background: p.stock > 0 ? "#227722" : "#c0392b" }}
+                />
+                <span style={{ color: p.stock > 0 ? "#227722" : "#c0392b" }}>
                   {p.stock > 0
                     ? "In stock — ready to ship"
                     : "Currently unavailable"}
                 </span>
               </div>
 
+              <div className="pd-qty-row">Quantity:</div>
+
               <AddToCartButton
                 productId={String(p._id)}
                 inStock={p.stock > 0}
               />
 
-              <div style={{ marginTop: 10 }}>
-                <WishlistButton productId={String(p._id)} />
-              </div>
-              <div style={{ marginTop: 10 }}>
+              <div className="pd-btn-grid" style={{ marginTop: 8 }}>
+                <a href="#reviews" className="pd-btn-line">
+                  Reviews
+                </a>
                 <CompareLaunchButton
+                  className="pd-btn-line"
                   product={{
                     _id: String(p._id),
                     name: p.name,
@@ -890,75 +1170,92 @@ export default async function ProductDetailPage({
                   }}
                 />
               </div>
-              <div className="pd-mini-trust">
-                {[
-                  {
-                    icon: (
-                      <svg
-                        width="13"
-                        height="13"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ),
-                    label: "SSL Secured",
-                  },
-                  {
-                    icon: (
-                      <svg
-                        width="13"
-                        height="13"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <polyline
-                          points="1 4 1 10 7 10"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M3.51 15a9 9 0 1 0 .49-4.95"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    ),
-                    label: "30-Day Returns",
-                  },
-                  {
-                    icon: (
-                      <svg
-                        width="13"
-                        height="13"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                        />
-                      </svg>
-                    ),
-                    label: "Free Insured Shipping",
-                  },
-                ].map((item) => (
-                  <div key={item.label} className="pd-mini-trust-item">
-                    {item.icon}
-                    {item.label}
-                  </div>
-                ))}
+
+              <WishlistButton
+                productId={String(p._id)}
+                className="pd-btn-secondary-legacy"
+              />
+
+              <div className="pd-tell-friend">
+                <MailIcon />
+                <a href="#">Tell Your Friend About This Product</a>
               </div>
+
+              <div className="pd-bar">Product Details</div>
+              <div className="pd-panel">
+                <table className="pd-specs-legacy">
+                  <tbody>
+                    {specs.map(({ label, value, highlight }, i) => (
+                      <tr key={`${label}-${i}`}>
+                        <td>{label.toUpperCase()}:</td>
+                        <td className={highlight ? "highlight" : ""}>
+                          {value}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pd-bar" id="reviews">
+                Product Reviews
+              </div>
+              <div className="pd-panel">
+                <div className="pd-reviews-empty">
+                  There are currently no product reviews.
+                </div>
+                <div className="pd-write-review">
+                  <a href="#" className="pd-btn-line" style={{ display: "inline-flex", padding: "8px 18px" }}>
+                    Write Review
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* ── RIGHT COLUMN ── */}
+            <div>
+              <div className="pd-related-heading">Related Items</div>
+              {related.length === 0 ? (
+                <div className="pd-related-empty-legacy">
+                  No related products found
+                </div>
+              ) : (
+                <div className="pd-related-list">
+                  {related.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/products/${item.id}`}
+                      className="pd-related-item"
+                    >
+                      <div className="pd-related-thumb">
+                        {item.img ? (
+                          <img
+                            src={optimizedImageUrl(item.img, {
+                              width: 200,
+                              quality: 85,
+                            })}
+                            alt={item.name}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span
+                            style={{ color: "var(--lg-border)", fontSize: 24 }}
+                          >
+                            ◇
+                          </span>
+                        )}
+                      </div>
+                      <span className="pd-related-item-name">
+                        {item.name}
+                      </span>
+                      <div className="pd-related-item-price">
+                        ${item.price.toLocaleString()}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -975,94 +1272,6 @@ export default async function ProductDetailPage({
             ))}
           </div>
 
-          {/* Related */}
-          <div className="pd-section-head">
-            <h2 className="pd-section-title">You May Also Love</h2>
-            <Link href="/products" className="pd-section-link">
-              View all
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-                <path
-                  d="M5 12h14M12 5l7 7-7 7"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </div>
-
-          <div className="pd-related-grid">
-            {related.length === 0 ? (
-              <div className="pd-related-empty">No related products found</div>
-            ) : (
-              related.map((item) => {
-                const relIsWatch = !!(item.watchBrand || item.watchMovement);
-                const relMeta = relIsWatch
-                  ? [item.watchBrand, item.watchGender, item.watchMovement]
-                      .filter(Boolean)
-                      .join(" · ")
-                  : [
-                      item.shape,
-                      item.size ? `${item.size} ct` : "",
-                      item.color,
-                      item.clarity,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ");
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/products/${item.id}`}
-                    className="pd-related-card"
-                  >
-                    <div className="pd-related-img">
-                      {item.img ? (
-                        <img
-                          src={optimizedImageUrl(item.img, {
-                            // 4-up grid, cards ~280px wide — 360px covers 2x retina.
-                            width: 360,
-                            quality: 85,
-                          })}
-                          alt={item.name}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "var(--border)",
-                            fontSize: 32,
-                          }}
-                        >
-                          ◇
-                        </div>
-                      )}
-                      <div className="pd-related-img-overlay" />
-                    </div>
-                    {/* SVG icons instead of emoji */}
-                    <div
-                      className={`pd-related-type-pip ${relIsWatch ? "watch" : "diamond"}`}
-                    >
-                      {relIsWatch ? <WatchIcon /> : <DiamondIcon />}
-                      {relIsWatch ? "Watch" : "Gem"}
-                    </div>
-                    <div className="pd-related-meta">{relMeta}</div>
-                    <div className="pd-related-name">{item.name}</div>
-                    <div className="pd-related-price">
-                      ${item.price.toLocaleString()}
-                    </div>
-                  </Link>
-                );
-              })
-            )}
-          </div>
-
           {/* Recently Viewed — client-rendered from the visitor's own
               browsing history; hidden automatically when there's none. */}
           <RecentlyViewedProducts excludeId={String(p._id)} />
@@ -1073,15 +1282,6 @@ export default async function ProductDetailPage({
               <h2 className="pd-section-title">What Our Clients Say</h2>
               <Link href="#" className="pd-section-link">
                 All reviews
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-                  <path
-                    d="M5 12h14M12 5l7 7-7 7"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
               </Link>
             </div>
             <div className="pd-testimonial-grid">
@@ -1096,47 +1296,9 @@ export default async function ProductDetailPage({
             </div>
           </div>
 
-          {/* Info footer */}
-          <div className="pd-info-footer">
-            {INFO_SECTIONS.map((sec) => (
-              <div key={sec.title} className="pd-info-col">
-                <div className="pd-info-col-title">{sec.title}</div>
-                <ul>
-                  {sec.links.map((link) => (
-                    <li key={link}>
-                      <a href="#">{link}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+         
 
-          {/* Bottom strip */}
-          <div className="pd-bottom-strip">
-            <div className="pd-bottom-cert">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-                <path
-                  d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M9 12l2 2 4-4"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              SSL Certificate &nbsp;·&nbsp; Payments Secured &nbsp;·&nbsp;
-              Privacy Protected
-            </div>
-            <div className="pd-copyright">
-              © {new Date().getFullYear()} &nbsp;·&nbsp; All rights reserved
-            </div>
-          </div>
+        
         </div>
       </div>
     </>

@@ -191,8 +191,8 @@ export default function ProductGallery({
           position: relative;
           width: 100%;
           aspect-ratio: 1 / 1;
-          background: #f0ede6;
-          border: 1px solid #e2ddd5;
+          background: #f2f4f9;
+          border: 1px solid #c3cfe6;
           overflow: hidden;
           cursor: crosshair;
         }
@@ -233,7 +233,7 @@ export default function ProductGallery({
           width: 64px;
           height: 64px;
           border-radius: 50%;
-          border: 1px solid rgba(180,150,80,0.7);
+          border: 1px solid rgba(63,83,130,0.7);
           box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset, 0 2px 16px rgba(0,0,0,0.1);
           transform: translate(-50%, -50%);
           pointer-events: none;
@@ -246,14 +246,14 @@ export default function ProductGallery({
           align-items: center;
           gap: 5px;
           font-size: 9px;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.06em;
           text-transform: uppercase;
-          color: #a09a90;
-          background: rgba(250,249,246,0.92);
-          border: 0.5px solid #e2ddd5;
+          color: #6b7899;
+          background: rgba(246,248,252,0.94);
+          border: 0.5px solid #c3cfe6;
           padding: 4px 10px;
           pointer-events: none;
-          font-family: "Elms Sans", sans-serif;
+          font-family: Verdana, Arial, sans-serif;
           z-index: 10;
         }
         .pg-thumbs {
@@ -264,14 +264,14 @@ export default function ProductGallery({
         .pg-thumb {
           width: 56px; height: 56px;
           flex-shrink: 0;
-          background: #f0ede6;
-          border: 1px solid #e2ddd5;
+          background: #f2f4f9;
+          border: 1px solid #c3cfe6;
           overflow: hidden;
           cursor: pointer;
           transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .pg-thumb:hover { border-color: #b09a70; box-shadow: 0 2px 8px rgba(120,100,60,0.12); }
-        .pg-thumb.active { border-color: #b09a70; box-shadow: 0 0 0 1.5px #b09a70; }
+        .pg-thumb:hover { border-color: #7f96c4; box-shadow: 0 2px 8px rgba(63,83,130,0.15); }
+        .pg-thumb.active { border-color: #7f96c4; box-shadow: 0 0 0 1.5px #7f96c4; }
         .pg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .pg-thumb-inactive { opacity: 0.4; cursor: default; }
       `}</style>
@@ -382,9 +382,9 @@ export default function ProductGallery({
                 top: 12,
                 left: 12,
                 zIndex: 20,
-                background: "#faf9f6",
-                border: "1px solid #c8b87a",
-                color: "#8a6e2a",
+                background: "#f6f8fc",
+                border: "1px solid #a9b8d9",
+                color: "#3d5382",
                 fontSize: "9px",
                 fontWeight: 500,
                 letterSpacing: "0.18em",
@@ -405,13 +405,13 @@ export default function ProductGallery({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "rgba(250,249,246,0.80)",
+                background: "rgba(246,248,252,0.85)",
               }}
             >
               <span
                 style={{
-                  border: "1px solid #c8c2b8",
-                  color: "#a09a90",
+                  border: "1px solid #c3cfe6",
+                  color: "#6b7899",
                   fontSize: "9px",
                   fontWeight: 500,
                   letterSpacing: "0.2em",
