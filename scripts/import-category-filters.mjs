@@ -127,8 +127,47 @@ async function main() {
   const subByName = new Map(allSubcategories.map((s) => [normalize(s.name), s]));
   const catByName = new Map(allCategories.map((c) => [normalize(c.name), c]));
 
+  // Some category_name values in the CSV are a cut-type/quality prefix or a
+  // color word in front of a gem that already exists as its own Subcategory
+  // (e.g. "faceted emeralds" / "cabochon emeralds" -> Emerald, "blue sapphire"
+  // / "pink sapphire" -> Sapphire, "rose quartz" / "smoky quartz" -> Quartz).
+  // Try stripping those before giving up on a name. This never invents a
+  // mapping to an unrelated category — it only strips known prefix words and
+  // re-checks the exact remainder against real Subcategory/Category names.
+  const STRIP_PREFIXES = ['faceted', 'cabochon', 'calibrated', 'trillion'];
+  const COLOR_WORDS = new Set([
+    'blue', 'pink', 'orange', 'yellow', 'white', 'rose', 'green', 'golden', 'rutilated', 'smoky',
+  ]);
+  function resolveAlias(name) {
+    let n = name;
+    const tokens = n.split(' ');
+    if (STRIP_PREFIXES.includes(tokens[0])) {
+      const stripped = tokens.slice(1).join(' ');
+      if (subByName.has(stripped)) return { name: stripped, kind: 'sub' };
+      if (catByName.has(stripped)) return { name: stripped, kind: 'cat' };
+      n = stripped;
+    }
+    if (n.endsWith('s')) {
+      const singular = n.slice(0, -1);
+      if (subByName.has(singular)) return { name: singular, kind: 'sub' };
+      if (catByName.has(singular)) return { name: singular, kind: 'cat' };
+    }
+    const nTokens = n.split(' ');
+    if (nTokens.length >= 2) {
+      let i = 0;
+      while (i < nTokens.length - 1 && COLOR_WORDS.has(nTokens[i])) i++;
+      if (i > 0) {
+        const candidate = nTokens.slice(i).join(' ');
+        if (subByName.has(candidate)) return { name: candidate, kind: 'sub' };
+        if (catByName.has(candidate)) return { name: candidate, kind: 'cat' };
+      }
+    }
+    return null;
+  }
+
   const resolution = new Map(); // normalized category_name -> { category, subcategory }
   const unmatched = [];
+  const aliasResolved = [];
   for (const name of distinctCategoryNames) {
     const sub = subByName.get(name);
     if (sub) {
@@ -140,13 +179,32 @@ async function main() {
       resolution.set(name, { category: cat._id, subcategory: undefined });
       continue;
     }
+    const alias = resolveAlias(name);
+    if (alias?.kind === 'sub') {
+      const s = subByName.get(alias.name);
+      resolution.set(name, { category: s.category, subcategory: s._id });
+      aliasResolved.push(`${name} -> ${alias.name}`);
+      continue;
+    }
+    if (alias?.kind === 'cat') {
+      const c = catByName.get(alias.name);
+      resolution.set(name, { category: c._id, subcategory: undefined });
+      aliasResolved.push(`${name} -> ${alias.name}`);
+      continue;
+    }
     resolution.set(name, {});
     unmatched.push(name);
   }
 
+  if (aliasResolved.length) {
+    console.log(`\n✅ ${aliasResolved.length} category_name values matched via cut-type/color alias stripping:`);
+    aliasResolved.forEach((n) => console.log(`   - ${n}`));
+  }
+
   if (unmatched.length) {
     console.warn(
-      `⚠️  ${unmatched.length}/${distinctCategoryNames.length} category_name values could not be matched to an existing Category/Subcategory (filters for these still import, just without a resolved category/subcategory link — facet lookups by legacyCategoryId still work once products.legacyCategoryId is backfilled):`
+      `\n⚠️  ${unmatched.length}/${distinctCategoryNames.length} category_name values could not be matched to an existing Category/Subcategory. ` +
+      `These are likely legacy micro-collections with no current Subcategory page — their filter rows still import (and are usable if you look them up by legacyCategoryId directly), but they will NOT appear in the category filter panel UI, since that panel looks up filters by the resolved Category/Subcategory, not by legacyCategoryId. Review this list and either add a Subcategory for them or leave them retired:`
     );
     unmatched.slice(0, 30).forEach((n) => console.warn(`   - ${n}`));
     if (unmatched.length > 30) console.warn(`   ...and ${unmatched.length - 30} more`);

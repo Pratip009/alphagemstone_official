@@ -168,9 +168,16 @@ export async function getApplicableFilterDefinitions(scope: {
 }): Promise<{ filterName: string; attributeId: number }[]> {
   if (!scope.subcategoryId && !scope.categoryId) return [];
 
+  // aggregate()'s $match does NOT auto-cast query values the way
+  // Model.find() does — a plain string here would be compared against the
+  // stored ObjectId and never match, silently returning [] every time (the
+  // bug that made the filter panel never render). Cast explicitly.
+  if (scope.subcategoryId && !mongoose.isValidObjectId(scope.subcategoryId)) return [];
+  if (scope.categoryId && !mongoose.isValidObjectId(scope.categoryId)) return [];
+
   const match: Record<string, unknown> = scope.subcategoryId
-    ? { subcategory: scope.subcategoryId }
-    : { category: scope.categoryId, subcategory: { $exists: false } };
+    ? { subcategory: new mongoose.Types.ObjectId(scope.subcategoryId) }
+    : { category: new mongoose.Types.ObjectId(scope.categoryId as string), subcategory: { $exists: false } };
 
   const docs = await CategoryFilter.aggregate([
     { $match: match },
@@ -197,6 +204,25 @@ export async function getCategoryFilterFacets(
 ): Promise<CategoryFilterGroup[]> {
   if (definitions.length === 0) return [];
 
+  // Same aggregate()-doesn't-auto-cast issue as getApplicableFilterDefinitions:
+  // baseQuery.category/subcategory arrive as plain ObjectId-hex strings
+  // (fine for Product.find(), which Mongoose casts) but this function feeds
+  // them into a raw Product.aggregate() $match, which does NOT cast — so
+  // left as strings, every branch would silently match zero products and
+  // every facet group would come back empty. Cast a local copy here without
+  // touching the shared baseQuery/buildProductFilterQuery used elsewhere.
+  const castScope = (q: FilterQuery<IProduct>): FilterQuery<IProduct> => {
+    const out: FilterQuery<IProduct> = { ...q };
+    if (typeof out.category === 'string' && mongoose.isValidObjectId(out.category)) {
+      out.category = new mongoose.Types.ObjectId(out.category);
+    }
+    if (typeof out.subcategory === 'string' && mongoose.isValidObjectId(out.subcategory)) {
+      out.subcategory = new mongoose.Types.ObjectId(out.subcategory);
+    }
+    return out;
+  };
+  baseQuery = castScope(baseQuery);
+
   const branches: Record<string, object[]> = {};
   const branchMeta: Record<string, FilterFieldMapping> = {};
 
@@ -215,6 +241,17 @@ export async function getCategoryFilterFacets(
     const primaryField = mapping.field.split('|')[0];
     const path = mapping.direct ? primaryField : `legacyAttributes.${primaryField}`;
 
+    // WEIGHT / NUMBER OF STONES map to real numeric Product fields
+    // (caratWeight, numberOfStones) — $trim/$toLower only work on strings,
+    // so grouping a numeric field through them throws at runtime. Convert
+    // numeric fields to a string first instead; string fields keep the
+    // existing case/whitespace-insensitive grouping.
+    const isNumeric = mapping.kind === 'numeric';
+    const groupIdExpr = isNumeric
+      ? { $toString: `$${path}` }
+      : { $toLower: { $trim: { input: `$${path}` } } };
+    const displayExpr = isNumeric ? { $toString: `$${path}` } : `$${path}`;
+
     branchMeta[def.filterName] = mapping;
     branches[def.filterName] = [
       { $match: scopedQuery },
@@ -223,9 +260,9 @@ export async function getCategoryFilterFacets(
       // option, while keeping the most common original casing for display.
       {
         $group: {
-          _id: { $toLower: { $trim: { input: `$${path}` } } },
+          _id: groupIdExpr,
           count: { $sum: 1 },
-          display: { $first: `$${path}` },
+          display: { $first: displayExpr },
         },
       },
       { $sort: { count: -1 } },

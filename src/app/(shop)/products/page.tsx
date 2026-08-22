@@ -1,10 +1,9 @@
 import { connectDB } from "@/lib/db";
-import { listProducts, listProductsWithCategoryFilters, getProductFacets, getSimpleFilterFacets } from "@/services/product.service";
+import { listProducts, listProductsWithCategoryFilters, getProductFacets } from "@/services/product.service";
 import { ProductFilterParams } from "@/services/productFilter.service";
 import { parseCategoryFilterSelectionFromObject } from "@/services/categoryFilter.service";
 import ProductCard from "@/components/products/ProductCard";
 import FilterBar from "@/components/filters/FilterBar";
-import SimpleProductFilter from "@/components/filters/SimpleProductFilter";
 import DynamicCategoryFilters from "@/components/filters/DynamicCategoryFilters";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
@@ -161,15 +160,17 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
 
           {/* ── Filter bar: horizontal, sticky, shown on every screen size ──
-              Facets are fetched inside FacetedFilterBar, independently of
-              the product grid above/below, so a slow facets aggregation
-              only delays this strip (behind SidebarSkeleton) and never
-              blocks the products themselves from rendering. ── */}
-          <div className="-mx-4 sm:-mx-8 mb-8">
-            <Suspense fallback={<SidebarSkeleton />}>
-              <FacetedFilterBar params={params} productType={productType} />
-            </Suspense>
-          </div>
+              Watches only — diamonds/gemstones now use the CSV-driven
+              DynamicCategoryFilters panel below instead of this dropdown
+              bar, so there's nothing to render (and no facets query to run)
+              for those product types. */}
+          {productType === "watch" && (
+            <div className="-mx-4 sm:-mx-8 mb-8">
+              <Suspense fallback={<SidebarSkeleton />}>
+                <FacetedFilterBar params={params} productType={productType} />
+              </Suspense>
+            </div>
+          )}
 
           <div className="flex gap-8 xl:gap-12">
 
@@ -300,16 +301,11 @@ async function FacetedFilterBar({
   params: ProductFilterParams;
   productType: ProductType;
 }) {
-  // Diamonds/gemstones get the simplified 6-dropdown filter (Shape, Size,
-  // Color, Clarity, Approx Weight, Number of Stones — no price/availability).
-  // Watches keep the existing full filter bar unchanged.
-  if (productType === "watch") {
-    const facets = await getProductFacets(params, productType);
-    return <FilterBar productType={productType} facets={facets} />;
-  }
-
-  const facets = await getSimpleFilterFacets(params);
-  return <SimpleProductFilter facets={facets} />;
+  // Only called for watches now — see the productType === "watch" guard
+  // around its call site above. Diamonds/gemstones use the CSV-driven
+  // DynamicCategoryFilters panel instead of a facets dropdown bar.
+  const facets = await getProductFacets(params, productType);
+  return <FilterBar productType={productType} facets={facets} />;
 }
 
 // ─── Active filter chips ──────────────────────────────────────────────────────
