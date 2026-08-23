@@ -18,7 +18,8 @@ import {
   FileClock,
   UserCheck,
   BarChart3,
-  UsersRound
+  UsersRound,
+  MessageSquareText
 } from "lucide-react";
 
 const NAV = [
@@ -31,6 +32,7 @@ const NAV = [
   { href: "/admin/categories", label: "Categories", icon: Layers },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/contacts", label: "Contacts", icon: Users },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquareText },
   { href: "/admin/blogs", label: "Blog", icon: BookOpen },
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
   { href: "/admin/coupons", label: "Coupons", icon: Tag },

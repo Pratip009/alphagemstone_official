@@ -8,6 +8,7 @@ import WishlistButton from "@/components/wishlist/WishlistButton";
 import RecordRecentlyViewed from "@/components/products/RecordRecentlyViewed";
 import RecentlyViewedProducts from "@/components/products/RecentlyViewedProducts";
 import CompareLaunchButton from "@/components/compare/CompareLaunchButton";
+import ProductReviews from "@/components/products/ProductReviews";
 import type { Metadata } from "next";
 import { cache } from "react";
 import { optimizedImageUrl } from "@/lib/image-url";
@@ -871,6 +872,68 @@ export default async function ProductDetailPage({
         .pd-reviews-empty { padding: 16px; font-size: 12px; color: var(--lg-muted); }
         .pd-write-review { margin: 0 14px 14px; }
 
+        /* ── product review system ── */
+        .pdr-stars-row { display: inline-flex; gap: 2px; align-items: center; }
+        .pdr-star-btn { background: none; border: none; padding: 2px; cursor: pointer; line-height: 0; }
+        .pdr-star-btn:hover { transform: scale(1.08); }
+
+        .pdr-summary { display: flex; gap: 28px; align-items: flex-start; padding: 18px 4px 20px; flex-wrap: wrap; border-bottom: 1px solid var(--lg-border-soft); }
+        .pdr-summary-score { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 90px; }
+        .pdr-summary-num { font-size: 34px; font-weight: 800; color: var(--lg-blue-deep); line-height: 1; }
+        .pdr-summary-count { font-size: 11px; color: var(--lg-muted); }
+        .pdr-summary-bars { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
+        .pdr-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--lg-muted); }
+        .pdr-bar-label { width: 30px; flex-shrink: 0; }
+        .pdr-bar-track { flex: 1; height: 6px; background: var(--lg-border-soft); border-radius: 4px; overflow: hidden; }
+        .pdr-bar-fill { display: block; height: 100%; background: linear-gradient(90deg, #c8a24a, #b8955a); border-radius: 4px; }
+        .pdr-bar-count { width: 22px; text-align: right; flex-shrink: 0; }
+
+        .pdr-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 4px; flex-wrap: wrap; }
+        .pdr-sort { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--lg-muted); }
+        .pdr-sort select { font-size: 11px; padding: 5px 8px; border: 1px solid var(--lg-border); border-radius: 5px; background: #fff; color: #333; }
+
+        .pdr-form { border: 1px solid var(--lg-border); border-radius: 8px; background: var(--lg-panel-alt); padding: 16px; margin: 0 4px 18px; display: flex; flex-direction: column; gap: 12px; }
+        .pdr-form-field { display: flex; flex-direction: column; gap: 6px; }
+        .pdr-form-field label { font-size: 10.5px; font-weight: 700; color: var(--lg-blue-deep); text-transform: uppercase; letter-spacing: 0.03em; }
+        .pdr-form-field input, .pdr-form-field textarea { font-size: 12.5px; padding: 8px 10px; border: 1px solid var(--lg-border); border-radius: 6px; font-family: inherit; resize: vertical; }
+        .pdr-form-field input:focus, .pdr-form-field textarea:focus { outline: none; border-color: #b8955a; }
+        .pdr-form-error { font-size: 11.5px; color: #c0392b; }
+        .pdr-form-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .pdr-cancel-link, .pdr-delete-link { background: none; border: none; font-size: 11.5px; color: var(--lg-muted); cursor: pointer; text-decoration: underline; padding: 0; }
+        .pdr-delete-link { color: #c0392b; }
+
+        .pdr-list { display: flex; flex-direction: column; }
+        .pdr-item { padding: 16px 4px; border-bottom: 1px solid var(--lg-border-soft); }
+        .pdr-item:last-child { border-bottom: none; }
+        .pdr-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .pdr-item-title { font-size: 12.5px; font-weight: 700; color: #222; margin-top: 4px; }
+        .pdr-item-date { font-size: 10.5px; color: var(--lg-muted); white-space: nowrap; }
+        .pdr-item-author { font-size: 11px; font-weight: 700; color: var(--lg-blue-deep); margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+        .pdr-verified { font-size: 9.5px; font-weight: 700; color: #1c7a2e; background: #e9f7ec; border: 1px solid #bfe6c8; border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .pdr-item-comment { font-size: 12.5px; line-height: 1.65; color: #333; margin: 8px 0 0; }
+
+        .pdr-item-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+        .pdr-like-btn { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--lg-border); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--lg-muted); cursor: pointer; transition: border-color 0.2s, color 0.2s, transform 0.1s; }
+        .pdr-like-btn:hover { border-color: #c0392b; color: #c0392b; }
+        .pdr-like-btn.liked { border-color: #c0392b; color: #c0392b; background: #fdf1f0; }
+        .pdr-like-btn:active { transform: scale(0.96); }
+        .pdr-heart-pop { animation: pdr-pop 0.32s ease; }
+        @keyframes pdr-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+        .pdr-reply { margin: 12px 0 0 18px; padding: 10px 14px; border-left: 3px solid #c8a24a; background: var(--lg-panel-alt); border-radius: 0 6px 6px 0; }
+        .pdr-reply-head { font-size: 10.5px; font-weight: 800; color: var(--lg-blue-deep); text-transform: uppercase; letter-spacing: 0.03em; }
+        .pdr-reply-text { font-size: 12px; color: #333; margin: 6px 0; line-height: 1.6; }
+        .pdr-reply-date { font-size: 10px; color: var(--lg-muted); }
+
+        .pdr-admin-reply-box { margin: 12px 0 0 18px; display: flex; flex-direction: column; gap: 8px; max-width: 480px; }
+        .pdr-admin-reply-box textarea { font-size: 12px; padding: 8px 10px; border: 1px dashed var(--lg-border); border-radius: 6px; font-family: inherit; resize: vertical; }
+        .pdr-admin-reply-box button { align-self: flex-start; padding: 6px 14px; font-size: 11px; }
+
+        .pdr-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 4px 4px; font-size: 11px; color: var(--lg-muted); }
+        .pdr-pagination button { background: #fff; border: 1px solid var(--lg-border); border-radius: 5px; padding: 5px 12px; font-size: 11px; cursor: pointer; color: #333; }
+        .pdr-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+        @media (max-width: 640px) { .pdr-summary { flex-direction: column; } }
+
         /* ── right column: related items ── */
         .pd-related-heading { font-size: 11px; color: var(--lg-blue-deep); font-weight: 800; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--lg-bar-2); text-transform: uppercase; letter-spacing: 0.06em; }
         .pd-related-list { display: flex; flex-direction: column; gap: 16px; }
@@ -1200,15 +1263,8 @@ export default async function ProductDetailPage({
               <div className="pd-bar" id="reviews">
                 Product Reviews
               </div>
-              <div className="pd-panel">
-                <div className="pd-reviews-empty">
-                  There are currently no product reviews.
-                </div>
-                <div className="pd-write-review">
-                  <a href="#" className="pd-btn-line" style={{ display: "inline-flex", padding: "8px 18px" }}>
-                    Write Review
-                  </a>
-                </div>
+              <div className="pd-panel pd-panel-pad">
+                <ProductReviews productId={String(p._id)} />
               </div>
             </div>
 
