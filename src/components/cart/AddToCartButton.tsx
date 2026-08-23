@@ -50,9 +50,9 @@ export default function AddToCartButton({
         disabled
         className="w-full py-2.5 border font-bold cursor-not-allowed"
         style={{
-          borderColor: '#c3cfe6',
-          background: '#eef1f7',
-          color: '#9aa4bd',
+          borderColor: '#ded2ac',
+          background: '#f7f4ec',
+          color: '#8a8578',
           fontSize: 11,
           borderRadius: 2,
         }}
@@ -67,14 +67,14 @@ export default function AddToCartButton({
       <div className="flex items-center gap-3" style={{ marginBottom: 10 }}>
         <div
           className="flex items-center"
-          style={{ border: '1px solid #a9b8d9', borderRadius: 2 }}
+          style={{ border: '1px solid #d9cba3', borderRadius: 2 }}
         >
           <button
             onClick={() => setQty(Math.max(1, qty - 1))}
             style={{
               padding: '5px 10px',
-              color: '#3d5382',
-              background: '#f6f8fc',
+              color: '#7a5f2a',
+              background: '#faf6ec',
               fontSize: 12,
               fontWeight: 'bold',
             }}
@@ -86,8 +86,8 @@ export default function AddToCartButton({
               padding: '5px 14px',
               fontSize: 12,
               fontWeight: 'bold',
-              borderLeft: '1px solid #a9b8d9',
-              borderRight: '1px solid #a9b8d9',
+              borderLeft: '1px solid #d9cba3',
+              borderRight: '1px solid #d9cba3',
               color: '#222',
             }}
           >
@@ -97,8 +97,8 @@ export default function AddToCartButton({
             onClick={() => setQty(qty + 1)}
             style={{
               padding: '5px 10px',
-              color: '#3d5382',
-              background: '#f6f8fc',
+              color: '#7a5f2a',
+              background: '#faf6ec',
               fontSize: 12,
               fontWeight: 'bold',
             }}
@@ -116,15 +116,15 @@ export default function AddToCartButton({
           borderRadius: 2,
           fontSize: 11,
           marginBottom: 8,
-          border: '1px solid #7f96c4',
+          border: '1px solid #a98a4a',
           background: added
             ? '#227722'
-            : 'linear-gradient(to bottom, #c3d1ec, #8ea1cf)',
+            : 'linear-gradient(to bottom, #d9c68f, #b08d4a)',
           color: '#fff',
         }}
       >
         {/* ✅ Show loading state during auth check too */}
-        {authLoading ? 'Loading…' : loading ? 'Adding…' : added ? '✓ Added to Cart' : 'Add To Cart'}
+        {authLoading ? 'Loading...' : loading ? 'Adding...' : added ? '✓ Added to Cart' : 'Add To Cart'}
       </button>
       <button
         onClick={() => router.push('/cart')}
@@ -134,9 +134,9 @@ export default function AddToCartButton({
           borderRadius: 2,
           fontSize: 11,
           fontWeight: 'bold',
-          border: '1px solid #a9b8d9',
+          border: '1px solid #d9cba3',
           background: '#fff',
-          color: '#2f3f60',
+          color: '#4a3c1f',
           marginBottom: 8,
         }}
       >

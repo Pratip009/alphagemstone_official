@@ -331,11 +331,11 @@ export default function ProductCard({
 
         .apc:hover .apc-card,
         .apc:focus-visible .apc-card {
-          transform: translateY(-4px);
-          border-color: var(--line-strong);
+          transform: translateY(-5px);
+          border-color: rgba(176, 141, 74, 0.38);
           box-shadow: 
-            0 20px 40px -16px rgba(26, 26, 28, 0.12),
-            0 8px 16px -8px rgba(26, 26, 28, 0.06);
+            0 26px 48px -18px rgba(107, 79, 30, 0.22),
+            0 10px 22px -10px rgba(26, 26, 28, 0.08);
         }
 
         .apc:focus-visible .apc-card {
@@ -350,7 +350,8 @@ export default function ProductCard({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 16px 0;
+          padding: 12px 16px 10px;
+          border-bottom: 1px solid var(--line);
         }
 
         .apc-lot {
@@ -374,20 +375,24 @@ export default function ProductCard({
           letter-spacing: 0.07em;
           text-transform: uppercase;
           color: var(--accent);
+          background: var(--accent-soft);
+          padding: 4px 9px 4px 7px;
+          border-radius: 999px;
         }
 
         /* ── Image area ───────────────────────────────────────────────── */
         .apc-visual {
           position: relative;
-          padding: 12px 20px 8px;
+          padding: 16px 20px 14px;
           display: flex;
           justify-content: center;
+          background: radial-gradient(ellipse 65% 65% at 50% 45%, rgba(176, 141, 74, 0.07), transparent 72%);
         }
 
         .apc-frame {
           position: relative;
           width: 100%;
-          max-width: 220px;
+          max-width: 150px;
           aspect-ratio: 1 / 1;
           background: var(--paper-soft);
           border-radius: 12px;
@@ -395,23 +400,69 @@ export default function ProductCard({
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          box-shadow:
+            inset 0 1px 3px rgba(26, 26, 28, 0.05),
+            inset 0 -1px 2px rgba(255, 255, 255, 0.7);
+        }
+
+        /* Jeweler's-loupe corner brackets, inset from the tray edge */
+        .apc-frame::before {
+          content: "";
+          position: absolute;
+          top: 7px;
+          left: 7px;
+          right: 7px;
+          bottom: 7px;
+          background:
+            linear-gradient(var(--accent), var(--accent)) top left / 11px 1.5px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) top left / 1.5px 11px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) top right / 11px 1.5px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) top right / 1.5px 11px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) bottom left / 11px 1.5px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) bottom left / 1.5px 11px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) bottom right / 11px 1.5px no-repeat,
+            linear-gradient(var(--accent), var(--accent)) bottom right / 1.5px 11px no-repeat;
+          opacity: 0.45;
+          transition: opacity 0.35s ease;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .apc:hover .apc-frame::before,
+        .apc:focus-visible .apc-frame::before {
+          opacity: 1;
+        }
+
+        /* Soft studio-light highlight over the stone */
+        .apc-frame::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.55), transparent 45%);
+          pointer-events: none;
         }
 
         .apc-photo {
-          max-width: 78%;
-          max-height: 78%;
+          position: relative;
+          z-index: 1;
+          max-width: 76%;
+          max-height: 76%;
           object-fit: contain;
           transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .apc:hover .apc-photo,
         .apc:focus-visible .apc-photo {
-          transform: scale(1.05);
+          transform: scale(1.06);
         }
 
         .apc-frame.is-out .apc-photo {
           filter: grayscale(0.7);
           opacity: 0.4;
+        }
+
+        .apc-frame.is-out::before {
+          opacity: 0.2;
         }
 
         /* Status badges */
@@ -500,7 +551,7 @@ export default function ProductCard({
         .apc-name {
           font-family: 'Fraunces', Georgia, serif;
           font-weight: 600;
-          font-size: 18px;
+          font-size: 19px;
           line-height: 1.3;
           letter-spacing: -0.015em;
           color: var(--ink);
@@ -621,7 +672,7 @@ export default function ProductCard({
 
         /* ── Responsive ───────────────────────────────────────────────── */
         @media (max-width: 900px) {
-          .apc-frame { max-width: 200px; }
+          .apc-frame { max-width: 135px; }
           .apc-name { font-size: 16.5px; }
           .apc-price { font-size: 20px; }
         }
@@ -631,7 +682,7 @@ export default function ProductCard({
 
           .apc-header { padding: 10px 14px 0; }
           .apc-visual { padding: 10px 14px 6px; }
-          .apc-frame { max-width: none; border-radius: 10px; }
+          .apc-frame { max-width: 130px; border-radius: 10px; }
 
           .apc-body { padding: 2px 14px 14px; }
           .apc-kicker { font-size: 9.5px; }

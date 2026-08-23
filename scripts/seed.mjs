@@ -15,7 +15,11 @@ import bcrypt from 'bcryptjs';
 import { config } from 'dotenv';
 config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://pratiptest_db_user:pratipkayalgemstone@cluster0.yoh1ght.mongodb.net/gemstone-shop';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI is not set. Set it in your environment or .env file.');
+  process.exit(1);
+}
 
 // ── Minimal inline schemas (no TypeScript required for seed) ──────────────────
 const UserSchema = new mongoose.Schema({ name: String, email: String, password: String, role: String });
@@ -184,8 +188,7 @@ async function seed() {
   console.log('✅ 50 products created with images');
 
   console.log('\n🎉 Seed complete!');
-  console.log('Admin: admin@gemstone.com / admin123');
-  console.log('User:  user@gemstone.com / user123');
+
 
   await mongoose.disconnect();
 }
