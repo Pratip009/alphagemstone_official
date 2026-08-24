@@ -160,9 +160,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
 
           {/* ── Filter bar: horizontal, sticky, shown on every screen size ──
-              Watches only — diamonds/gemstones now use the CSV-driven
-              DynamicCategoryFilters panel below instead of this dropdown
-              bar, so there's nothing to render (and no facets query to run)
+              Watches only — diamonds/gemstones use the CSV-driven
+              DynamicCategoryFilters dropdown bar above the grid instead,
+              so there's nothing to render (and no facets query to run)
               for those product types. */}
           {productType === "watch" && (
             <div className="-mx-4 sm:-mx-8 mb-8">
@@ -172,17 +172,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
             </div>
           )}
 
-          <div className="flex gap-8 xl:gap-12">
-
-            {/* ── CSV-driven category filters (final_category_filters.csv) ──
-                Only renders once a category/subcategory is in scope and has
-                applicable filter definitions — empty otherwise. */}
-            {categoryFilters.length > 0 && (
-              <DynamicCategoryFilters groups={categoryFilters} />
-            )}
-
-            {/* ── Main content ── */}
-            <main className="flex-1 min-w-0">
+          <main className="min-w-0">
 
               {/* Page heading */}
               <div className="mb-6 pb-5 border-b border-[#EDE3D0] flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -208,6 +198,14 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                   query={sp.q ?? sp.search}
                 />
               </div>
+
+              {/* ── CSV-driven category filters (final_category_filters.csv) ──
+                  Horizontal dropdown bar shown above the grid — only
+                  renders once a category/subcategory is in scope and has
+                  applicable filter definitions — empty otherwise. */}
+              {categoryFilters.length > 0 && (
+                <DynamicCategoryFilters groups={categoryFilters} />
+              )}
 
               {/* Active filter chips */}
               <ActiveFilterChips searchParams={sp} />
@@ -263,8 +261,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                   </div>
                 </>
               )}
-            </main>
-          </div>
+          </main>
         </div>
 
         {/* ── Bottom accent line ── */}
