@@ -290,7 +290,7 @@ export default function ProductCard({
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+        
 
         .apc {
           --paper: #ffffff;
@@ -308,7 +308,7 @@ export default function ProductCard({
           display: block;
           text-decoration: none;
           color: inherit;
-          font-family: 'Inter', system-ui, sans-serif;
+          font-family: 'Elms Sans', system-ui, sans-serif;
           outline: none;
           width: 100%;
           height: 100%;
@@ -355,7 +355,7 @@ export default function ProductCard({
         }
 
         .apc-lot {
-          font-family: 'IBM Plex Mono', monospace;
+          font-family: 'Elms Sans', system-ui, sans-serif;
           font-size: 10px;
           font-weight: 500;
           letter-spacing: 0.08em;
@@ -549,7 +549,7 @@ export default function ProductCard({
         }
 
         .apc-name {
-          font-family: 'Fraunces', Georgia, serif;
+          font-family: 'Elms Sans';
           font-weight: 600;
           font-size: 19px;
           line-height: 1.3;
@@ -632,7 +632,7 @@ export default function ProductCard({
         }
 
         .apc-price {
-          font-family: 'Fraunces', Georgia, serif;
+          font-family: 'Elms Sans';
           font-weight: 700;
           font-size: 22px;
           letter-spacing: -0.02em;

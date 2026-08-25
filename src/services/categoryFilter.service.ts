@@ -29,6 +29,14 @@ export interface CategoryFilterGroup {
 // Multiple values within one filterName = OR. Multiple filterNames = AND.
 export type CategoryFilterSelection = Record<string, string[]>;
 
+// Unit label appended to a filter's displayed option values only (never to
+// the underlying stored/matched number). Keyed by canonicalFilterName.
+// WEIGHT's backing field (caratWeight) is a bare number, so "0.4" alone in
+// a dropdown reads as ambiguous — "0.4 ct." doesn't.
+const DISPLAY_UNIT_SUFFIX: Record<string, string> = {
+  WEIGHT: ' ct.',
+};
+
 // ─── Parsing selections from the URL ───────────────────────────────────────────
 // Accepts either a single `filters` query param holding JSON
 // (?filters={"SHAPE":["Marquise"],"COLOR":["Pink"]}) or bracket-style params
@@ -278,14 +286,55 @@ export async function getCategoryFilterFacets(
     .filter((def) => branchMeta[def.filterName])
     .map((def) => {
       const rows: { _id: string; count: number; display: string }[] = result[def.filterName] || [];
-      const selectedValues = new Set(
-        (selection[def.filterName] || []).map((v) => v.trim().toLowerCase())
-      );
-      const options: CategoryFilterOption[] = rows.map((r) => ({
-        value: r.display,
-        count: r.count,
-        selected: selectedValues.has(r._id),
-      }));
+      const mapping = branchMeta[def.filterName];
+
+      // caratWeight is stored as a bare number (0.4, 1, 2…), so the raw
+      // $toString display ("0.4") reads as an unlabeled quantity in the
+      // dropdown — easy to mistake for something else. Appending the unit
+      // here is purely a display concern; the underlying _id used for
+      // matching/selection stays the raw number.
+      const displaySuffix = DISPLAY_UNIT_SUFFIX[canonicalFilterName(def.filterName)] ?? '';
+
+      // Selections round-trip through the URL as the *displayed* value
+      // (see DynamicCategoryFilters, which toggles on option.value), so a
+      // selected WEIGHT option now arrives back here as e.g. "0.4 ct."
+      // while the facet's own _id is the bare "0.4". For numeric fields,
+      // compare by parsed number rather than raw string so re-selecting a
+      // suffixed value still highlights correctly; other fields keep the
+      // original exact string match.
+      const selectedRaw = selection[def.filterName] || [];
+      const isNumericField = mapping.kind === 'numeric';
+      const selectedNums = isNumericField
+        ? selectedRaw.map((v) => extractLeadingNumber(v)).filter((n): n is number => n !== null)
+        : [];
+      const selectedValues = new Set(selectedRaw.map((v) => v.trim().toLowerCase()));
+
+      const options: CategoryFilterOption[] = rows.map((r) => {
+        const selected = isNumericField
+          ? selectedNums.some((n) => Math.abs(n - parseFloat(r._id)) < NUMERIC_MATCH_TOLERANCE)
+          : selectedValues.has(r._id);
+        return {
+          value: displaySuffix ? `${r.display}${displaySuffix}` : r.display,
+          count: r.count,
+          selected,
+        };
+      });
+
+      // The aggregation above sorts branches by `count desc` purely to keep
+      // the $limit:500 cutoff meaningful — that's a frequency ordering, not
+      // a display ordering, and it makes filters like WEIGHT/SIZE show
+      // their values in an apparently random order (e.g. 1ct, 0.4ct, 2ct).
+      // Numeric-ish filters (WEIGHT, SIZE, NUMBER OF STONES, ...) read far
+      // better lowest→highest, so re-sort those here using the same
+      // leading-number parse already used for numeric matching elsewhere.
+      // Purely categorical filters (SHAPE, COLOR, CLARITY, ...) have no
+      // natural numeric order, so they're left as-is.
+      const parsed = options.map((o) => extractLeadingNumber(o.value));
+      const isNumericDisplay = parsed.every((n) => n !== null);
+      if (isNumericDisplay) {
+        options.sort((a, b) => (extractLeadingNumber(a.value) as number) - (extractLeadingNumber(b.value) as number));
+      }
+
       return { filterName: def.filterName, attributeId: def.attributeId, options };
     })
     .filter((g) => g.options.length > 0);

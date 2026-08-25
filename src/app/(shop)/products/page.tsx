@@ -147,12 +147,12 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       <style>{`
         
 
-        body, .products-page *:not(.pc6, .pc6 *) { font-family: 'Gilda Display', serif !important; }
+        body, .products-page *:not(.pc6, .pc6 *) { font-family: 'Elms Sans', sans-serif !important; }
       `}</style>
 
       <div
         className="products-page min-h-screen bg-[#ffffff]"
-        style={{ fontFamily: "'Gilda Display', serif" }}
+        style={{ fontFamily: "'Elms Sans', sans-serif" }}
       >
         {/* ── Top accent line ── */}
         <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#B8975A] to-transparent" />

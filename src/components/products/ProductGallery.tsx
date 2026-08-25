@@ -253,7 +253,7 @@ export default function ProductGallery({
           border: 0.5px solid #c3cfe6;
           padding: 4px 10px;
           pointer-events: none;
-          font-family: Verdana, Arial, sans-serif;
+          font-family: 'Elms Sans', system-ui, sans-serif;
           z-index: 10;
         }
         .pg-thumbs {
