@@ -125,6 +125,16 @@ export interface IProduct extends Document {
   // collapses many legacy categories into fewer real subcategories.
   legacyCategoryId?: number[];
 
+  // Extra Subcategory ObjectIds this product should ALSO appear under,
+  // without changing its real category/subcategory. Used for thematic
+  // cross-listings (e.g. a ruby ring filed under Jewelry > Gemstone Rings
+  // that should also show up under Occasions & Gifts > Valentine Jewelry).
+  // Same idea as the legacy Specials cross-listing (legacyCategoryId)
+  // above, generalized for any subcategory rather than just the four
+  // hardcoded Specials ones — see buildProductFilterQuery() in
+  // productFilter.service.ts for how this is matched.
+  crossListedSubcategoryIds?: mongoose.Types.ObjectId[];
+
   metaTitle?: string;
   metaDescription?: string;
   metaKeywords?: string[];
@@ -296,6 +306,12 @@ const ProductSchema = new Schema<IProduct>(
     legacySku: { type: String, trim: true, maxlength: 100 },
     legacyCategoryId: {
       type: [Number],
+      default: undefined,
+      index: true,
+    },
+    crossListedSubcategoryIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'Subcategory',
       default: undefined,
       index: true,
     },

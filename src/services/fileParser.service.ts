@@ -657,7 +657,7 @@ function parseMatchedRow(r: Record<string, unknown>, rowNum: number, warnings: P
   const clarityRaw = clean(r['attributes.clarity']);
   const clarityNormalized = normalizeClarity(clarityRaw);
 
-  const productKind = detectProductKind('', '', '', gemstoneNameRaw, categoryName);
+  const productKind = detectProductKind('', '', '', gemstoneNameRaw, clean(r.subcategory) || categoryName);
 
   const caratWeight = num(r['attributes.caratWeight']);
   // `size` on the Product model is the carat-weight filter field for

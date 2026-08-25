@@ -213,10 +213,11 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
   filter.isActive = true;
 
   // Conditions that must each independently be ANDed onto the filter as
-  // their own $or block. Only ever populated by the Specials cross-listing
-  // branch below — kept separate from filter.$or (used later by the
-  // full-text search branch) since a plain object can only carry one $or
-  // key and the two would otherwise silently clobber each other.
+  // their own $or block. Populated by the Specials cross-listing branch
+  // and the general subcategory cross-listing branch below — kept separate
+  // from filter.$or (used later by the full-text search branch) since a
+  // plain object can only carry one $or key and the two would otherwise
+  // silently clobber each other.
   const andConditions: FilterQuery<IProduct>[] = [];
 
   // ── Category ───────────────────────────────────────────────────────────────
@@ -233,9 +234,23 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
       scopeOr.push({ category: params.category, subcategory: params.subcategory });
     }
     andConditions.push({ $or: scopeOr });
-  } else {
-    if (params.category)    filter.category    = params.category;
-    if (params.subcategory) filter.subcategory = params.subcategory;
+  } else if (params.subcategory) {
+    // Match either real membership (category + subcategory both match) OR
+    // a thematic cross-listing (crossListedSubcategoryIds contains this
+    // subcategory) — e.g. Occasions & Gifts > Valentine Jewelry pulls in
+    // ruby/pink-sapphire rings that live primarily under Jewelry > Gemstone
+    // Rings. See Product.crossListedSubcategoryIds for why this exists.
+    const scopeOr: FilterQuery<IProduct>[] = [
+      { crossListedSubcategoryIds: params.subcategory },
+    ];
+    if (params.category) {
+      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+    } else {
+      scopeOr.push({ subcategory: params.subcategory });
+    }
+    andConditions.push({ $or: scopeOr });
+  } else if (params.category) {
+    filter.category = params.category;
   }
   if (params.productKind) filter.productKind = params.productKind;
 
@@ -509,9 +524,18 @@ function baseSimpleFilter(params: ProductFilterParams): FilterQuery<IProduct> {
       scopeOr.push({ category: params.category, subcategory: params.subcategory });
     }
     filter.$or = scopeOr;
-  } else {
-    if (params.category)    filter.category    = params.category;
-    if (params.subcategory) filter.subcategory = params.subcategory;
+  } else if (params.subcategory) {
+    const scopeOr: FilterQuery<IProduct>[] = [
+      { crossListedSubcategoryIds: params.subcategory },
+    ];
+    if (params.category) {
+      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+    } else {
+      scopeOr.push({ subcategory: params.subcategory });
+    }
+    filter.$or = scopeOr;
+  } else if (params.category) {
+    filter.category = params.category;
   }
   if (params.productKind) filter.productKind = params.productKind;
   return filter;

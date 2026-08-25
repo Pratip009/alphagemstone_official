@@ -453,7 +453,7 @@ async function main() {
 
   console.log('\n✅ Done.');
   console.log(`   Bead Necklaces subcategory: ${subcategory._id}`);
-  console.log('   Check: /products?category=jewelry&subcategory=bead-necklaces');
+  console.log('   Check: /products?category=jewelry&subcategory=bead-necklace');
   console.log('   Filters available: TYPE (all), TREATMENT/ORIGIN/WEIGHT/GRADE/ITEM (Ruby+Sapphire), LENGTH/SHAPE/COLOR/GRADE/NAME (Gemstone).');
 
   await mongoose.disconnect();
