@@ -3,6 +3,7 @@ import { listSubcategories } from "@/services/category.service";
 import Category from "@/models/Category";
 import { notFound } from "next/navigation";
 import CategoryClientPage from "./CategoryClientPage";
+import { SPECIALS_VIRTUAL_SUBCATEGORIES } from "@/lib/specialsVirtualSubcategories";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -43,6 +44,27 @@ export default async function CategoryPage({ params }: PageProps) {
         slug: (category as any).slug,
       },
     }));
+
+  // "Specials" also carries a few virtual subcategories (Make An Offer,
+  // $9.99/$24.99/$99.00 Specials) that aren't real Subcategory documents —
+  // see specialsVirtualSubcategories.ts for why. Append them so this grid
+  // matches what the nav dropdown shows.
+  if ((category as any).slug === "specials") {
+    for (const v of SPECIALS_VIRTUAL_SUBCATEGORIES) {
+      subcategories.push({
+        _id: `virtual-${v.slug}`,
+        name: v.name,
+        slug: v.slug,
+        imageUrl: null,
+        description: v.description,
+        category: {
+          _id: catId,
+          name: (category as any).name,
+          slug: (category as any).slug,
+        },
+      });
+    }
+  }
 
   const serializedCategory = {
     _id: catId,

@@ -23,6 +23,7 @@ export async function getNavCategories(): Promise<NavCategory[]> {
   try {
     const { connectDB } = await import('@/lib/db');
     const { listCategories, listSubcategories } = await import('@/services/category.service');
+    const { SPECIALS_VIRTUAL_SUBCATEGORIES } = await import('@/lib/specialsVirtualSubcategories');
 
     await connectDB();
 
@@ -48,6 +49,22 @@ export async function getNavCategories(): Promise<NavCategory[]> {
             imageUrl: s.imageUrl ?? undefined,
             isActive: s.isActive,
           }));
+
+        // "Specials" also carries a few virtual subcategories (Make An
+        // Offer, $9.99/$24.99/$99.00 Specials) that aren't real Subcategory
+        // documents — see specialsVirtualSubcategories.ts for why. Append
+        // them here so they show in the nav alongside the real ones.
+        if (cat.slug === 'specials') {
+          for (const v of SPECIALS_VIRTUAL_SUBCATEGORIES) {
+            subs.push({
+              _id: `virtual-${v.slug}`,
+              name: v.name,
+              slug: v.slug,
+              imageUrl: undefined,
+              isActive: true,
+            });
+          }
+        }
 
         return {
           _id: catId,

@@ -4,12 +4,27 @@ import { IProduct } from '@/models/Product';
 import Category from '@/models/Category';
 import Subcategory from '@/models/Subcategory';
 import { escapeRegex, extractCarat, CARAT_MATCH_TOLERANCE } from '@/lib/search';
+import { SPECIALS_VIRTUAL_SUBCATEGORY_MAP } from '@/lib/specialsVirtualSubcategories';
 
 // ─── Filter Query Params ──────────────────────────────────────────────────────
 export interface ProductFilterParams {
   // Category
   category?: string;
   subcategory?: string;
+  // Internal — set by resolveSlugFilters(), never passed in from a route.
+  // When the requested subcategory is one of the "Specials" cross-listing
+  // subcategories, this carries its legacy category id so
+  // buildProductFilterQuery()/baseSimpleFilter() can match the FULL real
+  // membership (via Product.legacyCategoryId) instead of the handful of
+  // products whose primary category/subcategory ref is literally Specials.
+  // See the SPECIALS_SUBCATEGORY_LEGACY_IDS comment below for why.
+  specialsLegacyId?: number;
+  // Internal — set by resolveSlugFilters() when the requested subcategory
+  // is one of SPECIALS_VIRTUAL_SUBCATEGORIES (e.g. "make-an-offer",
+  // "9-99-specials"). These aren't real Subcategory documents — no
+  // category/subcategory ref is applied at all, just the criterion's own
+  // `match` object, since the matching products span every real category.
+  specialsVirtualMatch?: FilterQuery<IProduct>;
 
   // Product kind — 'diamond' | 'gemstone' | 'watch' | 'jewelry'. Independent
   // of category: gemstones are filed under several categories ("Precious
@@ -97,6 +112,29 @@ function toNumber(val: string | number | undefined): number | undefined {
 // ─── Slug resolver ────────────────────────────────────────────────────────────
 const isObjectId = (val: string) => /^[a-f\d]{24}$/i.test(val);
 
+// ─── Specials cross-listing ────────────────────────────────────────────────
+// The legacy site merchandised the same product under BOTH its real home
+// category (e.g. Jewelry > Diamond Rings) AND a "Specials" subcategory
+// (Specials > Jewelry Specials) — see products.csv `category_paths_all` /
+// `category_ids_resolved`. Product only stores one category/subcategory
+// pair though, so most of those products' PRIMARY category/subcategory
+// refs point at their real home, not Specials — a strict
+// {category: Specials, subcategory: X} match only ever finds the handful
+// of products whose primary ref IS Specials.
+//
+// The full cross-listing survives on every product as
+// `legacyCategoryId` (populated at import time from the CSV's
+// `category_id`/`category_ids_resolved` columns — see
+// fileParser.service.ts), so that's the real source of truth for "does
+// this belong under Specials > X". These ids are the legacy
+// products.csv `category_id` values for the four Specials subcategories.
+const SPECIALS_SUBCATEGORY_LEGACY_IDS: Record<string, number> = {
+  'alpha-specials': 212,
+  'diamond-specials': 203,
+  'gemstone-specials': 204,
+  'jewelry-specials': 205,
+};
+
 // listProducts() and getProductFacets() are both called (in parallel) from
 // every /products-style page, and both independently need the same
 // category/subcategory slug resolved to an ObjectId. Without this, that's
@@ -124,6 +162,33 @@ export async function resolveSlugFilters(
 ): Promise<ProductFilterParams> {
   const resolved = { ...params };
 
+  // Slugs are still raw strings at this point (not yet resolved to
+  // ObjectIds below) — the only place we can key off the subcategory slug
+  // text to detect a Specials cross-listing request.
+  if (
+    resolved.category === 'specials' &&
+    resolved.subcategory &&
+    SPECIALS_SUBCATEGORY_LEGACY_IDS[resolved.subcategory]
+  ) {
+    resolved.specialsLegacyId = SPECIALS_SUBCATEGORY_LEGACY_IDS[resolved.subcategory];
+  }
+
+  // Virtual Specials subcategories (Make An Offer, $9.99/$24.99/$99.00
+  // Specials) aren't backed by a Subcategory document at all — skip both
+  // the category AND subcategory ObjectId lookups below entirely so we
+  // never try to resolve "make-an-offer" as a real subcategory slug (which
+  // would just silently match nothing).
+  if (
+    resolved.category === 'specials' &&
+    resolved.subcategory &&
+    SPECIALS_VIRTUAL_SUBCATEGORY_MAP[resolved.subcategory]
+  ) {
+    resolved.specialsVirtualMatch = SPECIALS_VIRTUAL_SUBCATEGORY_MAP[resolved.subcategory].match;
+    resolved.category = undefined;
+    resolved.subcategory = undefined;
+    return resolved;
+  }
+
   const needsCategory =
     !!resolved.category && !isObjectId(resolved.category);
   const needsSubcategory =
@@ -147,9 +212,31 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
 
   filter.isActive = true;
 
+  // Conditions that must each independently be ANDed onto the filter as
+  // their own $or block. Only ever populated by the Specials cross-listing
+  // branch below — kept separate from filter.$or (used later by the
+  // full-text search branch) since a plain object can only carry one $or
+  // key and the two would otherwise silently clobber each other.
+  const andConditions: FilterQuery<IProduct>[] = [];
+
   // ── Category ───────────────────────────────────────────────────────────────
-  if (params.category)    filter.category    = params.category;
-  if (params.subcategory) filter.subcategory = params.subcategory;
+  if (params.specialsVirtualMatch) {
+    // No category/subcategory ref at all — these span every real category,
+    // so the criterion's own match object (price range, makeAnOffer, …) is
+    // the entire scope.
+    Object.assign(filter, params.specialsVirtualMatch);
+  } else if (params.specialsLegacyId != null) {
+    const scopeOr: FilterQuery<IProduct>[] = [
+      { legacyCategoryId: params.specialsLegacyId },
+    ];
+    if (params.category && params.subcategory) {
+      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+    }
+    andConditions.push({ $or: scopeOr });
+  } else {
+    if (params.category)    filter.category    = params.category;
+    if (params.subcategory) filter.subcategory = params.subcategory;
+  }
   if (params.productKind) filter.productKind = params.productKind;
 
   // ── Diamond / gemstone multi-select filters ────────────────────────────────
@@ -250,8 +337,14 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
     if (carat !== null) {
       orConditions.push({ size: { $gte: carat - CARAT_MATCH_TOLERANCE, $lte: carat + CARAT_MATCH_TOLERANCE } });
     }
-    filter.$or = orConditions;
+    if (andConditions.length > 0) {
+      andConditions.push({ $or: orConditions });
+    } else {
+      filter.$or = orConditions;
+    }
   }
+
+  if (andConditions.length > 0) filter.$and = andConditions;
 
   // ── Sort ───────────────────────────────────────────────────────────────────
   const sortMap: Record<string, Record<string, 1 | -1>> = {
@@ -406,8 +499,20 @@ function simpleFieldSelection(field: SimpleFilterField, params: ProductFilterPar
 
 function baseSimpleFilter(params: ProductFilterParams): FilterQuery<IProduct> {
   const filter: FilterQuery<IProduct> = { isActive: true };
-  if (params.category)    filter.category    = params.category;
-  if (params.subcategory) filter.subcategory = params.subcategory;
+  if (params.specialsVirtualMatch) {
+    Object.assign(filter, params.specialsVirtualMatch);
+  } else if (params.specialsLegacyId != null) {
+    const scopeOr: FilterQuery<IProduct>[] = [
+      { legacyCategoryId: params.specialsLegacyId },
+    ];
+    if (params.category && params.subcategory) {
+      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+    }
+    filter.$or = scopeOr;
+  } else {
+    if (params.category)    filter.category    = params.category;
+    if (params.subcategory) filter.subcategory = params.subcategory;
+  }
   if (params.productKind) filter.productKind = params.productKind;
   return filter;
 }
