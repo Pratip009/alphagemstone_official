@@ -45,6 +45,13 @@ const DIRECT_FIELD_MAP: Record<string, FilterFieldMapping> = {
   // clarity code (SI/VS…), others by a letter grade (A/AA/AAA). Checked
   // against both underlying fields with OR.
   'CLARITY/GRADE':  { field: 'clarityRaw|gradeRaw', kind: 'string', direct: true },
+  // Third-level legacy grouping (e.g. subcategory_2 "Gemstone Bead
+  // Necklace" / "Ruby Bead Necklaces" / "Sapphire Bead Necklaces", all
+  // filed under the single real "Bead Necklaces" Subcategory) surfaced as
+  // a selectable filter instead of its own nav-level page, since the
+  // Category/Subcategory schema only supports two real levels. See
+  // scripts/import-bead-necklaces.mjs.
+  TYPE:             { field: 'subcategory2Raw', kind: 'string', direct: true },
 };
 
 // filter_names with no dedicated Product column — matched against
