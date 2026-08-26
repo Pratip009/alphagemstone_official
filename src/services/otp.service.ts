@@ -107,7 +107,7 @@ export async function sendSignupOtp(
 export async function verifySignupOtp(
   email: string,
   otp: string
-): Promise<{ token: string; user: object }> {
+): Promise<{ token: string; user: { id: string; name: string; email: string; role: string } }> {
   const normalizedEmail = email.toLowerCase();
 
   const record = await Otp.findOne({

@@ -21,7 +21,12 @@ export interface IShippingAddress {
 
 export interface IOrder extends Document {
   _id: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
+  // Exactly one identity is set: a logged-in user, or a guest (guestId +
+  // guestEmail — email is required for guest orders since it's the only way
+  // to send confirmation/shipping emails and look the order back up later).
+  user?: mongoose.Types.ObjectId;
+  guestId?: string;
+  guestEmail?: string;
   items: IOrderItem[];
   shippingAddress: IShippingAddress;
   subtotal: number;
@@ -86,7 +91,9 @@ const ShippingAddressSchema = new Schema<IShippingAddress>(
 
 const OrderSchema = new Schema<IOrder>(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    guestId: { type: String },
+    guestEmail: { type: String, lowercase: true, trim: true },
     items: { type: [OrderItemSchema], required: true },
     shippingAddress: { type: ShippingAddressSchema, required: true },
     subtotal: { type: Number, required: true },
@@ -137,6 +144,15 @@ const OrderSchema = new Schema<IOrder>(
 );
 
 OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ guestId: 1, createdAt: -1 });
+
+OrderSchema.pre('validate', function (this: IOrder, next) {
+  if (!this.user && !(this.guestId && this.guestEmail)) {
+    next(new Error('Order requires either a user or a guestId + guestEmail'));
+  } else {
+    next();
+  }
+});
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ paypalOrderId: 1 });
 OrderSchema.index({ createdAt: -1 });

@@ -1,9 +1,9 @@
 /**
  * GET /api/orders/[id]/tracking
  *
- * Authenticated (customer or admin). Returns live FedEx tracking data
- * for the order.  Customers can only view their own orders (userId filter
- * is applied); admins see all orders.
+ * Works for a logged-in user, a guest (via their guest_id cookie), or an
+ * admin. Non-admins can only view their own order (identity filter applied);
+ * admins see all orders.
  *
  * Response:
  *   {
@@ -15,19 +15,19 @@
 
 import { connectDB } from '@/lib/db';
 import { getOrderTracking } from '@/services/order.service';
-import { withAuth, AuthenticatedRequest } from '@/middleware/auth.middleware';
+import { withCartAuth, CartAuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
-export const GET = withAuth(
-  async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const GET = withCartAuth(
+  async (req: CartAuthenticatedRequest, { params }: { params: { id: string } }) => {
     try {
       await connectDB();
       const { id } = params;
       if (!id) return errorResponse('Order ID is required', 400);
 
-      // Admins see any order; regular users only their own
-      const userId = req.user.role === 'admin' ? undefined : req.user.userId;
-      const tracking = await getOrderTracking(id, userId);
+      // Admins see any order; everyone else (logged-in or guest) only theirs.
+      const identity = req.user?.role === 'admin' ? undefined : req.identity;
+      const tracking = await getOrderTracking(id, identity);
 
       return successResponse(tracking);
     } catch (err) {

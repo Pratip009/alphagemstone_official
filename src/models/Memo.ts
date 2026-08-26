@@ -11,7 +11,6 @@ export type MemoStatus =
   | 'returned'
   | 'overdue'
   | 'recalled'
-  | 'purchased'
   | 'force_converted'
   | 'lost'
   | 'damaged'
@@ -128,7 +127,6 @@ const MEMO_STATUS_VALUES: MemoStatus[] = [
   'returned',
   'overdue',
   'recalled',
-  'purchased',
   'force_converted',
   'lost',
   'damaged',

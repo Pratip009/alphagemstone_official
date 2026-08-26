@@ -197,7 +197,6 @@ function RelatedArticlesSidebar({ related, currentSlug }: { related: RelatedBlog
                   src={b.featuredImage}
                   alt={b.title}
                   fill
-                  unoptimized
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                   sizes="64px"
                 />
@@ -511,7 +510,7 @@ export default function BlogDetailPage() {
       <section className="relative">
         {blog.featuredImage ? (
           <div className="relative h-[420px] md:h-[520px] overflow-hidden">
-            <Image src={blog.featuredImage} alt={blog.title} fill unoptimized className="object-cover" priority sizes="100vw" />
+            <Image src={blog.featuredImage} alt={blog.title} fill className="object-cover" priority sizes="100vw" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f0e0c]/80 via-[#0f0e0c]/30 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-8 md:p-14">
               <div className="max-w-6xl mx-auto">
@@ -696,10 +695,10 @@ export default function BlogDetailPage() {
           color: #3c3830;
           font-size: 0.95rem;
           line-height: 1.85;
-           font-family: "Elms Sans", sans-serif;
+           font-family: "Google Sans Flex", sans-serif;
         }
         .prose-blog h2 {
-          font-family: "Elms Sans", sans-serif;
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 1.7rem;
           font-weight: 600;
           color: #1a1714;
@@ -708,7 +707,7 @@ export default function BlogDetailPage() {
           border-bottom: 1px solid #ede9e1;
         }
         .prose-blog h3 {
-          font-family: "Elms Sans", sans-serif;
+          font-family: "Google Sans Flex", sans-serif;
           font-size: 1.3rem;
           font-weight: 600;
           color: #1a1714;
@@ -727,7 +726,7 @@ export default function BlogDetailPage() {
           margin: 1.5rem 0;
           background: #faf9f7;
           border-radius: 0 8px 8px 0;
-           font-family: "Elms Sans", sans-serif;
+           font-family: "Google Sans Flex", sans-serif;
           font-size: 1.05rem;
           color: #5c5852;
           font-style: italic;
@@ -742,7 +741,7 @@ export default function BlogDetailPage() {
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
           font-size: 0.85em;
-          font-family: "Elms Sans", sans-serif;
+          font-family: "Google Sans Flex", sans-serif;
           color: #c9a84c;
         }
         .prose-blog pre {

@@ -3,6 +3,8 @@ import { connectDB } from '@/lib/db';
 import { signup } from '@/services/auth.service';
 import { errorResponse } from '@/lib/api-response';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { extractGuestId, clearGuestCookie } from '@/lib/guest';
+import { mergeGuestCartIntoUser } from '@/services/cart.service';
 import { z } from 'zod';
 
 const signupSchema = z.object({
@@ -51,6 +53,19 @@ response.cookies.set('has_session', '1', {
   maxAge: 60 * 60 * 24 * 7,
   path: '/',
 });
+
+    // Fold a guest cart (built up before this account existed) into the new
+    // user's cart. Never let a merge failure block account creation.
+    const guestId = extractGuestId(req);
+    if (guestId) {
+      try {
+        await mergeGuestCartIntoUser(guestId, result.user.id);
+      } catch (mergeErr) {
+        console.error('[signup] guest cart merge failed:', mergeErr);
+      }
+      clearGuestCookie(response);
+    }
+
     return response;
   } catch (err) {
     console.error('[signup]', err);

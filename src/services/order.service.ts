@@ -15,6 +15,7 @@ import {
   adminNewOrderEmailHtml,
 } from '@/lib/email-templates';
 import { applyShippingServiceFee } from '@/lib/shipping-config';
+import { CartIdentity } from '@/middleware/auth.middleware';
 const resend    = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 const ADMIN_NOTIFICATION_EMAILS = (process.env.ADMIN_NOTIFICATION_EMAILS || '')
@@ -28,7 +29,30 @@ function estimateWeightLb(totalItems: number): number {
   return Math.min(totalItems * 0.5, 5);
 }
 
+/** Builds a Cart/Order filter from a CartIdentity — user or guest. */
+function identityFilter(identity: CartIdentity) {
+  return identity.userId ? { user: identity.userId } : { guestId: identity.guestId };
+}
+
+/** Derives the identity that owns an already-created order (for IDOR checks,
+ *  cart-clearing, etc. — orders don't carry a CartIdentity, just user/guestId). */
+function identityOfOrder(order: { user?: unknown; guestId?: string | null }): CartIdentity {
+  return order.user
+    ? { userId: order.user.toString() }
+    : { guestId: order.guestId as string };
+}
+
+function sameIdentity(a: CartIdentity, b: CartIdentity): boolean {
+  if (a.userId || b.userId) return !!a.userId && a.userId === b.userId;
+  return !!a.guestId && a.guestId === b.guestId;
+}
+
 // ─── Order creation ───────────────────────────────────────────────────────────
+
+// `.populate('user', 'name email')` yields null for guest orders (no user
+// ref to populate) — every email helper below must handle that and fall
+// back to the order's own guestEmail/shippingAddress.fullName.
+type PopulatedUserOrder = IOrder & { user?: { name: string; email: string } | null };
 
 export interface ShippingSelection {
   shippingCarrier?:           string;
@@ -41,13 +65,21 @@ export interface ShippingSelection {
 }
 
 export async function createOrderFromCart(
-  userId: string,
+  identity: CartIdentity,
   shippingAddress: IShippingAddress,
   paymentMethod: 'paypal' | 'cod',
   couponCode?: string,
-  shippingSelection?: ShippingSelection
+  shippingSelection?: ShippingSelection,
+  // Required for guest checkout — logged-in users' email comes from their
+  // account instead. Validated by the route's zod schema when identity is a
+  // guest; double-checked here since this function is the source of truth.
+  guestEmail?: string
 ) {
-  const cart = await Cart.findOne({ user: userId })
+  if (!identity.userId && !guestEmail) {
+    throw new Error('Email is required to check out as a guest');
+  }
+
+  const cart = await Cart.findOne(identityFilter(identity))
     .populate('items.product')
     .lean() as ICart | null;
   if (!cart || cart.items.length === 0) throw new Error('Cart is empty');
@@ -104,7 +136,9 @@ export async function createOrderFromCart(
   const finalTotal = Math.max(0, subtotal + tax + combinedShippingCost - couponDiscount);
 
   const order = new Order({
-    user:            userId,
+    user:            identity.userId ?? undefined,
+    guestId:         identity.guestId ?? undefined,
+    guestEmail:      identity.userId ? undefined : guestEmail!.toLowerCase().trim(),
     items,
     shippingAddress,
     subtotal,
@@ -140,17 +174,18 @@ export async function createOrderFromCart(
 
 export async function initiatePayPalPayment(
   orderId: string,
-  userId?: string,
+  identity?: CartIdentity,
   { skipOwnerCheck = false }: { skipOwnerCheck?: boolean } = {}
 ) {
   const order = await Order.findById(orderId) as IOrder | null;
   if (!order) throw new Error('Order not found');
 
-  // IDOR guard: only the order's owner (or an explicit admin/webhook caller
-  // that passes skipOwnerCheck) may initiate payment on this order.
+  // IDOR guard: only the order's owner (logged-in user OR the guest whose
+  // guest_id cookie matches — an explicit admin/webhook caller passes
+  // skipOwnerCheck) may initiate payment on this order.
   if (!skipOwnerCheck) {
-    if (!userId) throw new Error('Unauthorized');
-    if (order.user.toString() !== userId) throw new Error('Order not found');
+    if (!identity) throw new Error('Unauthorized');
+    if (!sameIdentity(identityOfOrder(order), identity)) throw new Error('Order not found');
   }
 
   const paypalOrder = await createPayPalOrder(order.totalAmount);
@@ -172,20 +207,20 @@ export async function initiatePayPalPayment(
  */
 export async function capturePayment(
   paypalOrderId: string,
-  userId?: string,
+  identity?: CartIdentity,
   { skipOwnerCheck = false }: { skipOwnerCheck?: boolean } = {}
 ) {
   const order = await Order.findOne({ paypalOrderId }) as IOrder | null;
   if (!order) throw new Error('Order not found');
 
-  // IDOR guard: only the order's owner (or an explicit admin/webhook caller
-  // that passes skipOwnerCheck) may capture payment on this order. Checked
-  // before calling PayPal so a guessed paypalOrderId can't trigger a real
-  // capture, stock decrement, cart clear, or confirmation email for someone
-  // else's order.
+  // IDOR guard: only the order's owner (logged-in user OR matching guest_id
+  // cookie — an explicit admin/webhook caller passes skipOwnerCheck) may
+  // capture payment on this order. Checked before calling PayPal so a
+  // guessed paypalOrderId can't trigger a real capture, stock decrement,
+  // cart clear, or confirmation email for someone else's order.
   if (!skipOwnerCheck) {
-    if (!userId) throw new Error('Unauthorized');
-    if (order.user.toString() !== userId) throw new Error('Order not found');
+    if (!identity) throw new Error('Unauthorized');
+    if (!sameIdentity(identityOfOrder(order), identity)) throw new Error('Order not found');
   }
 
   const captureData = await capturePayPalOrder(paypalOrderId);
@@ -204,7 +239,7 @@ export async function capturePayment(
     captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id;
   await order.save();
 
-  await clearCart(order.user.toString());
+  await clearCart(identityOfOrder(order));
 
   void sendOrderConfirmationEmail(order);
  
@@ -231,9 +266,10 @@ export async function getUserOrders(userId: string) {
   return Order.find({ user: userId }).sort({ createdAt: -1 }).lean();
 }
 
-export async function getOrderById(orderId: string, userId?: string) {
+// `identity` omitted → admin path, no ownership filter applied.
+export async function getOrderById(orderId: string, identity?: CartIdentity) {
   const query: Record<string, unknown> = { _id: orderId };
-  if (userId) query.user = userId;
+  if (identity) Object.assign(query, identityFilter(identity));
   return Order.findOne(query).populate('items.product', 'name images').lean();
 }
 
@@ -261,9 +297,9 @@ export async function getAllOrders(page = 1, limit = 20, status?: string) {
  * When userId is provided, only returns the order if it belongs to that user
  * (so customers can't view other people's orders); admins pass no userId.
  */
-export async function getOrderTracking(orderId: string, userId?: string) {
+export async function getOrderTracking(orderId: string, identity?: CartIdentity) {
   const query: Record<string, unknown> = { _id: orderId };
-  if (userId) query.user = userId;
+  if (identity) Object.assign(query, identityFilter(identity));
 
   const order = await Order.findOne(query).lean() as IOrder | null;
   if (!order) throw new Error('Order not found');
@@ -320,7 +356,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
     { new: true }
   )
     .populate('user', 'name email')
-    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+    .lean() as PopulatedUserOrder | null;
 
   if (order && status === 'shipped') {
     void sendOrderShippedEmail(order);
@@ -339,7 +375,7 @@ export async function applyDeliveryStatus(
 
   const order = await Order.findById(orderId)
     .populate('user', 'name email')
-    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+    .lean() as PopulatedUserOrder | null;
   if (!order) return null;
 
   // Already marked delivered (and already emailed) — nothing to do.
@@ -355,7 +391,7 @@ export async function applyDeliveryStatus(
     { new: true }
   )
     .populate('user', 'name email')
-    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+    .lean() as PopulatedUserOrder | null;
 
   if (updated && !order.deliveryNotifiedAt) {
     void sendOrderDeliveredEmail(updated);
@@ -390,7 +426,7 @@ export async function purchaseAndSaveLabel(
 ) {
   const order = await Order.findById(orderId)
     .populate('user', 'name email')
-    .lean() as (IOrder & { user: { name: string; email: string } }) | null;
+    .lean() as PopulatedUserOrder | null;
   if (!order) throw new Error('Order not found');
   if (order.paymentStatus !== 'completed') {
     throw new Error('Cannot purchase label: payment not completed');
@@ -433,7 +469,7 @@ export async function purchaseAndSaveLabel(
       trackingNumber: label.trackingNumber,
       trackingUrl,
       labelUrl:       label.labelUrl,
-    } as IOrder & { user: { name: string; email: string } };
+    } as PopulatedUserOrder;
     void sendOrderShippedEmail(updatedOrder);
   }
 
@@ -444,18 +480,30 @@ export async function purchaseAndSaveLabel(
 
 async function sendOrderConfirmationEmail(order: IOrder): Promise<void> {
   try {
-    const user = await User.findById(order.user)
-      .select('name email')
-      .lean() as { name: string; email: string } | null;
-    if (!user) return;
+    // Guest orders carry their own email/name (from checkout); logged-in
+    // orders look the recipient up from the User doc as before.
+    let recipientEmail: string | undefined;
+    let recipientName: string;
+    if (order.user) {
+      const user = await User.findById(order.user)
+        .select('name email')
+        .lean() as { name: string; email: string } | null;
+      if (!user) return;
+      recipientEmail = user.email;
+      recipientName = user.name;
+    } else {
+      recipientEmail = order.guestEmail;
+      recipientName = order.shippingAddress.fullName;
+    }
+    if (!recipientEmail) return;
 
     const { error } = await resend.emails.send({
       from:    EMAIL_FROM,
-      to:      user.email,
+      to:      recipientEmail,
       subject: `Order Confirmed — #${order._id.toString().slice(-8).toUpperCase()}`,
       html:    orderConfirmationEmailHtml({
         orderId:         order._id.toString(),
-        customerName:    user.name,
+        customerName:    recipientName,
         items:           order.items.map((i) => ({
           name:     i.name,
           quantity: i.quantity,
@@ -478,18 +526,21 @@ async function sendOrderConfirmationEmail(order: IOrder): Promise<void> {
 }
 
 async function sendOrderShippedEmail(
-  order: IOrder & { user: { name: string; email: string } }
+  order: PopulatedUserOrder
 ): Promise<void> {
   try {
     if (!order.trackingNumber) return;
+    const recipientEmail = order.user?.email ?? order.guestEmail;
+    const recipientName  = order.user?.name  ?? order.shippingAddress.fullName;
+    if (!recipientEmail) return;
 
     const { error } = await resend.emails.send({
       from:    EMAIL_FROM,
-      to:      order.user.email,
+      to:      recipientEmail,
       subject: `Your Order Has Shipped — #${order._id.toString().slice(-8).toUpperCase()}`,
       html:    orderShippedEmailHtml({
         orderId:           order._id.toString(),
-        customerName:      order.user.name,
+        customerName:      recipientName,
         trackingNumber:    order.trackingNumber,
         trackingUrl:       order.trackingUrl   ?? undefined,
         shippingCarrier:   order.shippingCarrier ?? undefined,
@@ -503,16 +554,20 @@ async function sendOrderShippedEmail(
   }
 }
 async function sendOrderDeliveredEmail(
-  order: IOrder & { user: { name: string; email: string } }
+  order: PopulatedUserOrder
 ): Promise<void> {
   try {
+    const recipientEmail = order.user?.email ?? order.guestEmail;
+    const recipientName  = order.user?.name  ?? order.shippingAddress.fullName;
+    if (!recipientEmail) return;
+
     const { error } = await resend.emails.send({
       from:    EMAIL_FROM,
-      to:      order.user.email,
+      to:      recipientEmail,
       subject: `Your Order Has Been Delivered — #${order._id.toString().slice(-8).toUpperCase()}`,
       html:    orderDeliveredEmailHtml({
         orderId:        order._id.toString(),
-        customerName:   order.user.name,
+        customerName:   recipientName,
         trackingNumber: order.trackingNumber ?? undefined,
         deliveredAt:    order.deliveredAt
           ? new Date(order.deliveredAt).toLocaleDateString('en-US', {
@@ -538,10 +593,20 @@ async function sendOrderDeliveredEmail(
 async function sendAdminNewOrderEmail(order: IOrder): Promise<void> {
   if (ADMIN_NOTIFICATION_EMAILS.length === 0) return; // not configured — skip silently
   try {
-    const user = await User.findById(order.user)
-      .select('name email')
-      .lean() as { name: string; email: string } | null;
-    if (!user) return;
+    let customerName: string;
+    let customerEmail: string | undefined;
+    if (order.user) {
+      const user = await User.findById(order.user)
+        .select('name email')
+        .lean() as { name: string; email: string } | null;
+      if (!user) return;
+      customerName = user.name;
+      customerEmail = user.email;
+    } else {
+      customerName = `${order.shippingAddress.fullName} (guest)`;
+      customerEmail = order.guestEmail;
+    }
+    if (!customerEmail) return;
 
     const { error } = await resend.emails.send({
       from:    EMAIL_FROM,
@@ -549,8 +614,8 @@ async function sendAdminNewOrderEmail(order: IOrder): Promise<void> {
       subject: `New Order — #${order._id.toString().slice(-8).toUpperCase()} ($${order.totalAmount.toFixed(2)})`,
       html:    adminNewOrderEmailHtml({
         orderId:       order._id.toString(),
-        customerName:  user.name,
-        customerEmail: user.email,
+        customerName,
+        customerEmail,
         totalAmount:   order.totalAmount,
         itemCount:     order.items.reduce((sum, i) => sum + i.quantity, 0),
         paymentMethod: order.paymentMethod,

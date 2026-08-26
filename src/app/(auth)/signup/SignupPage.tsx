@@ -29,6 +29,16 @@ export default function SignupPage() {
     [],
   );
 
+  // Prefills the email when arriving from the post-checkout "create an
+  // account" prompt (see order-confirmation/[id]/page.tsx) so a guest who
+  // just placed an order doesn't have to retype what they already gave us.
+  useEffect(() => {
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setForm((f) => (f.email ? f : { ...f, email: emailParam }));
+    }
+  }, [searchParams]);
+
   const startCountdown = () => {
     setCountdown(60);
     timerRef.current = setInterval(() => {

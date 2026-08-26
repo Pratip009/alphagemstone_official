@@ -12,11 +12,10 @@ const updateSchema = z.object({
   image:   z.string().optional().default(''),
 });
 
-export const GET = withAdmin(async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
+export const GET = withAdmin(async (_req: NextRequest, { params }: { params: { id: string } }) => {
   try {
     await connectDB();
-    const { id } = await context.params;
-    const campaign = await getCampaign(id);
+    const campaign = await getCampaign(params.id);
     if (!campaign) return errorResponse('Campaign not found', 404);
     return successResponse(campaign);
   } catch (err) {
@@ -25,10 +24,9 @@ export const GET = withAdmin(async (_req: NextRequest, context: { params: Promis
   }
 });
 
-export const PUT = withAdmin(async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
+export const PUT = withAdmin(async (req: NextRequest, { params }: { params: { id: string } }) => {
   try {
     await connectDB();
-    const { id } = await context.params;
     const body = await req.json();
 
     const parsed = updateSchema.safeParse(body);
@@ -36,7 +34,7 @@ export const PUT = withAdmin(async (req: NextRequest, context: { params: Promise
       return errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors);
     }
 
-    const campaign = await updateCampaign(id, parsed.data);
+    const campaign = await updateCampaign(params.id, parsed.data);
     return successResponse(campaign);
   } catch (err) {
     console.error('[PUT /api/admin/newsletter/campaigns/[id]]', err);
@@ -44,11 +42,10 @@ export const PUT = withAdmin(async (req: NextRequest, context: { params: Promise
   }
 });
 
-export const DELETE = withAdmin(async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
+export const DELETE = withAdmin(async (_req: NextRequest, { params }: { params: { id: string } }) => {
   try {
     await connectDB();
-    const { id } = await context.params;
-    await deleteCampaign(id);
+    await deleteCampaign(params.id);
     return successResponse({ deleted: true });
   } catch (err) {
     console.error('[DELETE /api/admin/newsletter/campaigns/[id]]', err);

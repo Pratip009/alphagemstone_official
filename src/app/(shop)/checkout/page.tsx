@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useApi } from "@/hooks/useApi";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import ShippingRateSelector from "@/components/shipping/ShippingRateSelector";
@@ -14,6 +15,7 @@ import { cartEvents } from "@/hooks/useCart";
 
 interface ShippingForm {
   fullName: string;
+  email: string;
   addressLine1: string;
   addressLine2: string;
   city: string;
@@ -25,6 +27,7 @@ interface ShippingForm {
 
 const EMPTY_FORM: ShippingForm = {
   fullName: "",
+  email: "",
   addressLine1: "",
   addressLine2: "",
   city: "",
@@ -189,7 +192,13 @@ const POSTAL_PATTERNS: Record<string, { pattern: RegExp; hint: string }> = {
 
 type FormErrors = Partial<Record<keyof ShippingForm, string>>;
 
-function validateForm(form: ShippingForm, pinVerified: boolean): FormErrors {
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateForm(
+  form: ShippingForm,
+  pinVerified: boolean,
+  requireEmail: boolean,
+): FormErrors {
   const errors: FormErrors = {};
   if (!form.fullName.trim()) {
     errors.fullName = "Full name is required";
@@ -197,6 +206,15 @@ function validateForm(form: ShippingForm, pinVerified: boolean): FormErrors {
     errors.fullName = "Letters, spaces and hyphens only";
   } else if (form.fullName.trim().split(/\s+/).length < 2) {
     errors.fullName = "Please enter first and last name";
+  }
+  // Only required for guest checkout — logged-in users' email is already
+  // on their account, so we don't ask again.
+  if (requireEmail) {
+    if (!form.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!EMAIL_PATTERN.test(form.email.trim())) {
+      errors.email = "Enter a valid email address";
+    }
   }
   if (!form.addressLine1.trim()) {
     errors.addressLine1 = "Street address is required";
@@ -256,6 +274,7 @@ function formatPhone(raw: string, country: string): string {
 
 const LABELS: Record<keyof ShippingForm, string> = {
   fullName: "Full Name",
+  email: "Email",
   addressLine1: "Street Address",
   addressLine2: "Apt / Suite / Unit",
   city: "City / District",
@@ -694,6 +713,7 @@ type Step = "shipping" | "rates" | "payment";
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function CheckoutPage() {
   const { apiFetch } = useApi();
+  const { user } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState<Step>("shipping");
   const [form, setForm] = useState<ShippingForm>(EMPTY_FORM);
@@ -723,10 +743,21 @@ export default function CheckoutPage() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   useEffect(() => {
+    // No more redirect-to-login here — cart works for guests too (server
+    // resolves identity via auth_token or guest_id cookie), so a fetch
+    // failure just means an empty/unreachable cart, not "you must sign in."
     apiFetch("/api/cart")
       .then((d) => setTotal(d.data.totals?.total || 0))
-      .catch(() => router.push("/login"));
+      .catch(() => setApiError("Couldn't load your cart. Please refresh and try again."));
   }, []);
+
+  // Prefill the (logged-in) user's email so the field doesn't sit empty for
+  // people who do have accounts — guests just type theirs in.
+  useEffect(() => {
+    if (user?.email) {
+      setForm((f) => (f.email ? f : { ...f, email: user.email }));
+    }
+  }, [user]);
 
   // Bring the top of the card into view whenever the step changes, so the
   // person always starts a new step (address / rates / payment) from the top
@@ -736,7 +767,7 @@ export default function CheckoutPage() {
   }, [step]);
 
   useEffect(() => {
-    const newErrors = validateForm(form, pinVerified);
+    const newErrors = validateForm(form, pinVerified, !user);
     setErrors((prev) => {
       const updated: FormErrors = { ...prev };
       (Object.keys(newErrors) as (keyof ShippingForm)[]).forEach((k) => {
@@ -747,7 +778,7 @@ export default function CheckoutPage() {
       });
       return updated;
     });
-  }, [form, touched, pinVerified]);
+  }, [form, touched, pinVerified, user]);
 
   const handleCountryChange = (country: string) => {
     setForm((f) => ({ ...f, country, state: "", postalCode: "", city: "" }));
@@ -759,7 +790,7 @@ export default function CheckoutPage() {
 
   const handleBlur = (field: keyof ShippingForm) => {
     setTouched((t) => ({ ...t, [field]: true }));
-    const newErrors = validateForm(form, pinVerified);
+    const newErrors = validateForm(form, pinVerified, !user);
     setErrors((prev) => ({ ...prev, [field]: newErrors[field] }));
   };
 
@@ -889,7 +920,7 @@ export default function CheckoutPage() {
       );
       return;
     }
-    const newErrors = validateForm(form, pinVerified);
+    const newErrors = validateForm(form, pinVerified, !user);
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     setStep("rates");
@@ -913,6 +944,9 @@ export default function CheckoutPage() {
           shippingRateId: selectedShipping.rateId,
           shippingEstimatedDays: selectedShipping.estimatedDays ?? null,
           shippingEstimatedDelivery: selectedShipping.estimatedDelivery ?? null,
+          // Only relevant for guests — the server uses it as the order's
+          // contact/confirmation email; ignored for logged-in users.
+          ...(!user && form.email ? { guestEmail: form.email } : {}),
           ...(couponCode ? { couponCode } : {}),
         }),
       });
@@ -946,7 +980,14 @@ export default function CheckoutPage() {
         body: JSON.stringify({ paypalOrderId: data.orderID }),
       });
       cartEvents.refresh();
-      router.push("/orders?success=true");
+      // Guests have no account to list orders under (/orders 401s for
+      // them) — send them to a standalone confirmation page instead, scoped
+      // to this one order via their guest_id cookie.
+      if (user) {
+        router.push("/orders?success=true");
+      } else {
+        router.push(`/order-confirmation/${orderId}?success=true`);
+      }
     } catch (err) {
       setPaymentProcessing(false);
       setApiError(
@@ -1420,6 +1461,56 @@ export default function CheckoutPage() {
                           </div>
                           <FieldError msg={errors.fullName} />
                         </div>
+
+                        {/* Email — only asked of guests; logged-in users'
+                            account email is used automatically. */}
+                        {!user && (
+                          <div
+                            className="field-wrap"
+                            style={{ animationDelay: "0.06s" }}
+                          >
+                            <label style={labelStyle}>
+                              Email{" "}
+                              <span style={{ color: "#6366f1" }}>*</span>
+                            </label>
+                            <div style={{ position: "relative" }}>
+                              <input
+                                type="email"
+                                style={inputStyle(fieldState("email"))}
+                                placeholder="you@example.com"
+                                value={form.email}
+                                onChange={(e) =>
+                                  handleChange("email", e.target.value)
+                                }
+                                onBlur={() => handleBlur("email")}
+                                autoComplete="email"
+                              />
+                              {fieldState("email") === "valid" && (
+                                <span
+                                  style={{
+                                    position: "absolute",
+                                    right: 12,
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                  }}
+                                >
+                                  <CheckCircle />
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              style={{
+                                fontSize: 11,
+                                color: "#94a3b8",
+                                marginTop: 4,
+                              }}
+                            >
+                              We'll send your order confirmation and
+                              shipping updates here.
+                            </p>
+                            <FieldError msg={errors.email} />
+                          </div>
+                        )}
 
                         {/* Country */}
                         <div

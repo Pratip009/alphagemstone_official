@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { uploadBuffer, destroyImage } from '@/lib/r2';
+import { uploadBuffer, destroyImage } from '@/lib/cloudinary';
 import { assertValidImageBuffer } from '@/lib/file-signature';
 import Subcategory from '@/models/Subcategory';
 

@@ -157,7 +157,7 @@ export default function AdminDashboard() {
       <div className="mb-8">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[0.68rem] tracking-[0.22em] uppercase text-[#c9a84c] font-semibold mb-2">◆ Alpha Gemstone</p>
+            <p className="text-[0.68rem] tracking-[0.22em] uppercase text-[#c9a84c] font-semibold mb-2">◆ Alpha Imports</p>
             <h1 className="font-['Cormorant_Garamond',serif] text-[2.6rem] font-medium text-[#1a1714] tracking-tight leading-none">
               Dashboard
             </h1>
@@ -222,7 +222,6 @@ export default function AdminDashboard() {
         {/* ── Right: User table ── */}
         <div className="bg-white border border-[#ede9e1] rounded-2xl overflow-hidden flex flex-col">
 
-          {/* Table header */}
           {/* Table header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#ede9e1]">
             <div>

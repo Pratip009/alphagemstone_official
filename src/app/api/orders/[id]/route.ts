@@ -1,14 +1,18 @@
 import { connectDB } from '@/lib/db';
-import { getOrderById, updateOrderStatus } from '@/services/order.service'; // ← add updateOrderStatus here
-import { withAuth, withAdmin, AuthenticatedRequest } from '@/middleware/auth.middleware';
+import { getOrderById, updateOrderStatus } from '@/services/order.service';
+import { withCartAuth, withAdmin, CartAuthenticatedRequest, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
-export const GET = withAuth(async (req: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
+// GET works for a logged-in user (their own orders), a guest (their own
+// order, matched via guest_id cookie — this is how the post-checkout
+// confirmation page re-fetches the order it just created), or an admin
+// (any order).
+export const GET = withCartAuth(async (req: CartAuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     await connectDB();
     const { id } = await context.params;
-    const userId = req.user.role === 'admin' ? undefined : req.user.userId;
-    const order = await getOrderById(id, userId);
+    const identity = req.user?.role === 'admin' ? undefined : req.identity;
+    const order = await getOrderById(id, identity);
     if (!order) return errorResponse('Order not found', 404);
     return successResponse(order);
   } catch {

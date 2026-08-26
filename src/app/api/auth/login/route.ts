@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/db";
 import { login } from "@/services/auth.service";
 import { errorResponse } from "@/lib/api-response";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { extractGuestId, clearGuestCookie } from "@/lib/guest";
+import { mergeGuestCartIntoUser } from "@/services/cart.service";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -70,6 +72,19 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });
+
+    // If they were shopping as a guest before logging in, fold that cart
+    // into their account cart rather than losing it — see cart.service's
+    // mergeGuestCartIntoUser docblock. Never let a merge failure block login.
+    const guestId = extractGuestId(req);
+    if (guestId) {
+      try {
+        await mergeGuestCartIntoUser(guestId, result.user.id);
+      } catch (mergeErr) {
+        console.error("[login] guest cart merge failed:", mergeErr);
+      }
+      clearGuestCookie(response);
+    }
 
     return response;
   } catch (err) {

@@ -8,7 +8,9 @@ export interface ICartItem {
 
 export interface ICart extends Document {
   _id: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
+  // Exactly one of user/guestId is set — see the pre-validate check below.
+  user?: mongoose.Types.ObjectId;
+  guestId?: string;
   items: ICartItem[];
   updatedAt: Date;
 }
@@ -24,11 +26,22 @@ const CartItemSchema = new Schema<ICartItem>(
 
 const CartSchema = new Schema<ICart>(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    // sparse+unique so many docs can have user: undefined (guest carts)
+    // without tripping the unique index — same for guestId below.
+    user: { type: Schema.Types.ObjectId, ref: 'User', unique: true, sparse: true },
+    guestId: { type: String, unique: true, sparse: true },
     items: { type: [CartItemSchema], default: [] },
   },
   { timestamps: true }
 );
+
+CartSchema.pre('validate', function (next) {
+  if (!this.user && !this.guestId) {
+    next(new Error('Cart requires either a user or a guestId'));
+  } else {
+    next();
+  }
+});
 
 
 const Cart = (() => {

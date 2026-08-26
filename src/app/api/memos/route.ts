@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withAuth } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit'; // adjust to actual export shape in your repo
 import { createMemoRequest, listMemosForUser, MemoError } from '@/services/memo.service';
-import { MEMO_MAX_DAYS } from '@/lib/memo.constants';
+import { MEMO_MAX_DAYS } from '@/lib/constants/memo.constants';
 
 const shippingAddressSchema = z.object({
   fullName: z.string().min(1),
@@ -33,14 +33,8 @@ const createMemoSchema = z.object({
 
 export const POST = withAuth(async (req: NextRequest & { user: { userId: string } }) => {
   try {
-    const rate = await rateLimit(req, {
-      id: 'memo-create',
-      limit: 5,
-      windowSec: 3600,
-      extraKey: req.user.userId,
-      scope: 'key',
-    });
-    if (!rate.success) return rateLimitResponse(rate);
+    const rate = await checkRateLimit(`memo-create:${req.user.userId}`, { max: 5, windowSeconds: 3600 });
+    if (!rate.allowed) return errorResponse('Too many memo requests — please try again later', 429);
 
     const body = await req.json();
     const parsed = createMemoSchema.safeParse(body);

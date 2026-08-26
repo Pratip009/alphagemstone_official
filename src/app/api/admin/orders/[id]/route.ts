@@ -44,21 +44,25 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
       id,
       { $set },
       { new: true }
-    ).populate('user', 'name email').lean() as (IOrder & { user: { name: string; email: string } }) | null;
+    ).populate('user', 'name email').lean() as (IOrder & { user?: { name: string; email: string } | null }) | null;
 
     if (!order) return errorResponse('Order not found', 404);
 
-    // Send shipped notification email when admin marks order as shipped
+    // Send shipped notification email when admin marks order as shipped.
+    // Guest orders have no `user` doc to populate — fall back to the
+    // guestEmail/shipping-address name captured at checkout.
     if (status === 'shipped') {
 const tracking = trackingNumber ?? order.trackingNumber;
-      if (tracking) {
+      const recipientEmail = order.user?.email ?? order.guestEmail;
+      const recipientName  = order.user?.name  ?? order.shippingAddress.fullName;
+      if (tracking && recipientEmail) {
         void resend.emails.send({
           from: EMAIL_FROM,
-          to: order.user.email,
+          to: recipientEmail,
           subject: `Your Order Has Shipped — #${order._id.toString().slice(-8).toUpperCase()}`,
           html: orderShippedEmailHtml({
             orderId: order._id.toString(),
-            customerName: order.user.name,
+            customerName: recipientName,
             trackingNumber: tracking,
             trackingUrl: (trackingUrl ?? order.trackingUrl) || undefined,
             shippingCarrier: (shippingCarrier ?? order.shippingCarrier) || undefined,

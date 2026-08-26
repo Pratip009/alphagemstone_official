@@ -6,10 +6,6 @@
  * Shows live tracking for an order via POST /api/shipping/track.
  * Handles ShipEngine "Too Many Requests" errors gracefully with
  * a user-friendly message and manual retry button.
- *
- * NOTE: ShipStation V2 only supports tracking lookups by `labelId`
- * (not by the customer-facing tracking number), so `labelId` is what
- * gets sent to the API. `trackingNumber` is display-only.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -30,17 +26,15 @@ function statusStyle(status: string) {
 }
 
 interface OrderTrackingProps {
-  /** ShipStation label ID — required to actually fetch live tracking. */
-  labelId?:       string | null;
-  /** Customer-facing tracking number — display only. */
   trackingNumber: string;
+  carrierCode?:   string;
   trackingUrl?:   string;
   className?:     string;
 }
 
 export default function OrderTracking({
-  labelId,
   trackingNumber,
+  carrierCode,
   trackingUrl,
   className = '',
 }: OrderTrackingProps) {
@@ -51,12 +45,6 @@ export default function OrderTracking({
   const [retryCount, setRetryCount]   = useState(0);
 
   const load = useCallback(async () => {
-    if (!labelId) {
-      setLoading(false);
-      setError('Live tracking isn\'t available for this order yet.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setIsRateLimit(false);
@@ -67,16 +55,16 @@ export default function OrderTracking({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ labelId }),
+        body: JSON.stringify({ trackingNumber, carrierCode }),
       });
 
       const json = await res.json();
 
-      if (res.status === 429 || json.message?.toLowerCase().includes('rate')) {
+      if (res.status === 429 || json.error?.toLowerCase().includes('rate')) {
         setIsRateLimit(true);
         throw new Error('rate_limit');
       }
-      if (!json.success) throw new Error(json.message ?? 'Tracking failed');
+      if (!json.success) throw new Error(json.error ?? 'Tracking failed');
       setTracking(json.data);
     } catch (err: any) {
       if (err.message !== 'rate_limit') {
@@ -85,7 +73,7 @@ export default function OrderTracking({
     } finally {
       setLoading(false);
     }
-  }, [labelId]);
+  }, [trackingNumber, carrierCode]);
 
   useEffect(() => { load(); }, [load, retryCount]);
 
