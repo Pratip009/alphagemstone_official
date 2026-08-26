@@ -194,9 +194,30 @@ export async function getApplicableFilterDefinitions(scope: {
     { $sort: { '_id.attributeId': 1 } },
   ]);
 
-  return docs
+  const definitions = docs
     .map((d) => ({ filterName: d._id.filterName as string, attributeId: d._id.attributeId as number }))
     .filter((d) => getFieldMapping(d.filterName) !== null);
+
+  // A single real Subcategory can aggregate several legacy categories (see
+  // the CategoryFilter model comment above), and each legacy category has
+  // its own attribute_id numbering — so the same canonical filterName (e.g.
+  // "GRADE") can legitimately come back twice here with two different
+  // attributeIds, one per legacy category. Everything downstream (the facet
+  // computation's `branches` map, and the group-by-filterName selection
+  // object in DynamicCategoryFilters) is keyed on filterName alone and
+  // assumes one entry per name, so collapse to a single definition per
+  // filterName here rather than surface duplicates as two identical-looking
+  // dropdowns (React key collision) that silently fight over the same
+  // selection/URL param.
+  const seen = new Set<string>();
+  const deduped: { filterName: string; attributeId: number }[] = [];
+  for (const def of definitions) {
+    if (seen.has(def.filterName)) continue;
+    seen.add(def.filterName);
+    deduped.push(def);
+  }
+
+  return deduped;
 }
 
 // ─── Live facet counts, self-excluding per filter ─────────────────────────────
