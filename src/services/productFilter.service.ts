@@ -1,4 +1,5 @@
 import { FilterQuery } from 'mongoose';
+import mongoose from 'mongoose';
 import { cache } from 'react';
 import { IProduct } from '@/models/Product';
 import Category from '@/models/Category';
@@ -206,6 +207,22 @@ export async function resolveSlugFilters(
   return resolved;
 }
 
+// Category/subcategory ids are plain hex strings coming out of
+// resolveSlugFilters(). Model.find() auto-casts those to ObjectId even when
+// they're nested inside an $or, but Model.aggregate() ($match) does NOT —
+// and buildProductFilterQuery()/baseSimpleFilter()'s output is fed into both
+// (the plain product listing via .find(), and the CSV category-filter /
+// simple-filter facet counts via .aggregate()). Casting here, once, at the
+// source keeps the same query object valid for both consumers instead of
+// relying on every aggregate() call site to remember to cast. (This was the
+// exact bug that made the category filter dropdown bar disappear: once
+// category/subcategory moved from top-level filter fields into a nested
+// $or for cross-listing support, the facet aggregation's $match silently
+// matched zero products on every branch.)
+function toObjectIdIfValid(id: string): mongoose.Types.ObjectId | string {
+  return mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : id;
+}
+
 // ─── Core Filter Builder ──────────────────────────────────────────────────────
 export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilters {
   const filter: FilterQuery<IProduct> = {};
@@ -231,7 +248,10 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
       { legacyCategoryId: params.specialsLegacyId },
     ];
     if (params.category && params.subcategory) {
-      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+      scopeOr.push({
+        category: toObjectIdIfValid(params.category),
+        subcategory: toObjectIdIfValid(params.subcategory),
+      });
     }
     andConditions.push({ $or: scopeOr });
   } else if (params.subcategory) {
@@ -241,16 +261,19 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
     // ruby/pink-sapphire rings that live primarily under Jewelry > Gemstone
     // Rings. See Product.crossListedSubcategoryIds for why this exists.
     const scopeOr: FilterQuery<IProduct>[] = [
-      { crossListedSubcategoryIds: params.subcategory },
+      { crossListedSubcategoryIds: toObjectIdIfValid(params.subcategory) },
     ];
     if (params.category) {
-      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+      scopeOr.push({
+        category: toObjectIdIfValid(params.category),
+        subcategory: toObjectIdIfValid(params.subcategory),
+      });
     } else {
-      scopeOr.push({ subcategory: params.subcategory });
+      scopeOr.push({ subcategory: toObjectIdIfValid(params.subcategory) });
     }
     andConditions.push({ $or: scopeOr });
   } else if (params.category) {
-    filter.category = params.category;
+    filter.category = toObjectIdIfValid(params.category);
   }
   if (params.productKind) filter.productKind = params.productKind;
 
@@ -521,21 +544,27 @@ function baseSimpleFilter(params: ProductFilterParams): FilterQuery<IProduct> {
       { legacyCategoryId: params.specialsLegacyId },
     ];
     if (params.category && params.subcategory) {
-      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+      scopeOr.push({
+        category: toObjectIdIfValid(params.category),
+        subcategory: toObjectIdIfValid(params.subcategory),
+      });
     }
     filter.$or = scopeOr;
   } else if (params.subcategory) {
     const scopeOr: FilterQuery<IProduct>[] = [
-      { crossListedSubcategoryIds: params.subcategory },
+      { crossListedSubcategoryIds: toObjectIdIfValid(params.subcategory) },
     ];
     if (params.category) {
-      scopeOr.push({ category: params.category, subcategory: params.subcategory });
+      scopeOr.push({
+        category: toObjectIdIfValid(params.category),
+        subcategory: toObjectIdIfValid(params.subcategory),
+      });
     } else {
-      scopeOr.push({ subcategory: params.subcategory });
+      scopeOr.push({ subcategory: toObjectIdIfValid(params.subcategory) });
     }
     filter.$or = scopeOr;
   } else if (params.category) {
-    filter.category = params.category;
+    filter.category = toObjectIdIfValid(params.category);
   }
   if (params.productKind) filter.productKind = params.productKind;
   return filter;
