@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { useApi } from '@/hooks/useApi';
 import { useRouter } from 'next/navigation';
 import { cartEvents } from '@/hooks/useCart';
@@ -11,6 +12,7 @@ export default function AddToCartButton({
   productId: string;
   inStock: boolean;
 }) {
+  const { user, loading: authLoading } = useAuth();  // ← get loading state
   const { apiFetch } = useApi();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -18,10 +20,14 @@ export default function AddToCartButton({
   const [qty, setQty] = useState(1);
 
   const handleAdd = async () => {
-    // No login gate — cart works for guests too (server resolves identity
-    // via auth_token or guest_id cookie). This used to redirect anyone who
-    // wasn't logged in straight to /login, which was the very first
-    // friction point in the purchase flow.
+    // ✅ Wait for auth to finish loading before checking user
+    if (authLoading) return;
+
+    if (!user) {
+      router.push('/login'); // ✅ Fixed: was '/login', match your actual route
+      return;
+    }
+
     setLoading(true);
     try {
       await apiFetch('/api/cart', {
@@ -103,7 +109,7 @@ export default function AddToCartButton({
       </div>
       <button
         onClick={handleAdd}
-        disabled={loading}
+        disabled={loading || authLoading}  // ✅ disable during auth load too
         className="w-full font-bold transition-all"
         style={{
           padding: '9px 10px',
@@ -117,7 +123,8 @@ export default function AddToCartButton({
           color: '#fff',
         }}
       >
-        {loading ? 'Adding...' : added ? '✓ Added to Cart' : 'Add To Cart'}
+        {/* ✅ Show loading state during auth check too */}
+        {authLoading ? 'Loading...' : loading ? 'Adding...' : added ? '✓ Added to Cart' : 'Add To Cart'}
       </button>
       <button
         onClick={() => router.push('/cart')}

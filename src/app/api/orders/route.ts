@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { createOrderFromCart, getUserOrders } from '@/services/order.service';
-import { withCartAuth, CartAuthenticatedRequest } from '@/middleware/auth.middleware';
+import { withAuth, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
 
@@ -20,10 +20,6 @@ const createOrderSchema = z.object({
   shippingAddress:  shippingSchema,
   paymentMethod:    z.enum(['paypal', 'cod']),
   couponCode:       z.string().optional(),
-  // Required when checking out as a guest (no account to source an email
-  // from). Optional for logged-in users — ignored if present, since their
-  // account email is used instead.
-  guestEmail:       z.string().email().optional(),
   // ShipEngine shipping selection saved at checkout
   shippingCarrier:           z.string().optional(),
   shippingService:           z.string().optional(),
@@ -35,7 +31,7 @@ const createOrderSchema = z.object({
 });
 
 // POST /api/orders
-export const POST = withCartAuth(async (req: CartAuthenticatedRequest) => {
+export const POST = withAuth(async (req: AuthenticatedRequest) => {
   try {
     await connectDB();
     const body = await req.json();
@@ -49,7 +45,6 @@ export const POST = withCartAuth(async (req: CartAuthenticatedRequest) => {
       shippingAddress,
       paymentMethod,
       couponCode,
-      guestEmail,
       shippingCarrier,
       shippingService,
       shippingServiceCode,
@@ -58,14 +53,6 @@ export const POST = withCartAuth(async (req: CartAuthenticatedRequest) => {
       shippingEstimatedDays,
       shippingEstimatedDelivery,
     } = parsed.data;
-
-    // A guest checking out MUST supply an email — it's the only way to send
-    // confirmation/shipping emails and the only way they can later look this
-    // order up. Validated here (not just in the zod schema) since the schema
-    // field is optional to accommodate logged-in users.
-    if (!req.identity.userId && !guestEmail) {
-      return errorResponse('Email is required to check out as a guest', 400);
-    }
 
     const shippingSelection = (shippingCarrier || shippingRateId) ? {
       shippingCarrier,
@@ -78,12 +65,11 @@ export const POST = withCartAuth(async (req: CartAuthenticatedRequest) => {
     } : undefined;
 
     const order = await createOrderFromCart(
-      req.identity,
+      req.user.userId,
       shippingAddress,
       paymentMethod,
       couponCode,
-      shippingSelection,
-      guestEmail
+      shippingSelection
     );
 
     return successResponse(order, 201);
@@ -93,16 +79,10 @@ export const POST = withCartAuth(async (req: CartAuthenticatedRequest) => {
 });
 
 // GET /api/orders
-// Order history is an account feature — guests have no login to list orders
-// under, so this stays user-only. A guest lands on their order-confirmation
-// page right after checkout instead (GET /api/orders/[id], identity-scoped).
-export const GET = withCartAuth(async (req: CartAuthenticatedRequest) => {
+export const GET = withAuth(async (req: AuthenticatedRequest) => {
   try {
-    if (!req.identity.userId) {
-      return errorResponse('Sign in to view your order history', 401);
-    }
     await connectDB();
-    const orders = await getUserOrders(req.identity.userId);
+    const orders = await getUserOrders(req.user.userId);
     return successResponse(orders);
   } catch {
     return errorResponse('Failed to fetch orders', 500);

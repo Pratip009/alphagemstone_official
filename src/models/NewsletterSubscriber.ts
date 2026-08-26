@@ -32,7 +32,8 @@ const NewsletterSubscriberSchema = new Schema<INewsletterSubscriber>(
   { timestamps: true }
 );
 
-NewsletterSubscriberSchema.index({ email: 1 });
+// Note: email index is already created by `unique: true` in the schema field definition.
+// Only the status index is needed here.
 NewsletterSubscriberSchema.index({ status: 1 });
 
 const NewsletterSubscriber =

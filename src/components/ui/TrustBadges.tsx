@@ -200,6 +200,8 @@ export default function TrustBadges() {
       </div>
 
       <style>{`
+       
+
         @keyframes hexSpin {
           0%   { filter: hue-rotate(0deg) brightness(1); }
           50%  { filter: hue-rotate(15deg) brightness(1.2); }

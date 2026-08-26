@@ -11,13 +11,14 @@ const schema = z.discriminatedUnion('action', [
 ]);
 
 export const PUT = withAdmin(
-  async (req: NextRequest & { user: { userId: string } }, { params }: { params: { userId: string } }) => {
+  async (req: NextRequest & { user: { userId: string } }, { params }: { params: Promise<{ userId: string }> }) => {
     try {
+      const { userId } = await params;
       const body = await req.json();
       const parsed = schema.safeParse(body);
       if (!parsed.success) return errorResponse('Invalid request', 400, parsed.error.flatten().fieldErrors);
 
-      const user = await adminUpdateEligibility(params.userId, req.user.userId, parsed.data);
+      const user = await adminUpdateEligibility(userId, req.user.userId, parsed.data);
       return successResponse(
         { userId: user._id, memoStatus: user.memoStatus, memoCreditLimit: user.memoCreditLimit },
         200

@@ -4,9 +4,10 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { adminPurchaseOutboundLabel, MemoError } from '@/services/memo.service';
 
 export const POST = withAdmin(
-  async (req: NextRequest & { user: { userId: string } }, { params }: { params: { id: string } }) => {
+  async (req: NextRequest & { user: { userId: string } }, { params }: { params: Promise<{ id: string }> }) => {
     try {
-      const memo = await adminPurchaseOutboundLabel(params.id, req.user.userId);
+      const { id } = await params;
+      const memo = await adminPurchaseOutboundLabel(id, req.user.userId);
       return successResponse(memo, 200);
     } catch (err) {
       if (err instanceof MemoError) return errorResponse(err.message, err.status);

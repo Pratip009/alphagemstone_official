@@ -42,8 +42,7 @@ interface CarrierShipment {
 
 interface Order {
   _id: string;
-  user?: { _id: string; name: string; email: string };
-  guestEmail?: string;
+  user: { _id: string; name: string; email: string };
   items: OrderItem[];
   shippingAddress: ShippingAddress;
   subtotal: number;
@@ -178,7 +177,7 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
           <div style={{ height: 1, background: 'linear-gradient(90deg, #c9a84c50, #ede9e1, transparent)', marginBottom: 36 }} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginBottom: 40 }}>
             {[
-              { title: 'Bill To', lines: [{ text: order.user?.name ?? (order.guestEmail ? 'Guest' : '—'), bold: true, size: 14 }, { text: order.user?.email ?? order.guestEmail ?? '—', color: '#6b6560' }] },
+              { title: 'Bill To', lines: [{ text: order.user?.name ?? '—', bold: true, size: 14 }, { text: order.user?.email ?? '—', color: '#6b6560' }] },
               { title: 'Ship To', lines: [{ text: order.shippingAddress.fullName, bold: true, size: 14 }, { text: order.shippingAddress.addressLine1 }, ...(order.shippingAddress.addressLine2 ? [{ text: order.shippingAddress.addressLine2 }] : []), { text: `${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postalCode}` }, { text: order.shippingAddress.country }] },
             ].map(({ title, lines }) => (
               <div key={title}>

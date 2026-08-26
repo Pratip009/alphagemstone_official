@@ -4,8 +4,6 @@ import { connectDB } from '@/lib/db';
 import '@/lib/registerModels';
 import { verifySignupOtp } from '@/services/otp.service';
 import { errorResponse } from '@/lib/api-response';
-import { extractGuestId, clearGuestCookie } from '@/lib/guest';
-import { mergeGuestCartIntoUser } from '@/services/cart.service';
 
 const schema = z.object({
   email: z.string().email(),
@@ -41,19 +39,6 @@ export async function POST(req: NextRequest) {
   maxAge: 60 * 60 * 24 * 7,
   path: '/',
 });
-
-    // Fold a guest cart (built up before this account existed) into the new
-    // user's cart. Never let a merge failure block account creation.
-    const guestId = extractGuestId(req);
-    if (guestId) {
-      try {
-        await mergeGuestCartIntoUser(guestId, result.user.id);
-      } catch (mergeErr) {
-        console.error('[verify-signup] guest cart merge failed:', mergeErr);
-      }
-      clearGuestCookie(response);
-    }
-
     return response;
   } catch (err) {
     console.error('[verify-signup]', err);

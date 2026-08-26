@@ -20,6 +20,7 @@ export interface OrderShippingData {
   shippingService?:           string | null;
   shippingRateId?:            string | null;
   shippingRate?:              number;
+  serviceFee?:                number;
   shippingEstimatedDelivery?: string | null;
   shippingEstimatedDays?:     number | null;
   trackingNumber?:            string | null;
@@ -66,6 +67,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
   const [error,          setError]          = useState<string | null>(null);
   const [success,        setSuccess]        = useState<string | null>(null);
   const [trackCooldown,  setTrackCooldown]  = useState(0); // seconds remaining
+  const [syncLoading,      setSyncLoading]      = useState(false);
 
   const [manualTracking,   setManualTracking]   = useState('');
   const [manualCarrier,    setManualCarrier]    = useState('');
@@ -76,7 +78,29 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
 
   // Auth is via the httpOnly cookie (credentials: 'include' below), not a header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+// ── Sync order status to "delivered" (carrier already confirmed it) ────────
+  async function handleSyncDelivered() {
+    setSyncLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res  = await fetch(`/api/admin/orders/${order._id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers,
+        body: JSON.stringify({ status: 'delivered' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? data.message ?? 'Failed to update status');
 
+      setSuccess('Order marked as delivered.');
+      onUpdate?.({ status: 'delivered' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setSyncLoading(false);
+    }
+  }
   // ── Purchase label ────────────────────────────────────────────────────────
   async function handlePurchaseLabel() {
     setLabelLoading(true);
@@ -112,7 +136,13 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
   }
 
   // ── Live tracking ─────────────────────────────────────────────────────────
+  // ShipStation V2 only supports tracking lookups by labelId, not by the
+  // customer-facing trackingNumber — see shipengine.service.ts.
   async function handleTrack() {
+    if (!labelId) {
+      setError('No ShipStation label on this order — live tracking isn\'t available. Use "Carrier Site" instead.');
+      return;
+    }
     if (tracking) { setTrackOpen(o => !o); return; }
     setTrackLoading(true);
     setError(null);
@@ -121,7 +151,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
         method: 'POST',
         credentials: 'include',
         headers,
-        body: JSON.stringify({ trackingNumber }),
+        body: JSON.stringify({ labelId }),
       });
       const data = await res.json();
 
@@ -234,6 +264,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
                 { label: 'Carrier',      value: order.shippingCarrier },
                 { label: 'Service',      value: order.shippingService },
                 { label: 'Quoted cost',  value: order.shippingRate != null ? `$${order.shippingRate.toFixed(2)}` : null },
+                { label: 'Service fee',  value: order.serviceFee ? `$${order.serviceFee.toFixed(2)}` : null },
                 { label: 'Est. delivery',value: order.shippingEstimatedDelivery ?? (order.shippingEstimatedDays ? `${order.shippingEstimatedDays} days` : null) },
                 { label: 'Rate ID',      value: order.shippingRateId, mono: true, muted: true },
               ].filter(r => r.value).map(({ label, value, mono, muted }) => (
@@ -301,7 +332,7 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
             </a>
           )}
 
-          {trackingNumber && (
+          {labelId && (
             <button
               onClick={handleTrack}
               disabled={trackLoading}
@@ -313,6 +344,11 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
                 : <><MapPin size={13} strokeWidth={2} /> {trackOpen ? 'Hide Tracking' : 'Live Tracking'}</>
               }
             </button>
+          )}
+          {!labelId && trackingNumber && (
+            <span className="flex items-center gap-1.5 px-4 py-2 text-[0.7rem] text-[#a09a90] italic">
+              No live tracking (manually entered — use Carrier Site link if available)
+            </span>
           )}
 
           {order.trackingUrl && (
@@ -398,6 +434,17 @@ export default function AdminOrderShipping({ order, onUpdate }: Props) {
                   <CheckCircle size={10} /> Delivered {tracking.deliveredAt}
                 </span>
               )}
+               {tracking.deliveredAt && order.status !== 'delivered' && (
+              <button
+                onClick={handleSyncDelivered}
+                disabled={syncLoading}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[0.7rem] font-semibold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                style={{ background: '#15803d', color: '#fff' }}
+              >
+                <CheckCircle size={12} />
+                {syncLoading ? 'Updating…' : 'Mark order as Delivered now'}
+              </button>
+            )}
             </div>
 
             {tracking.currentLocation && (

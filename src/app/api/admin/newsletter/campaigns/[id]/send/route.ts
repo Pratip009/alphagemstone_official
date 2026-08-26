@@ -4,10 +4,11 @@ import { sendCampaign } from '@/services/newsletter.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
-export const POST = withAdmin(async (_req: NextRequest, { params }: { params: { id: string } }) => {
+export const POST = withAdmin(async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     await connectDB();
-    const result = await sendCampaign(params.id);
+    const { id } = await context.params;
+    const result = await sendCampaign(id);
     return successResponse(result);
   } catch (err) {
     console.error('[POST /api/admin/newsletter/campaigns/[id]/send]', err);

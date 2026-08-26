@@ -1,11 +1,24 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { setAnalyticsUserId } from '@/lib/analytics';
+
+interface UserAddress {
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
 
 interface User {
   id: string;
   name: string;
   email: string;
   role: 'admin' | 'user';
+  phone?: string;
+  avatarUrl?: string;
+  address?: UserAddress;
 }
 
 interface AuthContextType {
@@ -14,6 +27,11 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<void>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Merges a partial user update (e.g. the response from PATCH /api/account)
+  // into the in-memory auth state, so anything reading `user` — like the
+  // navbar avatar/name — updates instantly without a round trip to /me.
+  updateUser: (partial: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
   isAdmin: boolean;
   loading: boolean;
 }
@@ -27,17 +45,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // The JWT lives only in the httpOnly `auth_token` cookie set by the server —
   // it's never readable from JS. On mount we ask the server who we are
   // (the cookie is sent automatically); no token is ever kept client-side.
+  const fetchMe = useCallback(async () => {
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      setUser(data.data);
+      return true;
+    }
+    return false;
+  }, []);
+
+const hasSessionHint = useCallback(() => {
+    if (typeof document === 'undefined') return false;
+    return document.cookie.split('; ').some((c) => c.startsWith('has_session='));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!cancelled && res.ok) {
-          const data = await res.json();
-          setUser(data.data);
+        if (hasSessionHint()) {
+          await fetchMe();
         }
       } catch {
-        // Not logged in / network error — treat as logged out.
+        
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -45,8 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
-
+  }, [fetchMe, hasSessionHint]);
+useEffect(() => {
+    setAnalyticsUserId(user?.id ?? null);
+  }, [user]);
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -98,6 +131,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateUser = useCallback((partial: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...partial } : prev));
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      await fetchMe();
+    } catch {
+      // ignore — caller can decide what to do if this silently no-ops
+    }
+  }, [fetchMe]);
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -105,6 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup,
       verifyOtp,
       logout,
+      updateUser,
+      refreshUser,
       isAdmin: user?.role === 'admin',
       loading,
     }}>
