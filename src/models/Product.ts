@@ -74,6 +74,10 @@ export interface IProduct extends Document {
   name: string;
   category: mongoose.Types.ObjectId;
   subcategory?: mongoose.Types.ObjectId;
+  // Third-level taxonomy — e.g. Tanzanite (subcategory) > "Oval Tanzanite".
+  // Optional: most subcategories have no children, so most products never
+  // set this. See SubSubcategory model for details.
+  subSubcategory?: mongoose.Types.ObjectId;
   price: number;
 
   productKind?: ProductKind;
@@ -193,6 +197,10 @@ const ProductSchema = new Schema<IProduct>(
     subcategory: {
       type: Schema.Types.ObjectId,
       ref: 'Subcategory',
+    },
+    subSubcategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'SubSubcategory',
     },
     price: {
       type: Number,
@@ -438,6 +446,8 @@ ProductSchema.index({ isActive: 1 });
 ProductSchema.index({ stock: 1 });
 ProductSchema.index({ createdAt: -1 });
 ProductSchema.index({ category: 1, subcategory: 1 });
+ProductSchema.index({ subSubcategory: 1, isActive: 1 });
+ProductSchema.index({ subcategory: 1, subSubcategory: 1, isActive: 1, createdAt: -1 });
 ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ category: 1, price: 1 });
 

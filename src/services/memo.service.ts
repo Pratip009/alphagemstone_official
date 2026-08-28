@@ -216,23 +216,13 @@ export async function createMemoRequest(input: CreateMemoInput): Promise<IMemo> 
       }
 
       // Single conditional update — never read-then-write for stock (§5.1).
-      // $ifNull guards against documents that predate the memo fields (e.g.
-      // bulk-imported catalogue rows that never went through a Mongoose
-      // save/create, so they never got the schema default written to disk).
-      // Without it, a missing reservedForMemo makes $subtract return null,
-      // and null >= quantity is always false — silently failing every
-      // reservation for such products even though memoEligible/isActive/
-      // stock all look correct on a normal (Mongoose-hydrated) read.
       const updated = await Product.findOneAndUpdate(
         {
           _id: line.productId,
           memoEligible: true,
           isActive: true,
           $expr: {
-            $gte: [
-              { $subtract: ['$stock', { $ifNull: ['$reservedForMemo', 0] }] },
-              line.quantity,
-            ],
+            $gte: [{ $subtract: ['$stock', '$reservedForMemo'] }, line.quantity],
           },
         },
         { $inc: { reservedForMemo: line.quantity } },

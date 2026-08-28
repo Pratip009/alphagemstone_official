@@ -28,6 +28,7 @@ export async function listProducts(params: ProductFilterParams) {
       .limit(limit)
       .populate('category', 'name slug')
       .populate('subcategory', 'name slug')
+      .populate('subSubcategory', 'name slug')
       .lean(),
     Product.countDocuments(query),
   ]);
@@ -60,6 +61,7 @@ export async function listProductsWithCategoryFilters(
       .limit(limit)
       .populate('category', 'name slug')
       .populate('subcategory', 'name slug')
+      .populate('subSubcategory', 'name slug')
       .lean(),
     Product.countDocuments(finalQuery),
     getApplicableFilterDefinitions({
@@ -162,6 +164,7 @@ export async function listProductsAdmin(params: AdminProductQueryParams) {
       .limit(limit)
       .populate('category', 'name slug')
       .populate('subcategory', 'name slug')
+      .populate('subSubcategory', 'name slug')
       .lean(),
     Product.countDocuments(query),
   ]);
@@ -302,6 +305,7 @@ export async function getProductById(id: string) {
   return Product.findOne({ _id: id, isActive: true })
     .populate('category', 'name slug')
     .populate('subcategory', 'name slug')
+    .populate('subSubcategory', 'name slug')
     .lean();
 }
 
@@ -316,6 +320,7 @@ export async function getProductsByIds(ids: string[]) {
   return Product.find({ _id: { $in: validIds }, isActive: true })
     .populate('category', 'name slug')
     .populate('subcategory', 'name slug')
+    .populate('subSubcategory', 'name slug')
     .lean();
 }
 

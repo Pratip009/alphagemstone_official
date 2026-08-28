@@ -27,6 +27,10 @@ const productSchema = z.object({
     .string()
     .optional()
     .transform((val) => (val === "" ? undefined : val)),
+  subSubcategory: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
   price: z.number().positive(),
   stock: z.number().int().min(0),
   images: z.array(z.string().min(1)).default([]),

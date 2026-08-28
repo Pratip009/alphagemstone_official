@@ -73,7 +73,7 @@ export async function generateMetadata({
 
   const label = isWatch ? "Timepieces" : isGemstone ? "Gemstones" : "Diamonds";
 
-  const filterBits = [sp.shape, sp.subcategory, sp.q ?? sp.search].filter(Boolean);
+  const filterBits = [sp.shape, sp.subcategory, sp.subSubcategory, sp.q ?? sp.search].filter(Boolean);
   const title = filterBits.length
     ? `${filterBits.join(" ")} ${label} | Alpha Gemstone`
     : `${label} | Alpha Gemstone`;
@@ -95,6 +95,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   const params: ProductFilterParams = {
     category:           sp.category,
     subcategory:        sp.subcategory,
+    subSubcategory:     sp.subSubcategory,
     shape:              sp.shape,
     color:              sp.color,
     clarity:            sp.clarity,
@@ -184,11 +185,21 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                     {productType === "watch" ? "Timepieces" : productType === "gemstone" ? "Gemstones" : "Diamonds"}
                   </h1>
                   <p className="mt-1.5 text-[10px] tracking-[0.25em] uppercase text-[#B8975A] font-medium">
-                    {productType === "watch"
-                      ? "Exceptional horological craftsmanship"
-                      : productType === "gemstone"
-                        ? "Certified natural gemstones"
-                        : "Ethically sourced · GIA & IGI certified"}
+                    {(() => {
+                      // If a sub-subcategory ("type") is in scope, surface its
+                      // resolved name (from the populated field on the first
+                      // matched product) instead of the generic tagline —
+                      // confirms to the shopper the exact type they drilled
+                      // into (e.g. "Oval Tanzanite").
+                      const firstProduct = products[0] as Record<string, unknown> | undefined;
+                      const subSubName = (firstProduct?.subSubcategory as { name?: string } | undefined)?.name;
+                      if (sp.subSubcategory && subSubName) return subSubName;
+                      return productType === "watch"
+                        ? "Exceptional horological craftsmanship"
+                        : productType === "gemstone"
+                          ? "Certified natural gemstones"
+                          : "Ethically sourced · GIA & IGI certified";
+                    })()}
                   </p>
                 </div>
 

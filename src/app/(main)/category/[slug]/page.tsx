@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db";
-import { listSubcategories } from "@/services/category.service";
+import { listSubcategoriesWithChildFlag } from "@/services/category.service";
 import Category from "@/models/Category";
 import { notFound } from "next/navigation";
 import CategoryClientPage from "./CategoryClientPage";
@@ -27,23 +27,22 @@ export default async function CategoryPage({ params }: PageProps) {
   const category = await Category.findOne({ slug, isActive: true }).lean();
   if (!category) notFound();
 
-  const allSubs = await listSubcategories();
   const catId = (category as any)._id?.toString();
+  const subsWithFlag = await listSubcategoriesWithChildFlag(catId);
 
-  const subcategories = allSubs
-    .filter((s) => (s.category as any)?._id?.toString() === catId && s.isActive)
-    .map((s) => ({
-      _id: String((s as any)._id),
-      name: s.name,
-      slug: s.slug,
-      imageUrl: (s as any).imageUrl ?? null,
-      description: (s as any).description ?? null,
-      category: {
-        _id: catId,
-        name: (category as any).name,
-        slug: (category as any).slug,
-      },
-    }));
+  const subcategories = subsWithFlag.map((s) => ({
+    _id: String((s as any)._id),
+    name: s.name,
+    slug: s.slug,
+    imageUrl: (s as any).imageUrl ?? null,
+    description: (s as any).description ?? null,
+    hasChildren: (s as any).hasChildren ?? false,
+    category: {
+      _id: catId,
+      name: (category as any).name,
+      slug: (category as any).slug,
+    },
+  }));
 
   // "Specials" also carries a few virtual subcategories (Make An Offer,
   // $9.99/$24.99/$99.00 Specials) that aren't real Subcategory documents —
@@ -57,6 +56,7 @@ export default async function CategoryPage({ params }: PageProps) {
         slug: v.slug,
         imageUrl: null,
         description: v.description,
+        hasChildren: false,
         category: {
           _id: catId,
           name: (category as any).name,

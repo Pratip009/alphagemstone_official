@@ -12,6 +12,10 @@ export interface ProductFilterParams {
   // Category
   category?: string;
   subcategory?: string;
+  // Third-level taxonomy under subcategory (e.g. Tanzanite > "Oval
+  // Tanzanite"). Slug or ObjectId — resolved to an ObjectId by
+  // resolveSlugFilters() just like category/subcategory.
+  subSubcategory?: string;
   // Internal — set by resolveSlugFilters(), never passed in from a route.
   // When the requested subcategory is one of the "Specials" cross-listing
   // subcategories, this carries its legacy category id so
@@ -158,6 +162,16 @@ const lookupSubcategoryId = cache(async (slug: string) => {
   return sub ? sub._id.toString() : '000000000000000000000000';
 });
 
+const lookupSubSubcategoryId = cache(async (slug: string) => {
+  // Lazy import to avoid pulling SubSubcategory into every module that
+  // imports this file just for the type.
+  const { default: SubSubcategory } = await import('@/models/SubSubcategory');
+  const sub = await SubSubcategory.findOne({ slug, isActive: true })
+    .select('_id')
+    .lean();
+  return sub ? sub._id.toString() : '000000000000000000000000';
+});
+
 export async function resolveSlugFilters(
   params: ProductFilterParams
 ): Promise<ProductFilterParams> {
@@ -194,15 +208,19 @@ export async function resolveSlugFilters(
     !!resolved.category && !isObjectId(resolved.category);
   const needsSubcategory =
     !!resolved.subcategory && !isObjectId(resolved.subcategory);
+  const needsSubSubcategory =
+    !!resolved.subSubcategory && !isObjectId(resolved.subSubcategory);
 
   // Independent lookups — run concurrently instead of one after another.
-  const [catId, subId] = await Promise.all([
+  const [catId, subId, subSubId] = await Promise.all([
     needsCategory ? lookupCategoryId(resolved.category as string) : null,
     needsSubcategory ? lookupSubcategoryId(resolved.subcategory as string) : null,
+    needsSubSubcategory ? lookupSubSubcategoryId(resolved.subSubcategory as string) : null,
   ]);
 
   if (needsCategory) resolved.category = catId as string;
   if (needsSubcategory) resolved.subcategory = subId as string;
+  if (needsSubSubcategory) resolved.subSubcategory = subSubId as string;
 
   return resolved;
 }
@@ -275,6 +293,15 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
   } else if (params.category) {
     filter.category = toObjectIdIfValid(params.category);
   }
+
+  // ── Sub-subcategory (third taxonomy level) ──────────────────────────────
+  // Independent of the subcategory $or scoping above — a product must have
+  // BOTH the right subcategory (handled above) AND this exact
+  // sub-subcategory, so a plain top-level filter field is correct here.
+  if (params.subSubcategory) {
+    filter.subSubcategory = toObjectIdIfValid(params.subSubcategory);
+  }
+
   if (params.productKind) filter.productKind = params.productKind;
 
   // ── Diamond / gemstone multi-select filters ────────────────────────────────
@@ -565,6 +592,9 @@ function baseSimpleFilter(params: ProductFilterParams): FilterQuery<IProduct> {
     filter.$or = scopeOr;
   } else if (params.category) {
     filter.category = toObjectIdIfValid(params.category);
+  }
+  if (params.subSubcategory) {
+    filter.subSubcategory = toObjectIdIfValid(params.subSubcategory);
   }
   if (params.productKind) filter.productKind = params.productKind;
   return filter;

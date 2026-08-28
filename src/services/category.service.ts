@@ -1,5 +1,6 @@
 import Category from '@/models/Category';
 import Subcategory from '@/models/Subcategory';
+import SubSubcategory from '@/models/SubSubcategory';
 
 function slugify(text: string): string {
   return text
@@ -99,7 +100,9 @@ export async function createSubcategory(
   const existing = await Subcategory.findOne({ slug, category: categoryId }).lean();
   if (existing) throw new Error('Subcategory already exists in this category');
 
-  const sub = new Subcategory({ name, slug, category: categoryId, description });
+  const sub = new Subcategory({
+    name, slug, category: categoryId, description, imageUrl, imagePublicId,
+  });
   await sub.save();
   return sub.toObject();
 }
@@ -111,4 +114,78 @@ export async function listSubcategories(categoryId?: string) {
     .populate('category', 'name slug')
     .sort({ name: 1 })
     .lean();
+}
+
+// ─── SubSubcategory (third taxonomy level) ─────────────────────────────────
+
+export async function createSubSubcategory(
+  name: string,
+  subcategoryId: string,
+  description?: string,
+  imageUrl?: string,
+  imagePublicId?: string
+) {
+  const subcategory = await Subcategory.findById(subcategoryId).lean();
+  if (!subcategory) throw new Error('Subcategory not found');
+
+  const slug = slugify(name);
+  const existing = await SubSubcategory.findOne({ slug, subcategory: subcategoryId }).lean();
+  if (existing) throw new Error('This sub-subcategory already exists under this subcategory');
+
+  const last = await SubSubcategory.findOne({ subcategory: subcategoryId })
+    .sort({ sortOrder: -1 })
+    .lean();
+  const sortOrder = last ? ((last as any).sortOrder ?? 0) + 1 : 0;
+
+  const doc = new SubSubcategory({
+    name,
+    slug,
+    subcategory: subcategoryId,
+    category: (subcategory as any).category,
+    description,
+    imageUrl,
+    imagePublicId,
+    sortOrder,
+  });
+  await doc.save();
+  return doc.toObject();
+}
+
+export async function listSubSubcategories(subcategoryId?: string) {
+  const filter: Record<string, unknown> = { isActive: true };
+  if (subcategoryId) filter.subcategory = subcategoryId;
+  return SubSubcategory.find(filter)
+    .populate('subcategory', 'name slug')
+    .populate('category', 'name slug')
+    .sort({ sortOrder: 1, name: 1 })
+    .lean();
+}
+
+/**
+ * Every Subcategory belonging to `categoryId`, each annotated with
+ * `hasChildren` — whether it has at least one active SubSubcategory.
+ *
+ * This is what the storefront category landing page uses to decide, per
+ * subcategory card, whether clicking it should open the intermediate
+ * "sub-subcategory" grid (Tanzanite → shapes) or go straight to the
+ * product listing (most subcategories, which have no children).
+ */
+export async function listSubcategoriesWithChildFlag(categoryId: string) {
+  const subs = await Subcategory.find({ category: categoryId, isActive: true })
+    .populate('category', 'name slug')
+    .sort({ name: 1 })
+    .lean();
+
+  if (subs.length === 0) return [];
+
+  const childCounts = await SubSubcategory.aggregate([
+    { $match: { subcategory: { $in: subs.map((s) => s._id) }, isActive: true } },
+    { $group: { _id: '$subcategory', count: { $sum: 1 } } },
+  ]);
+  const childCountMap = new Map(childCounts.map((c) => [String(c._id), c.count as number]));
+
+  return subs.map((s) => ({
+    ...s,
+    hasChildren: (childCountMap.get(String(s._id)) ?? 0) > 0,
+  }));
 }

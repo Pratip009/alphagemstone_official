@@ -9,6 +9,11 @@ interface ISubcategory {
   slug: string;
   imageUrl?: string | null;
   description?: string | null;
+  // Whether this subcategory has its own child sub-subcategories (e.g.
+  // Tanzanite → Oval/Trillion/Calibrated…). When true, clicking the card
+  // opens the intermediate sub-subcategory grid instead of going straight
+  // to the product listing.
+  hasChildren?: boolean;
   category: { _id: string; name: string; slug: string };
 }
 
@@ -146,9 +151,18 @@ function SubcategoryCard({
 export default function CategoryClientPage({
   category,
   subcategories,
+  // When rendering the intermediate "sub-subcategory" grid (e.g. Tanzanite
+  // → Oval Tanzanite / Trillion Tanzanite / …), `mode` is 'subsubcategory'
+  // and `parentSubcategorySlug` carries the subcategory these entries sit
+  // under — needed to build the final /products URL. In the normal
+  // Category → Subcategory grid, both are omitted.
+  mode = "subcategory",
+  parentSubcategorySlug,
 }: {
   category: ICategory;
   subcategories: ISubcategory[];
+  mode?: "subcategory" | "subsubcategory";
+  parentSubcategorySlug?: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -165,7 +179,23 @@ export default function CategoryClientPage({
     ? cleanDescription.split(/\n\n+/).filter((p) => p.trim().length > 0)
     : [];
 
+  const collectionNoun = mode === "subsubcategory" ? "Type" : "Collection";
+  const collectionNounPlural = mode === "subsubcategory" ? "Types" : "Collections";
+
   function handleSelectSub(sub: ISubcategory) {
+    if (mode === "subsubcategory") {
+      // Leaf level — always goes straight to the filtered product listing.
+      router.push(
+        `/products?category=${sub.category.slug}&subcategory=${parentSubcategorySlug}&subSubcategory=${sub.slug}`
+      );
+      return;
+    }
+    if (sub.hasChildren) {
+      // e.g. Tanzanite → Oval Tanzanite / Trillion Tanzanite / … — show the
+      // intermediate grid instead of jumping straight to products.
+      router.push(`/category/${sub.category.slug}/${sub.slug}`);
+      return;
+    }
     router.push(
       `/products?category=${sub.category.slug}&subcategory=${sub.slug}`
     );
@@ -521,7 +551,7 @@ export default function CategoryClientPage({
           <div className="cat-hero-inner">
             <div className="cat-hero-eyebrow">
               <div className="cat-hero-eyebrow-line" />
-              <span>Collection</span>
+              <span>{collectionNoun}</span>
               <div className="cat-hero-eyebrow-line rev" />
             </div>
             <h1 className="cat-hero-title">{category.name}</h1>
@@ -551,7 +581,7 @@ export default function CategoryClientPage({
                 <div className="cat-desc-count-pill">
                   <div className="cat-desc-count-dot" />
                   {subcategories.length}{" "}
-                  {subcategories.length === 1 ? "Collection" : "Collections"}
+                  {subcategories.length === 1 ? collectionNoun : collectionNounPlural}
                 </div>
               </div>
 
@@ -572,10 +602,10 @@ export default function CategoryClientPage({
             {/* Toolbar */}
             <div className="cat-toolbar">
               <div className="cat-toolbar-left">
-                <div className="cat-toolbar-heading">Browse Collections</div>
+                <div className="cat-toolbar-heading">Browse {collectionNounPlural}</div>
                 <div className="cat-toolbar-sub">
                   {filtered.length} of {subcategories.length}{" "}
-                  {subcategories.length === 1 ? "collection" : "collections"}
+                  {subcategories.length === 1 ? collectionNoun.toLowerCase() : collectionNounPlural.toLowerCase()}
                   {search && ` matching "${search}"`}
                 </div>
               </div>
