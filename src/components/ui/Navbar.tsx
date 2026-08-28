@@ -195,30 +195,50 @@ export default function Navbar({
   const navRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const HOVER_OPEN_DELAY = 200;
+    const updateNavbarHeight = () => {
+    if (navRef.current) {
+      // Use the nav's actual distance from the top of the viewport
+      // (its bottom edge), not just its own height. When the
+      // announcement bar is visible, the nav sits below it, so
+      // height alone under-counts the offset and the dropdown ends
+      // up overlapping the nav links.
+      const bottom = navRef.current.getBoundingClientRect().bottom;
+      document.documentElement.style.setProperty(
+        "--navbar-height",
+        `${bottom}px`,
+      );
+    }
+  };
+
   useEffect(() => {
-    const update = () => {
-      if (navRef.current) {
-        // Use the nav's actual distance from the top of the viewport
-        // (its bottom edge), not just its own height. When the
-        // announcement bar is visible, the nav sits below it, so
-        // height alone under-counts the offset and the dropdown ends
-        // up overlapping the nav links.
-        const bottom = navRef.current.getBoundingClientRect().bottom;
-        document.documentElement.style.setProperty(
-          "--navbar-height",
-          `${bottom}px`,
-        );
-      }
-    };
-    update();
-    window.addEventListener("resize", update);
+    updateNavbarHeight();
+    window.addEventListener("resize", updateNavbarHeight);
     // Recompute on scroll too — the announcement bar scrolls away as
     // the sticky nav settles at top:0, which changes this offset
     // independently of resize events.
-    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("scroll", updateNavbarHeight, { passive: true });
+
+    // At the very top of the page, before any scroll/resize ever fires,
+    // the first measurement can run before web fonts finish loading —
+    // the fallback font renders a slightly different nav height than the
+    // real one, so --navbar-height gets set a few px short/long and the
+    // dropdown opens with a visible gap (or overlap) under the nav. Fix
+    // it by re-measuring once the fonts actually settle...
+    document.fonts?.ready?.then(updateNavbarHeight).catch(() => {});
+
+    // ...and by watching the nav element directly, so ANY layout shift
+    // (fonts, logo image load, responsive wrapping) re-syncs the value
+    // immediately instead of waiting for the user to scroll first.
+    let observer: ResizeObserver | null = null;
+    if (navRef.current && "ResizeObserver" in window) {
+      observer = new ResizeObserver(() => updateNavbarHeight());
+      observer.observe(navRef.current);
+    }
+
     return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", updateNavbarHeight);
+      window.removeEventListener("scroll", updateNavbarHeight);
+      observer?.disconnect();
     };
   }, []);
 
@@ -260,26 +280,7 @@ export default function Navbar({
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
-  const updateNavbarHeight = () => {
-    if (navRef.current) {
-      const bottom = navRef.current.getBoundingClientRect().bottom;
-      document.documentElement.style.setProperty(
-        "--navbar-height",
-        `${bottom}px`,
-      );
-    }
-  };
-
-  useEffect(() => {
-    updateNavbarHeight();
-    window.addEventListener("resize", updateNavbarHeight);
-    window.addEventListener("scroll", updateNavbarHeight, { passive: true });
-    return () => {
-      window.removeEventListener("resize", updateNavbarHeight);
-      window.removeEventListener("scroll", updateNavbarHeight);
-    };
-  }, []);
-
+ 
   const scheduleOpen = (slug: string) => {
     cancelClose();
     if (openTimer.current) clearTimeout(openTimer.current);
@@ -1791,7 +1792,7 @@ export default function Navbar({
                     }}
                   >
                     <Link
-                      href={`/products?category=${cat.slug}`}
+                      href={`/category/${cat.slug}`}
                       className={`cat-tab${isOpen ? " open" : ""}`}
                       data-track-click={`category_tab_${cat.slug}`}
                       prefetch={false}
@@ -1834,27 +1835,27 @@ export default function Navbar({
              the dropdown never actually closed it. Now it schedules a
              close (same as leaving the tab) and also closes on click. */}
         <div
-        className={`mega-backdrop${openDropdown ? " visible" : ""}`}
-        onMouseEnter={schedulClose}
-        onClick={() => {
-          cancelOpen();
-          setOpenDropdown(null);
-        }}
-      />
-      {!loading &&
-        categories.map((cat, i) => {
-          if ((cat.subcategories?.length ?? 0) === 0) return null;
-          const isOpen = openDropdown === cat.slug;
-          return (
-            <div
-              key={cat._id}
-              className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
-              onMouseEnter={cancelClose}
-              onMouseLeave={() => {
-                cancelOpen();
-                schedulClose();
-              }}
-            >
+          className={`mega-backdrop${openDropdown ? " visible" : ""}`}
+          onMouseEnter={schedulClose}
+          onClick={() => {
+            cancelOpen();
+            setOpenDropdown(null);
+          }}
+        />
+        {!loading &&
+          categories.map((cat, i) => {
+            if ((cat.subcategories?.length ?? 0) === 0) return null;
+            const isOpen = openDropdown === cat.slug;
+            return (
+              <div
+                key={cat._id}
+                className={`cat-dropdown${isOpen ? " visible" : " hidden"}`}
+                onMouseEnter={cancelClose}
+                onMouseLeave={() => {
+                  cancelOpen();
+                  schedulClose();
+                }}
+              >
                 <div className="mega-inner">
                   <div className="mega-feature">
                     <FacetPattern seed={i} />
@@ -1868,8 +1869,8 @@ export default function Navbar({
                       {cat.subcategories.length === 1 ? "cut" : "cuts"} &amp;
                       styles
                     </p>
-                    <Link
-                      href={`/products?category=${cat.slug}`}
+                                        <Link
+                      href={`/category/${cat.slug}`}
                       onClick={() => {
                         setOpenDropdown(null);
                         trackEvent("cta_click", {
@@ -1990,7 +1991,7 @@ export default function Navbar({
                           filterType: "category",
                           filterValue: cat.slug,
                         });
-                        router.push(`/products?category=${cat.slug}`);
+                                                router.push(`/category/${cat.slug}`);
                         setMenuOpen(false);
                       } else {
                         setActiveMobileCategory(isExpanded ? null : cat.slug);
@@ -2037,8 +2038,8 @@ export default function Navbar({
                           : "0",
                       }}
                     >
-                      <Link
-                        href={`/products?category=${cat.slug}`}
+                                            <Link
+                        href={`/category/${cat.slug}`}
                         onClick={() => setMenuOpen(false)}
                         className="mobile-sub-all"
                       >
