@@ -1,9 +1,15 @@
 /**
  * Seeds the third-level "type" taxonomy (SubSubcategory) under existing
- * gemstone Subcategories — e.g. Tanzanite → Oval Tanzanite / Trillion
- * Tanzanite / Calibrated Tanzanite / … — and (optionally) best-effort links
- * existing products to the right one by matching keywords against each
- * product's name/shapeRaw/cutType/treatment/gemstoneName.
+ * Subcategories — e.g. Tanzanite → Oval Tanzanite / Trillion Tanzanite /
+ * Calibrated Tanzanite / …, or Silver Jewelry → Silver Rings / Silver
+ * Earrings / … — and (optionally) best-effort links existing products to
+ * the right one by matching keywords against each product's
+ * name/shapeRaw/cutType/treatment/gemstoneName/colorRaw/description.
+ *
+ * The taxonomy + matching logic lives in ./lib/subsubcategory-taxonomy.mjs
+ * so it can be validated against real product data independently of Mongo
+ * (see scripts/report-subsubcategory-counts.mjs for a read-only DB report,
+ * or run the taxonomy module against an exported CSV for offline checks).
  *
  * This is DRY-RUN by default — it only prints what it *would* do. Nothing
  * is written to the DB until you pass --commit.
@@ -16,16 +22,16 @@
  *
  * IMPORTANT: the product auto-linking is a best-effort keyword match, not a
  * guarantee. After running with --link-products, spot-check a few products
- * per subcategory in the admin UI (or scripts/list-subcategories.mjs-style
- * report) before relying on it in production. Products that don't match any
- * keyword are left alone — they simply keep showing up under the parent
- * Subcategory's plain listing instead of a specific Type.
+ * per subcategory in the admin UI, or run
+ * scripts/report-subsubcategory-counts.mjs to see linked-product counts per
+ * type and catch anything that's still empty.
  *
  * Requires MONGODB_URI in environment or .env / .env.local file.
  */
 
 import mongoose from 'mongoose';
 import { config } from 'dotenv';
+import { TAXONOMY, matches, slugify } from './lib/subsubcategory-taxonomy.mjs';
 
 config({ path: '.env.local' });
 config();
@@ -40,7 +46,6 @@ const COMMIT = process.argv.includes('--commit');
 const LINK_PRODUCTS = process.argv.includes('--link-products');
 
 // ── Minimal inline schemas ───────────────────────────────────────────────────
-const CategorySchema = new mongoose.Schema({ name: String, slug: String });
 const SubcategorySchema = new mongoose.Schema({
   name: String, slug: String, category: mongoose.Schema.Types.ObjectId, isActive: Boolean,
 });
@@ -58,100 +63,15 @@ const ProductSchema = new mongoose.Schema(
     name: String, category: mongoose.Schema.Types.ObjectId, subcategory: mongoose.Schema.Types.ObjectId,
     subSubcategory: mongoose.Schema.Types.ObjectId,
     gemstoneName: String, shapeRaw: String, cutType: String, treatment: String, colorRaw: String,
+    description: String,
     isActive: Boolean,
   },
   { strict: false }
 );
 
-const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);
 const Subcategory = mongoose.models.Subcategory || mongoose.model('Subcategory', SubcategorySchema);
 const SubSubcategory = mongoose.models.SubSubcategory || mongoose.model('SubSubcategory', SubSubcategorySchema);
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
-
-function slugify(text) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-// ── Taxonomy definition, transcribed from semisubcategories.txt ─────────────
-// `match` is an array of keyword groups; a product matches a child if ANY
-// group matches, and a group matches if ALL its keywords are found
-// (case-insensitive substring) somewhere across name/shapeRaw/cutType/
-// treatment/gemstoneName/colorRaw.
-const SHAPE_CHILDREN = (suffix) => [
-  { name: `Calibrated ${suffix}`,   match: [['calibrated']] },
-  { name: `Oval ${suffix}`,         match: [['oval']] },
-  { name: `Trillion ${suffix}`,     match: [['trillion']] },
-  { name: `Cushion ${suffix}`,      match: [['cushion']] },
-  { name: `Pear ${suffix}`,         match: [['pear']] },
-  { name: `Round ${suffix}`,        match: [['round']] },
-  { name: `Emerald Cut ${suffix}`,  match: [['emerald', 'cut'], ['emerald-cut']] },
-  { name: `Marquise ${suffix}`,     match: [['marquise']] },
-  { name: `Heart Shape ${suffix}`,  match: [['heart']] },
-];
-
-const CUT_CHILDREN = (suffix) => [
-  { name: `Faceted ${suffix}`,  match: [['faceted']] },
-  { name: `Cabochon ${suffix}`, match: [['cabochon']] },
-];
-
-const TAXONOMY = [
-  // ── Precious Gems ──────────────────────────────────────────────────────
-  { subcategory: 'Tanzanite', children: SHAPE_CHILDREN('Tanzanite') },
-  { subcategory: 'Emerald',   children: CUT_CHILDREN('Emeralds') },
-  { subcategory: 'Ruby',      children: CUT_CHILDREN('Ruby') },
-  {
-    subcategory: 'Sapphire',
-    children: [
-      { name: 'Blue Sapphire',       match: [['blue']] },
-      { name: 'Pink Sapphire',       match: [['pink']] },
-      { name: 'Orange Sapphire',     match: [['orange']] },
-      { name: 'Yellow Sapphire',     match: [['yellow']] },
-      { name: 'White Sapphire',      match: [['white']] },
-      { name: 'Green Sapphire',      match: [['green']] },
-      { name: 'Multicolor Sapphire', match: [['multicolor'], ['multi-color'], ['multi', 'color'], ['parti']] },
-    ],
-  },
-
-  // ── Semi Precious ──────────────────────────────────────────────────────
-  { subcategory: 'Amethyst',        children: CUT_CHILDREN('Amethyst') },
-  { subcategory: 'Chrome Diopside', children: CUT_CHILDREN('Chrome Diopside') },
-  { subcategory: 'Citrine',         children: CUT_CHILDREN('Citrine') },
-  { subcategory: 'Garnet',          children: CUT_CHILDREN('Garnet') },
-  { subcategory: 'Iolite',          children: CUT_CHILDREN('Iolite') },
-  { subcategory: 'Onyx',            children: CUT_CHILDREN('Onyx') },
-  { subcategory: 'Peridot',         children: CUT_CHILDREN('Peridot') },
-  {
-    subcategory: 'Quartz',
-    children: [
-      { name: 'Canary Green Gold Quartz', match: [['canary', 'green', 'gold']] },
-      { name: 'Cinnamon Citrine Quartz',  match: [['cinnamon', 'citrine']] },
-      { name: 'Crystal Quartz',           match: [['crystal', 'quartz']] },
-      { name: 'Madeira Citrine',          match: [['madeira']] },
-      { name: 'Olive Quartz',             match: [['olive']] },
-      { name: 'Green Golden Quartz',      match: [['green', 'gold']] },
-      { name: 'Rose Quartz',              match: [['rose']] },
-      { name: 'Rutilated Quartz',         match: [['rutilated'], ['rutile']] },
-      { name: 'Smoky Quartz',             match: [['smoky'], ['smokey']] },
-      { name: 'White Quartz',             match: [['white']] },
-    ],
-  },
-  { subcategory: 'Rhodolite Garnet', children: CUT_CHILDREN('Rhodolite Garnet') },
-  { subcategory: 'Sky Blue Topaz',   children: CUT_CHILDREN('Sky Blue Topaz') },
-  { subcategory: 'Swiss Blue Topaz', children: CUT_CHILDREN('Swiss Blue Topaz') },
-  { subcategory: 'Tourmaline',       children: CUT_CHILDREN('Tourmaline') },
-];
-
-function haystack(product) {
-  return [
-    product.name, product.shapeRaw, product.cutType,
-    product.treatment, product.gemstoneName, product.colorRaw,
-  ].filter(Boolean).join(' ').toLowerCase();
-}
-
-function matches(product, matchGroups) {
-  const hay = haystack(product);
-  return matchGroups.some((group) => group.every((kw) => hay.includes(kw)));
-}
 
 async function main() {
   await mongoose.connect(MONGODB_URI);
