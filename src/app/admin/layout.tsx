@@ -30,7 +30,6 @@ const NAV = [
   { href: "/admin/products", label: "Products", icon: Gem },
   { href: "/admin/upload", label: "Bulk Upload", icon: UploadCloud },
   { href: "/admin/categories", label: "Categories", icon: Layers },
-  { href: "/admin/subsubcategories", label: "Sub-Subcategories", icon: Layers },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/contacts", label: "Contacts", icon: Users },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquareText },

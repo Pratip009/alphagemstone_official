@@ -6,6 +6,7 @@ import { createSubSubcategory, listSubSubcategories } from '@/services/category.
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { uploadBuffer } from '@/lib/r2';
+import { assertValidImageBuffer } from '@/lib/file-signature';
 
 // ── POST /api/admin/subsubcategories ─────────────────────────────────────────
 // Accepts EITHER:
@@ -34,7 +35,19 @@ export const POST = withAdmin(async (req: NextRequest) => {
         if (file.size > 5 * 1024 * 1024)
           return errorResponse('Image must be ≤ 5 MB', 400);
 
-        const buffer   = Buffer.from(await file.arrayBuffer());
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Client-supplied MIME type/extension are attacker-controlled and are
+        // never trusted for this decision — verify the actual bytes.
+        try {
+          assertValidImageBuffer(buffer);
+        } catch {
+          return errorResponse(
+            'Invalid file: content is not a supported image format (JPEG, PNG, WebP, GIF, BMP)',
+            400
+          );
+        }
+
         const uploaded = await uploadBuffer(buffer, file.name, 'subsubcategories');
         imageUrl      = uploaded.secure_url;
         imagePublicId = uploaded.public_id;

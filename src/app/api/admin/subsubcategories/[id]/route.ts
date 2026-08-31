@@ -5,6 +5,7 @@ import { connectDB } from '@/lib/db';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { uploadBuffer, destroyImage } from '@/lib/r2';
+import { assertValidImageBuffer } from '@/lib/file-signature';
 import SubSubcategory from '@/models/SubSubcategory';
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -65,9 +66,21 @@ export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
         if (file.size > 5 * 1024 * 1024)
           return errorResponse('Image must be ≤ 5 MB', 400);
 
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Client-supplied MIME type/extension are attacker-controlled and are
+        // never trusted for this decision — verify the actual bytes.
+        try {
+          assertValidImageBuffer(buffer);
+        } catch {
+          return errorResponse(
+            'Invalid file: content is not a supported image format (JPEG, PNG, WebP, GIF, BMP)',
+            400
+          );
+        }
+
         if (doc.imagePublicId) await destroyImage(doc.imagePublicId);
 
-        const buffer      = Buffer.from(await file.arrayBuffer());
         const uploaded    = await uploadBuffer(buffer, file.name, 'subsubcategories');
         doc.imageUrl      = uploaded.secure_url;
         doc.imagePublicId = uploaded.public_id;

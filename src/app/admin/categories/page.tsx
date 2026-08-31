@@ -4,7 +4,7 @@ import { useApi } from '@/hooks/useApi';
 import {
   Plus, Tag, Layers, CheckCircle2, AlertCircle,
   Search, Trash2, ChevronRight, FolderOpen, Folder, FileDown,
-  ImagePlus, X, Upload, Pencil, GripVertical,
+  ImagePlus, X, Upload, Pencil, GripVertical, Boxes,
   Bold, Italic, List, ListOrdered, Heading2, Heading3,
   Quote, Minus, RotateCcw, RotateCw, Link, AlignLeft,
 } from 'lucide-react';
@@ -14,6 +14,14 @@ interface Subcategory {
   _id: string; name: string; slug: string;
   category: { _id: string; name: string };
   imageUrl?: string;
+}
+interface SubSubcategory {
+  _id: string; name: string; slug: string;
+  subcategory: { _id: string; name: string };
+  category?: { _id: string; name: string };
+  imageUrl?: string;
+  sortOrder?: number;
+  isActive?: boolean;
 }
 
 // ─── Minimal Rich Text Editor ─────────────────────────────────────────────────
@@ -309,7 +317,9 @@ export default function AdminCategoriesPage() {
   const { apiFetch } = useApi();
   const [categories,    setCategories]    = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [subsubcategories, setSubsubcategories] = useState<SubSubcategory[]>([]);
   const [selectedCat,   setSelectedCat]   = useState<string | null>(null);
+  const [selectedSub,   setSelectedSub]   = useState<string | null>(null);
 
   // category form
   const [catName, setCatName] = useState('');
@@ -321,6 +331,23 @@ export default function AdminCategoriesPage() {
   const [subImage,   setSubImage]   = useState<File | null>(null);
   const [subPreview, setSubPreview] = useState<string | null>(null);
   const subImageRef = useRef<HTMLInputElement>(null);
+
+  // sub-subcategory form
+  const [subsubName,    setSubsubName]    = useState('');
+  const [subsubParent,  setSubsubParent]  = useState('');
+  const [subsubImage,   setSubsubImage]   = useState<File | null>(null);
+  const [subsubPreview, setSubsubPreview] = useState<string | null>(null);
+  const subsubImageRef = useRef<HTMLInputElement>(null);
+  const [subsubLoading, setSubsubLoading] = useState(false);
+  const [subsubSearch,  setSubsubSearch]  = useState('');
+
+  // sub-subcategory image upload / delete modals
+  const [uploadingSubsub,  setUploadingSubsub]  = useState<string | null>(null);
+  const [uploadFileSubsub, setUploadFileSubsub] = useState<File | null>(null);
+  const [uploadPreviewSubsub, setUploadPreviewSubsub] = useState<string | null>(null);
+  const [uploadLoadingSubsub, setUploadLoadingSubsub] = useState(false);
+  const uploadInputSubsubRef = useRef<HTMLInputElement>(null);
+  const [deletingSubsub, setDeletingSubsub] = useState<string | null>(null);
 
   const [loading,     setLoading]     = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -347,13 +374,15 @@ export default function AdminCategoriesPage() {
 
   // ── fetch ──────────────────────────────────────────────────────────────────
   const fetchAll = async () => {
-    const [c, s] = await Promise.all([
+    const [c, s, ss] = await Promise.all([
       apiFetch('/api/admin/categories'),
       apiFetch('/api/admin/subcategories'),
+      apiFetch('/api/admin/subsubcategories'),
     ]);
     const cats: Category[] = c.data || [];
     setCategories(cats);
     setSubcategories(s.data || []);
+    setSubsubcategories(ss.data || []);
     if (!selectedCat && cats.length > 0) setSelectedCat(cats[0]._id);
   };
 
@@ -387,6 +416,23 @@ export default function AdminCategoriesPage() {
     setUploadFile(null);
     setUploadPreview(null);
     if (uploadInputRef.current) uploadInputRef.current.value = '';
+  };
+
+  const handleSubsubImagePick = async (file: File | null) => {
+    setSubsubImage(file);
+    setSubsubPreview(file ? await makePreview(file) : null);
+  };
+
+  const handleUploadFilePickSubsub = async (file: File | null) => {
+    setUploadFileSubsub(file);
+    setUploadPreviewSubsub(file ? await makePreview(file) : null);
+  };
+
+  const closeUploadModalSubsub = () => {
+    setUploadingSubsub(null);
+    setUploadFileSubsub(null);
+    setUploadPreviewSubsub(null);
+    if (uploadInputSubsubRef.current) uploadInputSubsubRef.current.value = '';
   };
 
   // ── PDF export ─────────────────────────────────────────────────────────────
@@ -466,6 +512,26 @@ export default function AdminCategoriesPage() {
     } catch (err) {
       flash(err instanceof Error ? err.message : 'Failed', 'error');
     } finally { setLoading(false); }
+  };
+
+  const createSubSubcategoryHandler = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subsubParent) { flash('Choose a parent subcategory first', 'error'); return; }
+    setSubsubLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('name', subsubName);
+      fd.append('subcategoryId', subsubParent);
+      if (subsubImage) fd.append('image', subsubImage);
+      await apiFetch('/api/admin/subsubcategories', { method: 'POST', body: fd });
+      flash('Sub-subcategory created', 'success');
+      setSubsubName('');
+      handleSubsubImagePick(null);
+      if (subsubImageRef.current) subsubImageRef.current.value = '';
+      fetchAll();
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'Failed', 'error');
+    } finally { setSubsubLoading(false); }
   };
 
   // ── edit category ──────────────────────────────────────────────────────────
@@ -556,6 +622,22 @@ export default function AdminCategoriesPage() {
     } finally { setUploadLoading(false); }
   };
 
+  // ── upload image to existing sub-subcategory (PATCH accepts multipart) ─────
+  const submitUploadImageSubsub = async () => {
+    if (!uploadFileSubsub || !uploadingSubsub) return;
+    setUploadLoadingSubsub(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', uploadFileSubsub);
+      await apiFetch(`/api/admin/subsubcategories/${uploadingSubsub}`, { method: 'PATCH', body: fd });
+      flash('Image uploaded', 'success');
+      closeUploadModalSubsub();
+      fetchAll();
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'Upload failed', 'error');
+    } finally { setUploadLoadingSubsub(false); }
+  };
+
   // ── delete ─────────────────────────────────────────────────────────────────
   const deleteCategory = async (id: string) => {
     setLoading(true);
@@ -576,10 +658,23 @@ export default function AdminCategoriesPage() {
       await apiFetch(`/api/admin/subcategories/${id}`, { method: 'DELETE' });
       flash('Subcategory deleted', 'success');
       setDeletingSub(null);
+      if (selectedSub === id) setSelectedSub(null);
       fetchAll();
     } catch (err) {
       flash(err instanceof Error ? err.message : 'Failed', 'error');
     } finally { setLoading(false); }
+  };
+
+  const deleteSubSubcategory = async (id: string) => {
+    setSubsubLoading(true);
+    try {
+      await apiFetch(`/api/admin/subsubcategories/${id}`, { method: 'DELETE' });
+      flash('Sub-subcategory deleted', 'success');
+      setDeletingSubsub(null);
+      fetchAll();
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'Failed', 'error');
+    } finally { setSubsubLoading(false); }
   };
 
   // ── derived ────────────────────────────────────────────────────────────────
@@ -591,6 +686,11 @@ export default function AdminCategoriesPage() {
     .filter(s => s.category._id === selectedCat)
     .filter(s => !subSearch || s.name.toLowerCase().includes(subSearch.toLowerCase()));
   const subCount = (catId: string) => subcategories.filter(s => s.category._id === catId).length;
+  const subsubCount = (subId: string) => subsubcategories.filter(ss => ss.subcategory._id === subId).length;
+  const selectedSubObj = subcategories.find(s => s._id === selectedSub);
+  const visibleSubsubs = subsubcategories
+    .filter(ss => ss.subcategory._id === selectedSub)
+    .filter(ss => !subsubSearch || ss.name.toLowerCase().includes(subsubSearch.toLowerCase()));
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
@@ -616,6 +716,11 @@ export default function AdminCategoriesPage() {
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#7ab0c9]" />
               {subcategories.length} subcategories
+            </span>
+            <span className="w-px h-3 bg-[#e2ddd5]" />
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#a97ac9]" />
+              {subsubcategories.length} sub-subcategories
             </span>
           </div>
           <button
@@ -824,7 +929,9 @@ export default function AdminCategoriesPage() {
                 {visibleSubs.map(sub => (
                   <div
                     key={sub._id}
-                    className="group relative flex flex-col rounded-xl border border-[#ede9e1] bg-[#faf9f6] hover:border-[#7ab0c9]/40 hover:bg-white transition-all duration-150 overflow-hidden"
+                    className={`group relative flex flex-col rounded-xl border bg-[#faf9f6] hover:border-[#a97ac9]/40 hover:bg-white transition-all duration-150 overflow-hidden cursor-pointer
+                      ${selectedSub === sub._id ? 'border-[#a97ac9] ring-2 ring-[#a97ac9]/15 bg-white' : 'border-[#ede9e1]'}`}
+                    onClick={() => { setSelectedSub(sub._id); setSubsubParent(sub._id); setSubsubSearch(''); }}
                   >
                     {sub.imageUrl ? (
                       <div className="relative w-full h-28 bg-[#f0ece4] overflow-hidden">
@@ -853,8 +960,14 @@ export default function AdminCategoriesPage() {
                         <p className="text-[0.825rem] font-semibold text-[#1a1714] truncate">{sub.name}</p>
                         <p className="text-[0.65rem] font-mono text-[#c8c2b8] truncate">{sub.slug}</p>
                       </div>
+                      {subsubCount(sub._id) > 0 && (
+                        <span className="text-[0.62rem] font-bold px-1.5 py-0.5 rounded-full bg-[#a97ac9]/12 text-[#a97ac9] flex-shrink-0">
+                          {subsubCount(sub._id)}
+                        </span>
+                      )}
+                      <ChevronRight size={13} strokeWidth={2} className={`flex-shrink-0 transition-transform ${selectedSub === sub._id ? 'rotate-90 text-[#a97ac9]' : 'text-[#c8c2b8]'}`} />
                       <button
-                        onClick={() => setDeletingSub(sub._id)}
+                        onClick={(e) => { e.stopPropagation(); setDeletingSub(sub._id); }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-[#c8c2b8] hover:text-red-400 flex-shrink-0"
                       >
                         <Trash2 size={13} strokeWidth={1.8} />
@@ -991,6 +1104,256 @@ export default function AdminCategoriesPage() {
           </form>
         </div>
       </div>
+
+      {/* ══ Sub-subcategories panel — appears once a subcategory is selected ══ */}
+      {selectedSubObj && (
+        <div className="mt-4 bg-white border border-[#ede9e1] rounded-2xl overflow-hidden">
+          <div className="px-5 pt-4 pb-3 border-b border-[#f0ece4] flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#a97ac9]/10 border border-[#a97ac9]/20 flex items-center justify-center flex-shrink-0">
+                <Boxes size={13} strokeWidth={1.6} className="text-[#a97ac9]" />
+              </div>
+              <div>
+                <p className="text-[0.68rem] font-bold tracking-[0.1em] uppercase text-[#a09a90]">
+                  Sub-subcategories &middot; {selectedSubObj.name}
+                </p>
+                <p className="text-[0.7rem] text-[#c8c2b8] mt-0.5">
+                  {activeCatObj?.name} &rsaquo; {selectedSubObj.name} &rsaquo; …
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#faf9f6] border border-[#e8e3db]">
+                <Search size={12} strokeWidth={1.8} className="text-[#c8c2b8]" />
+                <input
+                  className="flex-1 bg-transparent text-[0.78rem] text-[#1a1714] placeholder:text-[#c8c2b8] outline-none w-32"
+                  placeholder="Find…"
+                  value={subsubSearch}
+                  onChange={e => setSubsubSearch(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={() => setSelectedSub(null)}
+                className="p-1.5 rounded-lg text-[#c8c2b8] hover:bg-[#f7f5f1] hover:text-[#6b6560] transition-all"
+                title="Close"
+              >
+                <X size={15} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+            {/* ── existing sub-subcategories grid ── */}
+            <div>
+              {visibleSubsubs.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-center py-14 border border-dashed border-[#e2ddd5] rounded-xl bg-[#faf9f6]">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-[#ede9e1] flex items-center justify-center">
+                    <Boxes size={20} strokeWidth={1.3} className="text-[#c8c2b8]" />
+                  </div>
+                  <p className="text-[0.78rem] text-[#c8c2b8]">
+                    {subsubSearch ? 'No results.' : 'No sub-subcategories yet — add one with the form.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                  {visibleSubsubs.map(ss => (
+                    <div
+                      key={ss._id}
+                      className="group relative flex flex-col rounded-xl border border-[#ede9e1] bg-[#faf9f6] hover:border-[#a97ac9]/40 hover:bg-white transition-all duration-150 overflow-hidden"
+                    >
+                      {ss.imageUrl ? (
+                        <div className="relative w-full h-28 bg-[#f0ece4] overflow-hidden">
+                          <img src={ss.imageUrl} alt={ss.name} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => { setUploadingSubsub(ss._id); setUploadFileSubsub(null); setUploadPreviewSubsub(null); }}
+                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center gap-1.5 text-white text-[0.72rem] font-semibold"
+                          >
+                            <ImagePlus size={14} strokeWidth={2} /> Replace image
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setUploadingSubsub(ss._id); setUploadFileSubsub(null); setUploadPreviewSubsub(null); }}
+                          className="w-full h-20 flex flex-col items-center justify-center gap-1.5 border-b border-dashed border-[#e2ddd5] bg-[#f7f5f1] hover:bg-[#f0ece4] text-[#c8c2b8] hover:text-[#a09a90] transition-colors"
+                        >
+                          <ImagePlus size={15} strokeWidth={1.6} />
+                          <span className="text-[0.65rem] font-medium">Add image</span>
+                        </button>
+                      )}
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <span className="w-7 h-7 rounded-lg bg-[#a97ac9]/10 border border-[#a97ac9]/20 flex items-center justify-center flex-shrink-0">
+                          <Boxes size={12} strokeWidth={1.6} className="text-[#a97ac9]" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[0.825rem] font-semibold text-[#1a1714] truncate">{ss.name}</p>
+                          <p className="text-[0.65rem] font-mono text-[#c8c2b8] truncate">{ss.slug}</p>
+                        </div>
+                        <button
+                          onClick={() => setDeletingSubsub(ss._id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-[#c8c2b8] hover:text-red-400 flex-shrink-0"
+                        >
+                          <Trash2 size={13} strokeWidth={1.8} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── New Sub-subcategory form ── */}
+            <form onSubmit={createSubSubcategoryHandler} className="bg-[#faf9f6] border border-[#ede9e1] rounded-2xl p-4 flex flex-col gap-3.5 h-fit">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#a97ac9]/10 border border-[#a97ac9]/20 flex items-center justify-center flex-shrink-0">
+                  <Boxes size={13} strokeWidth={1.6} className="text-[#a97ac9]" />
+                </div>
+                <div>
+                  <h2 className="text-[0.85rem] font-semibold text-[#1a1714]">New Sub-subcategory</h2>
+                  <p className="text-[0.7rem] text-[#a09a90]">Nested under a subcategory</p>
+                </div>
+              </div>
+              <div className="h-px bg-[#e8e3db]" />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[0.65rem] font-bold tracking-[0.09em] uppercase text-[#a09a90]">Name</label>
+                <input
+                  className="w-full px-3 py-2 rounded-lg border border-[#e2ddd5] bg-white text-[0.83rem] text-[#1a1714] placeholder:text-[#c8c2b8] focus:outline-none focus:border-[#a97ac9] focus:ring-2 focus:ring-[#a97ac9]/10 transition-all"
+                  placeholder="e.g. Oval Tanzanite"
+                  value={subsubName}
+                  onChange={e => setSubsubName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[0.65rem] font-bold tracking-[0.09em] uppercase text-[#a09a90]">Parent Subcategory</label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg border border-[#e2ddd5] bg-white text-[0.83rem] text-[#1a1714] focus:outline-none focus:border-[#a97ac9] focus:ring-2 focus:ring-[#a97ac9]/10 transition-all appearance-none cursor-pointer"
+                  value={subsubParent}
+                  onChange={e => setSubsubParent(e.target.value)}
+                  required
+                >
+                  <option value="">Select a subcategory…</option>
+                  {subcategories.map(s => <option key={s._id} value={s._id}>{s.category.name} / {s.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[0.65rem] font-bold tracking-[0.09em] uppercase text-[#a09a90]">
+                  Image <span className="normal-case font-normal text-[#c8c2b8]">(optional)</span>
+                </label>
+                {subsubPreview ? (
+                  <div className="relative rounded-xl overflow-hidden border border-[#e2ddd5]">
+                    <img src={subsubPreview} alt="preview" className="w-full h-28 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { handleSubsubImagePick(null); if (subsubImageRef.current) subsubImageRef.current.value = ''; }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                    >
+                      <X size={12} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="subsub-image-input"
+                    className="flex flex-col items-center justify-center gap-2 w-full h-20 rounded-xl border-2 border-dashed border-[#e2ddd5] bg-white cursor-pointer hover:border-[#a97ac9]/60 hover:bg-[#faf6fb] transition-all"
+                  >
+                    <Upload size={15} strokeWidth={1.6} className="text-[#c8c2b8]" />
+                    <span className="text-[0.68rem] text-[#c8c2b8]">Click to upload · JPG / PNG / WebP · max 5 MB</span>
+                  </label>
+                )}
+                <input
+                  id="subsub-image-input"
+                  ref={subsubImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => handleSubsubImagePick(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <button
+                type="submit" disabled={subsubLoading}
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#1a1714] text-white text-[0.8rem] font-semibold tracking-wide hover:bg-[#2a2420] disabled:opacity-50 transition-all"
+              >
+                <Plus size={14} strokeWidth={2.2} /> Create Sub-subcategory
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Upload Image Modal — Sub-subcategory ══ */}
+      {uploadingSubsub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(26,23,20,0.55)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-[#ede9e1] w-full max-w-sm p-6 flex flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#a97ac9]/10 border border-[#a97ac9]/20 flex items-center justify-center">
+                  <ImagePlus size={15} strokeWidth={1.6} className="text-[#a97ac9]" />
+                </div>
+                <div>
+                  <h3 className="text-[0.9rem] font-semibold text-[#1a1714]">
+                    {subsubcategories.find(s => s._id === uploadingSubsub)?.imageUrl ? 'Replace Image' : 'Add Image'}
+                  </h3>
+                  <p className="text-[0.72rem] text-[#a09a90]">
+                    {subsubcategories.find(s => s._id === uploadingSubsub)?.name}
+                  </p>
+                </div>
+              </div>
+              <button onClick={closeUploadModalSubsub} className="p-1.5 rounded-lg text-[#c8c2b8] hover:bg-[#f7f5f1] hover:text-[#6b6560] transition-all">
+                <X size={15} strokeWidth={2} />
+              </button>
+            </div>
+            {uploadPreviewSubsub ? (
+              <div className="relative rounded-xl overflow-hidden border border-[#e2ddd5]">
+                <img src={uploadPreviewSubsub} alt="preview" className="w-full h-44 object-cover" />
+                <button
+                  onClick={() => { setUploadFileSubsub(null); setUploadPreviewSubsub(null); if (uploadInputSubsubRef.current) uploadInputSubsubRef.current.value = ''; }}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : (
+              <label htmlFor="upload-existing-input-subsub" className="flex flex-col items-center justify-center gap-2.5 w-full h-36 rounded-xl border-2 border-dashed border-[#e2ddd5] bg-[#faf9f6] cursor-pointer hover:border-[#a97ac9]/60 hover:bg-[#faf6fb] transition-all">
+                <Upload size={20} strokeWidth={1.5} className="text-[#c8c2b8]" />
+                <div className="text-center">
+                  <p className="text-[0.78rem] font-medium text-[#a09a90]">Click to choose image</p>
+                  <p className="text-[0.68rem] text-[#c8c2b8]">JPG · PNG · WebP · max 5 MB</p>
+                </div>
+              </label>
+            )}
+            <input id="upload-existing-input-subsub" ref={uploadInputSubsubRef} type="file" accept="image/*" className="hidden" onChange={e => handleUploadFilePickSubsub(e.target.files?.[0] ?? null)} />
+            <div className="flex gap-2.5">
+              <button onClick={closeUploadModalSubsub} className="flex-1 py-2.5 rounded-xl border border-[#e2ddd5] text-[#6b6560] text-[0.8rem] font-semibold hover:bg-[#f7f5f1] transition-all">Cancel</button>
+              <button onClick={submitUploadImageSubsub} disabled={!uploadFileSubsub || uploadLoadingSubsub} className="flex-1 py-2.5 rounded-xl bg-[#1a1714] text-white text-[0.8rem] font-semibold hover:bg-[#2a2420] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                {uploadLoadingSubsub ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Uploading…</> : <><Upload size={13} strokeWidth={2} /> Upload</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Delete Sub-subcategory Modal ══ */}
+      {deletingSubsub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(26,23,20,0.55)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-[#ede9e1] w-full max-w-sm p-6 flex flex-col gap-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={16} strokeWidth={1.8} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-[0.9rem] font-semibold text-[#1a1714]">Delete Sub-subcategory</h3>
+                <p className="text-[0.72rem] text-[#a09a90]">"{subsubcategories.find(s => s._id === deletingSubsub)?.name}"</p>
+              </div>
+            </div>
+            <p className="text-[0.8rem] text-[#6b6560] leading-relaxed">
+              This sub-subcategory will be permanently removed, along with its image. This action cannot be undone.
+            </p>
+            <div className="flex gap-2.5">
+              <button onClick={() => setDeletingSubsub(null)} className="flex-1 py-2.5 rounded-xl border border-[#e2ddd5] text-[#6b6560] text-[0.8rem] font-semibold hover:bg-[#f7f5f1] transition-all">Cancel</button>
+              <button onClick={() => deleteSubSubcategory(deletingSubsub)} disabled={subsubLoading} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-[0.8rem] font-semibold hover:bg-red-600 disabled:opacity-50 transition-all">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ Edit Category Modal ══ */}
       {editingCat && (
