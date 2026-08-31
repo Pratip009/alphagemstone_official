@@ -75,18 +75,84 @@ const TARGETS = [
     url: 'https://www.alphaimports.com/cocktail-rings-c-24_135_277.html',
     category: 'Jewelry', subcategory: 'Gemstone Rings', subSubcategory: 'Cocktail Rings',
   },
+
+  // ── Round 2: confirmed via manual legacy-site check on 2026-08-31 ───────
+  // These 6 are genuine gaps (real inventory on legacy, nothing scraped
+  // yet for them). Two categories checked in the same pass are DELIBERATELY
+  // excluded from this list because they are NOT genuine gaps:
+  //   - Bargains > Diamond Earrings (c-24_145_148): same 2 products
+  //     (legacyProductId 32403, 4377) as Diamond Earrings > Diamond Earring
+  //     Bargains, already scraped/relinked above. This is legacy
+  //     cross-listing (one product, two category placements) that our
+  //     schema can't represent at the subSubcategory level, same issue as
+  //     Bridal Diamond Rings. Scraping it again would just create
+  //     duplicate-name products with a NEW fake legacyProductId — don't.
+  //   - Silver Jewelry > Silver Earrings (c-24_271_274, 459 products):
+  //     its on-page description text is IDENTICAL to the sibling
+  //     "Gemstone Silver Earrings" subSubcategory, which already has 480
+  //     products in the DB. Strong signal of large overlap/duplication.
+  //     Needs a DB-side legacyProductId diff against Gemstone Silver
+  //     Earrings BEFORE scraping, to avoid re-importing the same 400+
+  //     products under a second category. Do not add until that's checked.
+  {
+    url: 'https://www.alphaimports.com/more-gemstone-rings-c-24_135_140.html',
+    category: 'Jewelry', subcategory: 'Gemstone Rings', subSubcategory: 'More Gemstone Rings',
+  },
+  {
+    url: 'https://www.alphaimports.com/diamond-loupe-c-24_145_248.html',
+    category: 'Jewelry', subcategory: 'Bargains', subSubcategory: 'Diamond Loupe',
+  },
+  {
+    url: 'https://www.alphaimports.com/wish-pearl-necklace-c-24_145_151.html',
+    category: 'Jewelry', subcategory: 'Bargains', subSubcategory: 'Wish Pearl Necklace',
+  },
+  {
+    url: 'https://www.alphaimports.com/silk-cord-necklace-c-24_145_152.html',
+    category: 'Jewelry', subcategory: 'Bargains', subSubcategory: 'Silk Cord Necklace',
+  },
+  {
+    // NOTE: product 6719 also appears on Silk Cord Necklace above (legacy
+    // cross-listing within Bargains itself). The scraper's cross-page
+    // dedup-by-legacyProductId will only keep ONE entry for 6719 across
+    // the whole run — which subSubcategory it lands under depends on
+    // TARGETS order (first one scraped wins). That's fine; it just can't
+    // be linked under both without the same schema extension noted above.
+    url: 'https://www.alphaimports.com/silk-cords-c-24_145_153.html',
+    category: 'Jewelry', subcategory: 'Bargains', subSubcategory: 'Silk Cords',
+  },
+  {
+    url: 'https://www.alphaimports.com/silver-solitaire-pendants-c-24_271_307.html',
+    category: 'Jewelry', subcategory: 'Silver Jewelry', subSubcategory: 'Silver Solitaire Pendants',
+  },
+  {
+    url: 'https://www.alphaimports.com/diamond-stud-earrings-in-silver-c-24_271_290.html',
+    category: 'Jewelry', subcategory: 'Silver Jewelry', subSubcategory: 'Diamond Stud Earrings (In Silver)',
+  },
 ];
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchHtml(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; catalog-sync/1.0)' },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.text();
+const FETCH_RETRIES = 3;
+
+// Transient "fetch failed" (dropped connection, DNS blip, brief rate-limit)
+// is common enough over a 30+ page sequential scrape that a single failure
+// shouldn't drop 12 products silently. Retry with backoff before giving up.
+async function fetchHtml(url, attempt = 1) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; catalog-sync/1.0)' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return res.text();
+  } catch (err) {
+    if (attempt >= FETCH_RETRIES) throw err;
+    const backoffMs = 1000 * attempt;
+    console.log(`   ↳ retry ${attempt}/${FETCH_RETRIES - 1} for ${url} after ${err.message} (waiting ${backoffMs}ms)`);
+    await sleep(backoffMs);
+    return fetchHtml(url, attempt + 1);
+  }
 }
 
 // Total product count from "Displaying X to Y (of Z products)".
