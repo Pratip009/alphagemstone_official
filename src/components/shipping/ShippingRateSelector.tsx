@@ -29,8 +29,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ShippingRate, ShippingAddress, PackageDimensions } from '@/types/shipping';
-import { applyShippingServiceFee } from '@/lib/shipping-config';
-import { LOW_COST_CARRIER_THRESHOLD, LOW_COST_CARRIER_SERVICE_FEE } from '@/lib/shipping-config';
+import { applyShippingServiceFee, getShippingServiceFee } from '@/lib/shipping-config';
 interface ShippingRateSelectorProps {
   origin:            ShippingAddress;
   destination:       ShippingAddress;
@@ -306,9 +305,9 @@ export default function ShippingRateSelector({
                         ${rate.rate.toFixed(2)}
                     </p>
                     <div className="mt-[5px] flex flex-col items-end gap-1">
-                      {rate.rate < LOW_COST_CARRIER_THRESHOLD && (
+                      {getShippingServiceFee(rate.rate) > 0 && (
                         <span className="ss-mono rounded-full px-2 py-[2.5px] text-[9.5px] font-bold uppercase tracking-wide" style={{ background: 'var(--ss-blue-soft)', color: 'var(--ss-blue)' }}>
-                          +${LOW_COST_CARRIER_SERVICE_FEE.toFixed(2)} fee
+                          +${getShippingServiceFee(rate.rate).toFixed(2)} fee
                         </span>
                       )}
                       {rate.guaranteed && (

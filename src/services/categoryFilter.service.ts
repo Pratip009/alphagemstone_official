@@ -255,7 +255,16 @@ export async function getCategoryFilterFacets(
   const branches: Record<string, object[]> = {};
   const branchMeta: Record<string, FilterFieldMapping> = {};
 
-  for (const def of definitions) {
+  // $facet stage names must be valid field-path expressions (no dots, no
+  // leading '$', etc.) — Mongo throws "FieldPath field names may not
+  // contain '.'" otherwise. filterName values come from admin-entered
+  // CategoryFilter documents and can legitimately contain a dot (e.g.
+  // "APPROX. NUMBER OF STONES"), so they're unsafe to use directly as
+  // facet keys. Use a positional, always-safe key instead and keep a
+  // map back to the real filterName for reading results out below.
+  const filterNameToFacetKey: Record<string, string> = {};
+
+  for (const [i, def] of definitions.entries()) {
     const mapping = getFieldMapping(def.filterName);
     if (!mapping) continue;
 
@@ -281,8 +290,11 @@ export async function getCategoryFilterFacets(
       : { $toLower: { $trim: { input: `$${path}` } } };
     const displayExpr = isNumeric ? { $toString: `$${path}` } : `$${path}`;
 
+    const facetKey = `f${i}`;
+    filterNameToFacetKey[def.filterName] = facetKey;
+
     branchMeta[def.filterName] = mapping;
-    branches[def.filterName] = [
+    branches[facetKey] = [
       { $match: scopedQuery },
       { $match: { [path]: { $exists: true, $nin: [null, ''] } } },
       // Group case/whitespace-insensitively so "SI" and "si " count as one
@@ -306,7 +318,8 @@ export async function getCategoryFilterFacets(
   return definitions
     .filter((def) => branchMeta[def.filterName])
     .map((def) => {
-      const rows: { _id: string; count: number; display: string }[] = result[def.filterName] || [];
+      const rows: { _id: string; count: number; display: string }[] =
+        result[filterNameToFacetKey[def.filterName]] || [];
       const mapping = branchMeta[def.filterName];
 
       // caratWeight is stored as a bare number (0.4, 1, 2…), so the raw

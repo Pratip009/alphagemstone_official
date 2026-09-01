@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import Product from "@/models/Product";
 import {
-  extractCarat, extractWeight, escapeRegex,
-  CARAT_MATCH_TOLERANCE, weightTolerance,
+  extractCarat, extractWeight, extractMm, extractDimensions, buildDimensionRegex, escapeRegex,
+  CARAT_MATCH_TOLERANCE, weightTolerance, mmTolerance,
 } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +43,12 @@ export async function GET(req: NextRequest) {
 
   const carat = extractCarat(q);
   const gramWeight = extractWeight(q);
+  // A "WxH" query like "14.5x9.3mm" also looks like it could be a lone mm
+  // spec to extractMm ("...9.3mm" matches on its own) — check dimensions
+  // first and skip the single-number mm check when it's really a pair, so
+  // it isn't also (mis)matched against the carat-scale `size` field below.
+  const dims = extractDimensions(q);
+  const mmSize = dims ? null : extractMm(q);
 
   // Tokenize into words so multi-word queries don't require an exact
   // substring match in one specific order. Previously the whole query
@@ -99,19 +105,56 @@ export async function GET(req: NextRequest) {
     or.push({ weight: { $gte: gramWeight - tol, $lte: gramWeight + tol } });
   }
 
+  // "1.2mm" / "1.2 mm" — physical diameter/size. The catalogue has no
+  // dedicated mm column, so this is matched against the same `size` field
+  // carat queries use above. Requires an explicit "mm" unit so it never
+  // collides with a bare-number carat query.
+  //
+  // Also checked as literal text against name/description: a lot of
+  // gemstone listings never populate a separate size field at all — the
+  // spec ("6.5mm Round Diamond...") IS the product name — so a pure
+  // numeric-field check alone misses those entirely.
+  if (mmSize !== null) {
+    const tol = mmTolerance(mmSize);
+    or.push({ size: { $gte: mmSize - tol, $lte: mmSize + tol } });
+    const mmTextRx = new RegExp(`${escapeRegex(String(mmSize))}\\s*mm`, "i");
+    or.push({ name: mmTextRx });
+    or.push({ description: mmTextRx });
+  }
+
+  // "14.5x9.3mm" / "7x5 mm" / "7 X 5" — WxH physical dimensions. Checked
+  // against the dedicated `dimensions` field (Product.dimensions, e.g.
+  // "14.5 x 9.3 mm") via a flexible regex tolerant of spacing/"x" vs "×"/
+  // missing unit/either number-order — but ALSO against name/description,
+  // since many gemstone listings never populate `dimensions` separately:
+  // the spec ("7x5mm Oval Spessartite Garnet...") is written straight into
+  // the name instead.
+  if (dims !== null) {
+    const dimRx = buildDimensionRegex(dims);
+    or.push({ dimensions: dimRx });
+    or.push({ name: dimRx });
+    or.push({ description: dimRx });
+  }
+
   const products = await Product.find({
     isActive: { $ne: false },
     $or: or,
   })
     .select(
-      "name price images image category productKind watchBrand watchModel gemstoneName legacySku description size caratWeight weight approxWeight shape color clarity certification"
+      "name price images image category subcategory subSubcategory productKind watchBrand watchModel gemstoneName legacySku description size caratWeight weight dimensions approxWeight shape color clarity certification"
     )
     // The Product schema has no `slug` field, so it was never actually
     // returned — the client fell back to a fuzzy `/products?search=` link
     // for every result instead of going straight to the product. Populating
     // `category` here (previously left as a bare ObjectId) also fixes the
     // category name shown under each result in the dropdown.
+    //
+    // `subcategory`/`subSubcategory` are populated too so the dropdown can
+    // show the full taxonomy path a product lives under (e.g.
+    // "Diamonds › White Diamonds"), not just the top-level category.
     .populate("category", "name slug")
+    .populate("subcategory", "name slug")
+    .populate("subSubcategory", "name slug")
     .limit(limit)
     .lean();
 

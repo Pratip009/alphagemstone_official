@@ -21,6 +21,12 @@ interface ISubcategory {
   description?: string;
   imageUrl?: string;
   isActive: boolean;
+  hasChildren?: boolean;
+}
+function subcategoryHref(catSlug: string, sub: ISubcategory) {
+  return sub.hasChildren
+    ? `/category/${catSlug}/${sub.slug}`
+    : `/products?category=${catSlug}&subcategory=${sub.slug}`;
 }
 
 interface IProduct {
@@ -1038,9 +1044,7 @@ export default function ShopLayout() {
 useEffect(() => {
   if (subcategories.length === 0) return;
   subcategories.forEach((sub) => {
-    router.prefetch(
-      `/products?category=${sub.category.slug}&subcategory=${sub.slug}`,
-    );
+    router.prefetch(subcategoryHref(sub.category.slug, sub));
   });
 }, [subcategories, router]);
 
@@ -1092,19 +1096,15 @@ useEffect(() => {
     );
   }
 
-   function handleSelectSub(sub: ISubcategory) {
+      function handleSelectSub(sub: ISubcategory) {
     setMobileOpen(false);
     startTransition(() => {
-      router.push(
-        `/products?category=${sub.category.slug}&subcategory=${sub.slug}`,
-      );
+      router.push(subcategoryHref(sub.category.slug, sub));
     });
   }
 
   function prefetchSub(sub: ISubcategory) {
-    router.prefetch(
-      `/products?category=${sub.category.slug}&subcategory=${sub.slug}`,
-    );
+    router.prefetch(subcategoryHref(sub.category.slug, sub));
   }
 
   function handleSelectCat(cat: ICategory) {

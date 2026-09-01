@@ -18,12 +18,39 @@ export const STORE_ORIGIN: ShippingAddress = {
   country:    process.env.STORE_COUNTRY  ?? 'US',
   phone:      process.env.STORE_PHONE    ?? '2125550100',
 };
+
+// Tiered service fee brackets, based on the raw carrier rate.
+// Each tier is { upTo: <exclusive upper bound, or null for "and above">, fee }.
+export const SERVICE_FEE_TIERS: Array<{ upTo: number | null; fee: number }> = [
+  { upTo: 10, fee: 2 },   // rate < $10        -> $2
+  { upTo: 20, fee: 4 },   // $10 <= rate < $20  -> $4
+  { upTo: 30, fee: 6 },   // $20 <= rate < $30  -> $6
+  { upTo: 50, fee: 8 },   // $30 <= rate < $50  -> $8
+  { upTo: null, fee: 10 }, // rate >= $50        -> $10
+];
+
+// Backwards-compatible aliases (kept in case other code still imports these).
 export const LOW_COST_CARRIER_THRESHOLD = 10;
 export const LOW_COST_CARRIER_SERVICE_FEE = 2;
 
+/**
+ * Returns the flat service fee (in USD) that applies to a given raw carrier rate,
+ * based on the SERVICE_FEE_TIERS brackets above.
+ */
+export function getShippingServiceFee(rawRate: number): number {
+  const rate = Number(rawRate) || 0;
+  for (const tier of SERVICE_FEE_TIERS) {
+    if (tier.upTo === null || rate < tier.upTo) {
+      return tier.fee;
+    }
+  }
+  return SERVICE_FEE_TIERS[SERVICE_FEE_TIERS.length - 1].fee;
+}
+
 export function applyShippingServiceFee(rawRate: number): number {
   const rate = Number(rawRate) || 0;
-  const withFee = rate < LOW_COST_CARRIER_THRESHOLD ? rate + LOW_COST_CARRIER_SERVICE_FEE : rate;
+  const fee = getShippingServiceFee(rate);
+  const withFee = rate + fee;
   return Math.round(withFee * 100) / 100;
 }
 

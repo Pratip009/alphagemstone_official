@@ -82,6 +82,54 @@ export function weightTolerance(weight: number): number {
   return Math.max(0.2, weight * 0.05);
 }
 
+/**
+ * Physical diameter/size in millimetres — e.g. "1.2mm", "6.5 mm". Matched
+ * against the same `size` field diamonds/gemstones store their spec in
+ * (carat elsewhere in this file, mm here), since the catalogue has no
+ * separate mm column. Requires an explicit "mm" unit so it never collides
+ * with a bare-number carat query like "1.2" (which stays carats).
+ */
+export function extractMm(q: string): number | null {
+  const lq = q.trim().toLowerCase();
+  const m = lq.match(/(\d+(?:\.\d+)?)\s*mm\b/);
+  if (m) return parseFloat(m[1]);
+  return null;
+}
+
+/** How close two mm sizes need to be to count as a match — tighter than carat since mm specs are usually given precisely. */
+export function mmTolerance(mm: number): number {
+  return Math.max(0.05, mm * 0.03);
+}
+
+export interface DimensionQuery { a: number; b: number }
+
+/**
+ * WxH style physical dimensions, e.g. "14.5x9.3mm", "14.5 x 9.3 mm",
+ * "7x5", "7 X 5mm". Stored as a free-text string on Product.dimensions
+ * (there's no structured width/height column), so this can't be matched
+ * with a numeric range query the way carat/weight/mm are above — see
+ * buildDimensionRegex, which matches it via a flexible regex instead.
+ */
+export function extractDimensions(q: string): DimensionQuery | null {
+  const lq = q.trim().toLowerCase();
+  const m = lq.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)(?:\s*mm)?\b/);
+  if (!m) return null;
+  return { a: parseFloat(m[1]), b: parseFloat(m[2]) };
+}
+
+/**
+ * Case-insensitive regex matching the two dimension numbers appearing
+ * close together, in EITHER order (so a "14.5x9.3mm" query also matches a
+ * product whose dimensions are stored as "9.3 x 14.5 mm") — tolerant of
+ * whatever separator/spacing/unit the catalogue used ("x", "×", extra
+ * spaces, "mm"/"MM"/no unit at all).
+ */
+export function buildDimensionRegex(dims: DimensionQuery): RegExp {
+  const a = escapeRegex(String(dims.a));
+  const b = escapeRegex(String(dims.b));
+  return new RegExp(`(${a}[^0-9]{1,6}${b})|(${b}[^0-9]{1,6}${a})`, 'i');
+}
+
 export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
