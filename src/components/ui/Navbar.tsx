@@ -17,6 +17,7 @@ interface NavSubcategory {
   slug: string;
   imageUrl?: string;
   isActive?: boolean;
+  hasChildren?: boolean;
 }
 
 interface NavCategory {
@@ -29,7 +30,11 @@ interface NavCategory {
 }
 
 // ── Data fetching hook ───────────────────────────────────────────────────────
-
+function subcategoryHref(catSlug: string, sub: NavSubcategory) {
+  return sub.hasChildren
+    ? `/category/${catSlug}/${sub.slug}`
+    : `/products?category=${catSlug}&subcategory=${sub.slug}`;
+}
 function useNavCategories(initialCategories: NavCategory[]) {
   const hasInitial = initialCategories.length > 0;
   const [categories, setCategories] =
@@ -195,7 +200,7 @@ export default function Navbar({
   const navRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const HOVER_OPEN_DELAY = 200;
-    const updateNavbarHeight = () => {
+  const updateNavbarHeight = () => {
     if (navRef.current) {
       // Use the nav's actual distance from the top of the viewport
       // (its bottom edge), not just its own height. When the
@@ -280,7 +285,7 @@ export default function Navbar({
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
- 
+
   const scheduleOpen = (slug: string) => {
     cancelClose();
     if (openTimer.current) clearTimeout(openTimer.current);
@@ -1869,7 +1874,7 @@ export default function Navbar({
                       {cat.subcategories.length === 1 ? "cut" : "cuts"} &amp;
                       styles
                     </p>
-                                        <Link
+                    <Link
                       href={`/category/${cat.slug}`}
                       onClick={() => {
                         setOpenDropdown(null);
@@ -1904,7 +1909,7 @@ export default function Navbar({
                       {cat.subcategories.map((sub, si) => (
                         <Link
                           key={sub._id}
-                          href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
+                          href={subcategoryHref(cat.slug, sub)}
                           onClick={() => {
                             setOpenDropdown(null);
                             trackEvent("filter_apply", {
@@ -1991,7 +1996,7 @@ export default function Navbar({
                           filterType: "category",
                           filterValue: cat.slug,
                         });
-                                                router.push(`/category/${cat.slug}`);
+                        router.push(`/category/${cat.slug}`);
                         setMenuOpen(false);
                       } else {
                         setActiveMobileCategory(isExpanded ? null : cat.slug);
@@ -2038,7 +2043,7 @@ export default function Navbar({
                           : "0",
                       }}
                     >
-                                            <Link
+                      <Link
                         href={`/category/${cat.slug}`}
                         onClick={() => setMenuOpen(false)}
                         className="mobile-sub-all"
@@ -2048,7 +2053,7 @@ export default function Navbar({
                       {cat.subcategories.map((sub) => (
                         <Link
                           key={sub._id}
-                          href={`/products?category=${cat.slug}&subcategory=${sub.slug}`}
+                          href={subcategoryHref(cat.slug, sub)}
                           onClick={() => {
                             setMenuOpen(false);
                             trackEvent("filter_apply", {

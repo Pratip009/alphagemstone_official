@@ -8,6 +8,11 @@ export interface NavSubcategory {
   slug: string;
   imageUrl?: string;
   isActive?: boolean;
+  // Whether this subcategory has its own SubSubcategory children (e.g.
+  // Tanzanite > Oval Tanzanite / Trillion Tanzanite / …). Drives whether
+  // clicking it in the navbar opens the /category/[slug]/[subSlug] landing
+  // page or goes straight to the filtered product listing.
+  hasChildren?: boolean;
 }
 
 export interface NavCategory {
@@ -22,14 +27,14 @@ export interface NavCategory {
 export async function getNavCategories(): Promise<NavCategory[]> {
   try {
     const { connectDB } = await import('@/lib/db');
-    const { listCategories, listSubcategories } = await import('@/services/category.service');
+    const { listCategories, listSubcategoriesWithChildFlagAll } = await import('@/services/category.service');
     const { SPECIALS_VIRTUAL_SUBCATEGORIES } = await import('@/lib/specialsVirtualSubcategories');
 
     await connectDB();
 
     const [categories, subcategories] = await Promise.all([
       listCategories(),
-      listSubcategories(),
+      listSubcategoriesWithChildFlagAll(),
     ]);
 
     return categories
@@ -48,6 +53,7 @@ export async function getNavCategories(): Promise<NavCategory[]> {
             slug: s.slug,
             imageUrl: s.imageUrl ?? undefined,
             isActive: s.isActive,
+            hasChildren: s.hasChildren === true,
           }));
 
         // "Specials" also carries a few virtual subcategories (Make An
@@ -62,6 +68,7 @@ export async function getNavCategories(): Promise<NavCategory[]> {
               slug: v.slug,
               imageUrl: undefined,
               isActive: true,
+              hasChildren: false, 
             });
           }
         }

@@ -189,3 +189,31 @@ export async function listSubcategoriesWithChildFlag(categoryId: string) {
     hasChildren: (childCountMap.get(String(s._id)) ?? 0) > 0,
   }));
 }
+/**
+ * Every active Subcategory across ALL categories, each annotated with
+ * `hasChildren` the same way listSubcategoriesWithChildFlag does for a
+ * single category — one aggregate query, not one per category. Used by the
+ * navbar (getNavCategories.ts / GET /api/categories) so clicking a
+ * subcategory in the dropdown can decide, without an extra request, whether
+ * to open the sub-subcategory landing page or go straight to the product
+ * listing.
+ */
+export async function listSubcategoriesWithChildFlagAll() {
+  const subs = await Subcategory.find({ isActive: true })
+    .populate('category', 'name slug')
+    .sort({ name: 1 })
+    .lean();
+
+  if (subs.length === 0) return [];
+
+  const childCounts = await SubSubcategory.aggregate([
+    { $match: { subcategory: { $in: subs.map((s) => s._id) }, isActive: true } },
+    { $group: { _id: '$subcategory', count: { $sum: 1 } } },
+  ]);
+  const childCountMap = new Map(childCounts.map((c) => [String(c._id), c.count as number]));
+
+  return subs.map((s) => ({
+    ...s,
+    hasChildren: (childCountMap.get(String(s._id)) ?? 0) > 0,
+  }));
+}

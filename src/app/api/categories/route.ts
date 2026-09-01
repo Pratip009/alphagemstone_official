@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
 import {
   listCategories,
-  listSubcategories,
+  listSubcategoriesWithChildFlagAll,
   listCategoriesForProductKind,
 } from '@/services/category.service';
 import { successResponse, errorResponse } from '@/lib/api-response';
@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
     const categories = await listCategories();
 
     if (withSubs) {
-      const subcategories = await listSubcategories();
+      // Annotated with hasChildren so nav consumers (e.g. Navbar.tsx) can
+      // decide, without a second request, whether a subcategory click
+      // should open the sub-subcategory landing page or go straight to the
+      // product listing.
+      const subcategories = await listSubcategoriesWithChildFlagAll();
       const enriched = categories.map((cat) => {
         const catId = (cat as Record<string, unknown>)._id?.toString();
         return {
