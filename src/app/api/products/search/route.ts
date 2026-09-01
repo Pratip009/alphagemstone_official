@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 // e.g. if your connection helper is `@/lib/mongodb` or `connectDB`, swap it in.
 import db from "@/lib/db";
 import Product from "@/models/Product";
+// Registers the Category/Subcategory/SubSubcategory schemas with Mongoose.
+// Not used directly here, but .populate("category"/"subcategory"/
+// "subSubcategory") below needs each ref model already registered in this
+// process — otherwise Mongoose throws "MissingSchemaError: Schema hasn't
+// been registered for model 'Category'" the first time this route bundle
+// runs without something else having imported them first.
+import "@/models/Category";
+import "@/models/Subcategory";
+import "@/models/SubSubcategory";
 import {
   extractCarat, extractWeight, extractMm, extractDimensions, buildDimensionRegex, escapeRegex,
   CARAT_MATCH_TOLERANCE, weightTolerance, mmTolerance,
@@ -35,7 +44,15 @@ const SEARCHABLE_FIELDS = [
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
-  const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? 30) || 30, 50);
+  // Capped at 200, not 50: this endpoint has no relevance sort (plain $or,
+  // no text index), so Mongo returns matching documents in essentially
+  // arbitrary order. The client re-ranks by relevance after fetching (see
+  // scoreProduct in SearchBar.tsx) — but it can only rank documents that
+  // actually made it into this response. A low cap here was silently
+  // dropping genuinely relevant products whenever a query also (loosely)
+  // matched a lot of unrelated ones, especially with the broad
+  // name/description fallback regexes for mm/dimension queries.
+  const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? 30) || 30, 200);
 
   if (!q) return NextResponse.json({ data: [] });
 

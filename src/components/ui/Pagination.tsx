@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function Pagination({
   page,
@@ -11,13 +11,20 @@ export default function Pagination({
   searchParams: Record<string, string>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   if (totalPages <= 1) return null;
 
   const goTo = (p: number) => {
     const params = new URLSearchParams(searchParams);
     params.set('page', String(p));
-    router.push(`/products?${params.toString()}`);
+    // Was hardcoded to "/products" — this component is also used on
+    // /products/diamonds, /products/watches, /products/gemstones, so
+    // paging through results there silently redirected the shopper to a
+    // different route (losing that page's implicit category scoping,
+    // e.g. /products/diamonds' default category=diamonds, and its layout).
+    // Stay on whatever page this component is actually rendered on.
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const pages = Array.from({ length: Math.min(5, totalPages) }, (_, i) => {

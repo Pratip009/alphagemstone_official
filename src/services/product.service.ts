@@ -253,16 +253,16 @@ export async function getProductFacets(
   params: ProductFilterParams,
   kind?: 'watch' | 'diamond' | 'gemstone',
 ) {
-  // Also resolve slugs for facets so counts are scoped correctly
-  const resolved = await resolveSlugFilters({
-    category: params.category,
-    subcategory: params.subcategory,
-    productKind: params.productKind,
-  });
+  // Resolve category/subcategory/subSubcategory slugs to ObjectIds, but
+  // otherwise pass every active filter through untouched — buildFacetsPipeline
+  // needs the FULL param set to compute genuinely self-excluding counts
+  // (every filter applied except each branch's own attribute). Previously
+  // only category/subcategory/productKind were kept here, so every facet
+  // count reflected the whole category regardless of what the shopper had
+  // already filtered by.
+  const resolved = await resolveSlugFilters(params);
 
-  const { query } = buildProductFilterQuery(resolved);
-
-  const pipeline = buildFacetsPipeline(query, kind) as Parameters<typeof Product.aggregate>[0];
+  const pipeline = buildFacetsPipeline(resolved, kind) as Parameters<typeof Product.aggregate>[0];
   const [result] = await Product.aggregate(pipeline);
   return result;
 }

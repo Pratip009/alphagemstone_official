@@ -157,11 +157,44 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
   const [localSizeMin, setLocalSizeMin] = useState(sizeMin);
   const [localSizeMax, setLocalSizeMax] = useState(sizeMax);
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
-    price: false, shape: false, color: false, clarity: false, carat: false,
-    gender: false, brand: false, movement: false, strap: false, caseMaterial: false,
-    dialColor: false, features: false, style: false, caseSize: false, availability: false,
-  });
+  // Local range-slider/input state only tracked the URL on first mount —
+  // "Clear all", browser back/forward, or any other external URL change
+  // (e.g. tapping a category pill) left these showing stale values that
+  // no longer matched what was actually applied. Re-sync whenever the
+  // underlying URL params change.
+  useEffect(() => {
+    setLocalPriceMin(priceMin);
+    setLocalPriceMax(priceMax);
+  }, [priceMin, priceMax]);
+
+  useEffect(() => {
+    setLocalSizeMin(sizeMin);
+    setLocalSizeMax(sizeMax);
+  }, [sizeMin, sizeMax]);
+
+  // Secondary/less-common filters start collapsed so the page doesn't open
+  // with a wall of fully-expanded cards above the product grid (especially
+  // bad on mobile, since this bar has no separate compact drawer). A
+  // filter still starts expanded if it already has an active selection —
+  // otherwise loading a shared/bookmarked filtered link would hide the
+  // very filter that's actually applied.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => ({
+    price: false,
+    shape: false,
+    color: activeColors.length === 0,
+    clarity: activeClarities.length === 0,
+    carat: false,
+    availability: searchParams.get('inStock') !== 'true',
+    gender: false,
+    brand: false,
+    movement: activeWatchMovements.length === 0,
+    strap: activeWatchStrapTypes.length === 0,
+    caseMaterial: activeWatchCaseMaterials.length === 0,
+    dialColor: activeWatchDialColors.length === 0,
+    features: activeWatchFeatures.length === 0,
+    style: activeWatchStyles.length === 0,
+    caseSize: !activeWatchCaseSize,
+  }));
 
   const toggleCollapsed = (key: string) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -215,15 +248,41 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
     );
   };
 
+  // CSV-driven category filters (GRADE, TREATMENT, ORIGIN, ...) are scoped
+  // to a specific category/subcategory's attribute set — a value picked
+  // under one subcategory can be meaningless (or still silently applied
+  // and narrowing results) under a different one, since
+  // applyCategoryFilterSelection has no way to know it's "stale." Strip
+  // every filter[...] param whenever the category/subcategory scope
+  // changes so nothing invisible carries over.
+  const clearCsvFilterParams = (params: URLSearchParams) => {
+    Array.from(params.keys())
+      .filter((k) => k.startsWith('filter['))
+      .forEach((k) => params.delete(k));
+  };
+
   const selectCategory = (slug: string) => {
     if (expandedCategory === slug) {
+      // Was collapse-only: closing the subcategory roundel row while
+      // silently leaving the category filter itself applied — clicking an
+      // already-active category pill again looks and reads exactly like a
+      // toggle-off (same visual language as every other filter pill in
+      // this bar), so it should actually clear the filter too, not just
+      // hide the panel underneath it.
       setExpandedCategory(null);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('category');
+      params.delete('subcategory');
+      clearCsvFilterParams(params);
+      params.set('page', '1');
+      router.push(`${baseRoute}?${params.toString()}`);
       return;
     }
     setExpandedCategory(slug);
     const params = new URLSearchParams(searchParams.toString());
     params.set('category', slug);
     params.delete('subcategory');
+    clearCsvFilterParams(params);
     params.set('page', '1');
     router.push(`${baseRoute}?${params.toString()}`);
   };
@@ -233,6 +292,7 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
     params.set('category', categorySlug);
     if (activeSubcategorySlug === subSlug) params.delete('subcategory');
     else params.set('subcategory', subSlug);
+    clearCsvFilterParams(params);
     params.set('page', '1');
     router.push(`${baseRoute}?${params.toString()}`);
   };
@@ -492,7 +552,68 @@ export default function FilterBar({ productType = 'diamond', facets, categories:
                 </div>
               </FilterCard>
 
-              {/* Add remaining watch filters (Movement, Strap, etc.) as needed from your original code */}
+              <FilterCard label="Movement" collapsed={!!collapsed.movement} onToggle={() => toggleCollapsed('movement')} active={activeWatchMovements.length > 0} count={activeWatchMovements.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_MOVEMENTS).map((m) => (
+                    <CheckItem key={m} label={m} count={countFor(facets?.watchMovements, m)} checked={activeWatchMovements.includes(m)} onChange={() => toggleMultiSelect('watchMovement', activeWatchMovements, m)} />
+                  ))}
+                </div>
+              </FilterCard>
+
+              <FilterCard label="Strap" collapsed={!!collapsed.strap} onToggle={() => toggleCollapsed('strap')} active={activeWatchStrapTypes.length > 0} count={activeWatchStrapTypes.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_STRAP_TYPES).map((s) => (
+                    <CheckItem key={s} label={s} count={countFor(facets?.watchStrapTypes, s)} checked={activeWatchStrapTypes.includes(s)} onChange={() => toggleMultiSelect('watchStrapType', activeWatchStrapTypes, s)} />
+                  ))}
+                </div>
+              </FilterCard>
+
+              <FilterCard label="Case Material" collapsed={!!collapsed.caseMaterial} onToggle={() => toggleCollapsed('caseMaterial')} active={activeWatchCaseMaterials.length > 0} count={activeWatchCaseMaterials.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_CASE_MATERIALS).map((m) => (
+                    <CheckItem key={m} label={m} count={countFor(facets?.watchCaseMaterials, m)} checked={activeWatchCaseMaterials.includes(m)} onChange={() => toggleMultiSelect('watchCaseMaterial', activeWatchCaseMaterials, m)} />
+                  ))}
+                </div>
+              </FilterCard>
+
+              <FilterCard label="Dial Color" collapsed={!!collapsed.dialColor} onToggle={() => toggleCollapsed('dialColor')} active={activeWatchDialColors.length > 0} count={activeWatchDialColors.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_DIAL_COLORS).map((c) => (
+                    <SwatchOption
+                      key={c}
+                      label={c}
+                      swatch={dialColorToHex(c)}
+                      count={countFor(facets?.watchDialColors, c)}
+                      checked={activeWatchDialColors.includes(c)}
+                      onChange={() => toggleMultiSelect('watchDialColor', activeWatchDialColors, c)}
+                    />
+                  ))}
+                </div>
+              </FilterCard>
+
+              <FilterCard label="Features" collapsed={!!collapsed.features} onToggle={() => toggleCollapsed('features')} active={activeWatchFeatures.length > 0} count={activeWatchFeatures.length}>
+                <div className="flex flex-wrap gap-2 max-w-[18rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_FEATURES).map((f) => (
+                    <CheckItem key={f} label={f} count={countFor(facets?.watchFeatures, f)} checked={activeWatchFeatures.includes(f)} onChange={() => toggleMultiSelect('watchFeatures', activeWatchFeatures, f)} />
+                  ))}
+                </div>
+              </FilterCard>
+
+              <FilterCard label="Style" collapsed={!!collapsed.style} onToggle={() => toggleCollapsed('style')} active={activeWatchStyles.length > 0} count={activeWatchStyles.length}>
+                <div className="flex flex-wrap gap-2 max-w-[16rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_STYLES).map((s) => (
+                    <CheckItem key={s} label={s} count={countFor(facets?.watchStyles, s)} checked={activeWatchStyles.includes(s)} onChange={() => toggleMultiSelect('watchStyle', activeWatchStyles, s)} />
+                  ))}
+                </div>
+              </FilterCard>
+
+              <FilterCard label="Case Size" collapsed={!!collapsed.caseSize} onToggle={() => toggleCollapsed('caseSize')} active={!!activeWatchCaseSize}>
+                <div className="flex flex-wrap gap-2 max-w-[14rem] lg:flex-nowrap lg:max-w-none lg:overflow-x-auto lg:pb-1">
+                  {dedupe(WATCH_CASE_SIZES).map((s) => (
+                    <CheckItem key={s} label={s} count={countFor(facets?.watchCaseSizes, s)} checked={activeWatchCaseSize === s} onChange={() => updateFilter('watchCaseSize', activeWatchCaseSize === s ? null : s)} />
+                  ))}
+                </div>
+              </FilterCard>
             </>
           )}
         </div>

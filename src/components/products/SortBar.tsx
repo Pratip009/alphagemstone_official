@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 const SORT_OPTIONS = [
@@ -21,6 +21,7 @@ export default function SortBar({
   query?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   const active =
@@ -31,7 +32,12 @@ export default function SortBar({
     const params = new URLSearchParams(window.location.search);
     params.set('sortBy', value);
     params.set('page', '1');
-    router.push(`/products?${params.toString()}`);
+    // Was hardcoded to "/products" — this component is also used on
+    // /products/diamonds, /products/watches, /products/gemstones, so
+    // changing sort there silently redirected the shopper off that page
+    // entirely (losing that page's implicit category scoping and layout).
+    // Stay on whatever page this bar is actually rendered on.
+    router.push(`${pathname}?${params.toString()}`);
     setOpen(false);
   };
 
