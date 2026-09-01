@@ -88,7 +88,7 @@ export interface Order {
   tax: number;
   totalAmount: number;
   status: OrderStatus;
-  paymentMethod: 'paypal' | 'cod';
+  paymentMethod: 'paypal';
   paymentStatus: PaymentStatus;
   paypalOrderId?: string;
   createdAt: string;

@@ -18,7 +18,7 @@ const shippingSchema = z.object({
 
 const createOrderSchema = z.object({
   shippingAddress:  shippingSchema,
-  paymentMethod:    z.enum(['paypal', 'cod']),
+  paymentMethod:    z.literal('paypal'),
   couponCode:       z.string().optional(),
   // ShipEngine shipping selection saved at checkout
   shippingCarrier:           z.string().optional(),

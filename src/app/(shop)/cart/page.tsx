@@ -103,7 +103,7 @@ function CartCard({
         className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
         style={{ background: '#faf8f4', border: '1px solid #ede9e1', minWidth: '4.5rem', minHeight: '4.5rem' }}
       >
-        {item.product.images[0] ? (
+        {item.product?.images?.[0] ? (
           <img
             src={item.product.images[0]}
             alt={item.product.name}
@@ -220,7 +220,10 @@ export default function CartPage() {
   const fetchCart = async () => {
     try {
       const data = await apiFetch('/api/cart');
-      setItems(data.data.cart?.items || []);
+      const rawItems: CartItem[] = data.data.cart?.items || [];
+      // Defensive filter: the backend already strips items whose product
+      // was deleted, but guard here too in case of stale/cached responses.
+      setItems(rawItems.filter((item) => !!item.product));
       setTotals(data.data.totals);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load cart');

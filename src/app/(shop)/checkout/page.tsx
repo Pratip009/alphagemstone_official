@@ -722,9 +722,18 @@ export default function CheckoutPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
+  const [cartEmpty, setCartEmpty] = useState(false);
+
   useEffect(() => {
     apiFetch("/api/cart")
-      .then((d) => setTotal(d.data.totals?.total || 0))
+      .then((d) => {
+        setTotal(d.data.totals?.total || 0);
+        const items = d.data.cart?.items || [];
+        if (items.length === 0) {
+          setCartEmpty(true);
+          router.push("/cart");
+        }
+      })
       .catch(() => router.push("/login"));
   }, []);
 
@@ -901,6 +910,14 @@ export default function CheckoutPage() {
     setApiError("");
     setLoading(true);
     try {
+      // If we already created an order (the customer went Back from the
+      // payment step to pick a different rate), cancel that one first —
+      // otherwise every re-confirm leaves a duplicate 'pending' order behind
+      // that's still holding stock it'll never actually pay for.
+      if (orderId) {
+        await apiFetch(`/api/orders/${orderId}`, { method: "DELETE" }).catch(() => {});
+      }
+
       const data = await apiFetch("/api/orders", {
         method: "POST",
         body: JSON.stringify({
@@ -1054,6 +1071,8 @@ export default function CheckoutPage() {
       (selectedShipping ? applyShippingServiceFee(selectedShipping.rate) : 0) -
       couponDiscount,
   );
+
+  if (cartEmpty) return null;
 
   return (
     // ── PayPalScriptProvider wraps the ENTIRE page so it is never
@@ -2375,7 +2394,7 @@ export default function CheckoutPage() {
                         color: "#15803d",
                       }}
                     >
-                      ✓ {couponCode} — $10 off applied!
+                      ✓ {couponCode} — ${couponDiscount.toFixed(2)} off applied!
                     </span>
                     <button
                       onClick={() => {

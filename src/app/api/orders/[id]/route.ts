@@ -1,5 +1,5 @@
 import { connectDB } from '@/lib/db';
-import { getOrderById, updateOrderStatus } from '@/services/order.service'; // ← add updateOrderStatus here
+import { getOrderById, updateOrderStatus, cancelOwnPendingOrder } from '@/services/order.service';
 import { withAuth, withAdmin, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
@@ -27,5 +27,20 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
     return successResponse(order);
   } catch (err: any) {
     return errorResponse(err.message ?? 'Failed to update order', 500);
+  }
+});
+
+// DELETE /api/orders/[id] — customer cancels their OWN order, only while it's
+// still pending and unpaid. Used by checkout: if the customer goes back and
+// re-confirms a different shipping rate, the old pending order (and the
+// stock it reserved) is released instead of being left orphaned.
+export const DELETE = withAuth(async (req: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
+  try {
+    await connectDB();
+    const { id } = await context.params;
+    const order = await cancelOwnPendingOrder(id, req.user.userId);
+    return successResponse(order);
+  } catch (err: any) {
+    return errorResponse(err.message ?? 'Failed to cancel order', 400);
   }
 });

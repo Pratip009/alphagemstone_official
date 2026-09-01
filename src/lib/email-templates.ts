@@ -447,7 +447,7 @@ export interface OrderEmailData {
   shippingCost: number;
   tax: number;
   totalAmount: number;
-  paymentMethod: 'paypal' | 'cod';
+  paymentMethod: 'paypal';
   shippingAddress: {
     fullName: string;
     addressLine1: string;
@@ -479,7 +479,7 @@ function orderItemsRows(items: OrderEmailItem[]): string {
 export function orderConfirmationEmailHtml(data: OrderEmailData): string {
   const firstName = data.customerName.split(' ')[0] || data.customerName;
   const shortOrderId = data.orderId.slice(-8).toUpperCase();
-  const paymentLabel = data.paymentMethod === 'paypal' ? 'PayPal' : 'Cash on Delivery';
+  const paymentLabel = 'PayPal';
   const addr = data.shippingAddress;
   const addressLines = [addr.addressLine1, addr.addressLine2, `${addr.city}, ${addr.state} ${addr.postalCode}`, addr.country].filter(Boolean).join('<br />');
 

@@ -71,7 +71,9 @@ export default function CartSidebar({
     apiFetch("/api/cart")
       .then((d) => {
         setCart({
-          items: d.data.cart.items,
+          // Defensive filter: guard against a stale/cached response that
+          // still contains an item whose product was deleted.
+          items: (d.data.cart.items || []).filter((item: CartItem) => !!item.product),
           totals: d.data.totals,
         });
       })
@@ -129,7 +131,7 @@ export default function CartSidebar({
       const cartData = d.data?.cart ?? d.data ?? d;
       const totals = d.data?.totals ?? d.totals ?? null;
       if (cartData?.items) {
-        setCart({ items: cartData.items, totals });
+        setCart({ items: cartData.items.filter((item: CartItem) => !!item.product), totals });
       }
       // Keep the navbar badge (useCart) in sync — it only recomputes on
       // this event, not on every cart mutation.
@@ -137,7 +139,10 @@ export default function CartSidebar({
     } catch {
       // Revert by re-fetching
       apiFetch("/api/cart").then((d) =>
-        setCart({ items: d.data.cart.items, totals: d.data.totals }),
+        setCart({
+          items: (d.data.cart.items || []).filter((item: CartItem) => !!item.product),
+          totals: d.data.totals,
+        }),
       );
     } finally {
       setUpdatingId(null);
@@ -160,12 +165,15 @@ export default function CartSidebar({
     const cartData = d.data?.cart ?? d.data ?? d;
     const totals = d.data?.totals ?? d.totals ?? null;
     if (cartData?.items) {
-      setCart({ items: cartData.items, totals });
+      setCart({ items: cartData.items.filter((item: CartItem) => !!item.product), totals });
     }
   } catch (err) {
     console.error('Failed to remove cart item:', err);
     apiFetch('/api/cart').then((d) =>
-      setCart({ items: d.data.cart.items, totals: d.data.totals })
+      setCart({
+        items: (d.data.cart.items || []).filter((item: CartItem) => !!item.product),
+        totals: d.data.totals,
+      })
     );
   } finally {
     // Always fire this — even if the block above threw — so the navbar
@@ -563,7 +571,7 @@ export default function CartSidebar({
           {/* Items */}
           {!loading && items.length > 0 && (
             <div>
-              {items.map((item,index) => {
+              {items.filter((item) => !!item.product).map((item,index) => {
                 const isUpdating = updatingId === item._id;
                 const imgSrc = item.product.images?.[0];
                 return (

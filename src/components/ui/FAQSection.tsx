@@ -147,7 +147,7 @@ const faqs: FAQItem[] = [
     category: "Payments",
     question: "What payment methods do you accept?",
     answer:
-      "We accept all major credit cards (Visa, Mastercard, Amex, Discover), PayPal, cashier's checks, money orders, and secured COD — giving you maximum flexibility.",
+      "We accept all major credit cards (Visa, Mastercard, Amex, Discover), PayPal, cashier's checks, and money orders — giving you maximum flexibility.",
   },
   {
     id: 21,

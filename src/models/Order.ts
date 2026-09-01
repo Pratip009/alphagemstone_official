@@ -30,8 +30,15 @@ export interface IOrder extends Document {
   tax: number;
   totalAmount: number;
   status: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-  paymentMethod: 'paypal' | 'cod';
+  paymentMethod: 'paypal';
   paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+  // Whether the stock for this order's items is currently held (decremented)
+  // against Product.stock. True from the moment the order is created (stock
+  // is reserved up front, before payment) until either the order is paid
+  // (stays true — the sale is final) or the order is cancelled/expires
+  // (flips false once stock has been restored). Prevents double-releasing
+  // or double-reserving stock.
+  stockReserved: boolean;
   paypalOrderId?: string;
   paypalPaymentId?: string;
   paypalPayerId?: string;
@@ -102,13 +109,17 @@ const OrderSchema = new Schema<IOrder>(
     },
     paymentMethod: {
       type: String,
-      enum: ['paypal', 'cod'],
+      enum: ['paypal'],
       required: true,
     },
     paymentStatus: {
       type: String,
       enum: ['pending', 'completed', 'failed', 'refunded'],
       default: 'pending',
+    },
+    stockReserved: {
+      type: Boolean,
+      default: true,
     },
     paypalOrderId: String,
     paypalPaymentId: String,
