@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import OtpInput from "@/components/ui/OtpInput";
 import { useAuth } from "@/hooks/useAuth";
+import { runAuthRequest } from "@/lib/api-client-error";
 
 type Step = "form" | "otp";
 
@@ -42,22 +43,20 @@ export default function SignupPage() {
     }, 1000);
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+ const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/signup-otp", {
+      await runAuthRequest("/api/auth/signup-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to send code.");
       setStep("otp");
       startCountdown();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send code.");
+      setError(err instanceof Error ? err.message : "Could not send the verification code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -72,33 +71,31 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await verifyOtp(form.email, otp);
-      setRedirecting(true); // ← add this
+      setRedirecting(true);
       const redirect = searchParams.get("redirect") || "/products";
       router.push(redirect);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed.");
-      setLoading(false); // ← only reset on error now
+      setError(err instanceof Error ? err.message : "Verification failed. Please try again.");
+      setLoading(false);
     }
   };
 
-  const handleResend = async () => {
+ const handleResend = async () => {
     if (countdown > 0) return;
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/signup-otp", {
+      await runAuthRequest("/api/auth/signup-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to resend.");
       setOtp("");
       setSuccess("New code sent!");
       setTimeout(() => setSuccess(""), 3000);
       startCountdown();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to resend.");
+      setError(err instanceof Error ? err.message : "Could not resend the code. Please try again.");
     } finally {
       setLoading(false);
     }

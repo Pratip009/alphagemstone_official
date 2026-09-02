@@ -3,13 +3,20 @@ import { connectDB } from '@/lib/db';
 import { signup } from '@/services/auth.service';
 import { errorResponse } from '@/lib/api-response';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
-import { emailSchema } from '@/lib/validation';
+import { emailSchema, firstZodErrorMessage } from '@/lib/validation';
 import { z } from 'zod';
 
 const signupSchema = z.object({
-  name: z.string().trim().min(2).max(100),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Please enter your full name (at least 2 characters).')
+    .max(100, 'Name is too long.'),
   email: emailSchema,
-  password: z.string().min(6).max(100),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters.')
+    .max(100, 'Password is too long.'),
 });
 
 export async function POST(req: NextRequest) {
@@ -22,7 +29,11 @@ export async function POST(req: NextRequest) {
 
     const parsed = signupSchema.safeParse(body);
     if (!parsed.success) {
-      return errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors);
+      return errorResponse(
+        firstZodErrorMessage(parsed.error),
+        400,
+        parsed.error.flatten().fieldErrors
+      );
     }
 
     const { name, email, password } = parsed.data;

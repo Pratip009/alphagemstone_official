@@ -15,18 +15,18 @@ export default function LoginPage() {
   const [focused, setFocused] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       await login(form.email, form.password);
-      setRedirecting(true); // ← add this
+      setRedirecting(true);
       const redirect = searchParams.get("redirect") || "/";
       router.push(redirect);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-      setLoading(false); // ← move out of finally, only reset on error
+      setError(err instanceof Error ? err.message : "Could not sign you in. Please try again.");
+      setLoading(false);
     }
   };
 

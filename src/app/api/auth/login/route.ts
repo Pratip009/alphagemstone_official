@@ -3,12 +3,12 @@ import { connectDB } from "@/lib/db";
 import { login } from "@/services/auth.service";
 import { errorResponse } from "@/lib/api-response";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { emailSchema } from "@/lib/validation";
+import { emailSchema, firstZodErrorMessage } from "@/lib/validation";
 import { z } from "zod";
 
 const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1),
+  password: z.string().min(1, 'Please enter your password.'),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
       return errorResponse(
-        "Validation failed",
+        firstZodErrorMessage(parsed.error),
         400,
         parsed.error.flatten().fieldErrors,
       );
@@ -41,7 +41,12 @@ export async function POST(req: NextRequest) {
       extraKey: email.toLowerCase(),
       scope: "key",
     });
-    if (!acctLimit.success) return rateLimitResponse(acctLimit);
+    if (!acctLimit.success) {
+      return rateLimitResponse(
+        acctLimit,
+        "Too many failed login attempts for this account. Please wait 15 minutes and try again, or reset your password."
+      );
+    }
 
     const result = await login(email, password);
 

@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import OtpInput from '@/components/ui/OtpInput';
+import { runAuthRequest } from '@/lib/api-client-error';
+
 
 type Step = 'email' | 'otp' | 'password' | 'done';
 
@@ -31,28 +33,26 @@ export default function ForgotPasswordPage() {
     }, 1000);
   };
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+ const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      await runAuthRequest('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed.');
       setStep('otp');
       startCountdown();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed.');
+      setError(err instanceof Error ? err.message : 'Could not send the reset code. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleOtpSubmit = () => {
-    if (otp.length !== 6) { setError('Please enter the 6-digit code.'); return; }
+    if (otp.length !== 6) { setError('Please enter the full 6-digit code.'); return; }
     setError('');
     setStep('password');
   };
@@ -61,36 +61,34 @@ export default function ForgotPasswordPage() {
     if (countdown > 0) return;
     setError(''); setLoading(true);
     try {
-      await fetch('/api/auth/forgot-password', {
+      await runAuthRequest('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
       setOtp('');
       startCountdown();
-    } catch {
-      setError('Failed to resend. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend the code. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+ const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (newPassword.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setError(''); setLoading(true);
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      await runAuthRequest('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp, newPassword }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Reset failed.');
       setStep('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reset failed.');
+      setError(err instanceof Error ? err.message : 'Could not reset your password. Please try again.');
       if (err instanceof Error && err.message.toLowerCase().includes('code')) {
         setStep('otp');
         setOtp('');

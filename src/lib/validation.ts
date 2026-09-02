@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared email schema for all auth routes.
@@ -23,3 +23,18 @@ export const emailSchema = z
   .trim()
   .toLowerCase()
   .email('Please enter a valid email address');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Turns a ZodError into one human-readable sentence for the API's top-level
+// `message` field.
+//
+// Before this, every auth route did:
+//   errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors)
+// which put the actually useful text ("Password must be at least 6
+// characters") inside `errors.password[0]`, a field the login/signup pages
+// never read — they only ever displayed the generic `message`. The user
+// saw "Validation failed" with no indication of what to fix.
+export function firstZodErrorMessage(error: ZodError, fallback = 'Please check your input and try again.'): string {
+  const first = error.issues[0];
+  return first?.message || fallback;
+}

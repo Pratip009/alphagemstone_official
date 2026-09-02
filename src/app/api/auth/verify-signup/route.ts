@@ -4,11 +4,11 @@ import { connectDB } from '@/lib/db';
 import '@/lib/registerModels';
 import { verifySignupOtp } from '@/services/otp.service';
 import { errorResponse } from '@/lib/api-response';
-import { emailSchema } from '@/lib/validation';
+import { emailSchema, firstZodErrorMessage } from '@/lib/validation';
 
 const schema = z.object({
   email: emailSchema,
-  otp: z.string().trim().length(6),
+  otp: z.string().trim().length(6, 'Please enter the full 6-digit code.'),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
-      return errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors);
+      return errorResponse(
+        firstZodErrorMessage(parsed.error),
+        400,
+        parsed.error.flatten().fieldErrors
+      );
     }
     const { email, otp } = parsed.data;
     const result = await verifySignupOtp(email, otp);
