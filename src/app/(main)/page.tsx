@@ -13,6 +13,7 @@ import WorldShipping from "@/components/ui/WorldShipping";
 import BirthstoneCarousel from "@/components/ui/BirthstoneCarousel";
 import AwardsAccolades from "@/components/ui/AwardsAccolades";
 import DiamondStudsSection from "@/components/ui/DiamondStudsSection";
+import MetalPriceTicker from "@/components/ui/MetalPriceTicker";
 
 // Statically generate this page (ISR): built once, served from cache, and
 // silently regenerated in the background at most once every 5 minutes.
@@ -55,6 +56,7 @@ export default async function HomePage() {
       <Testimonials />
       <FeaturedInNews />
       <JewelryModal />
+      <MetalPriceTicker/>
     </main>
   );
 }
