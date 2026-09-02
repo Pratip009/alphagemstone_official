@@ -200,18 +200,7 @@ function MetalCell({ index, label, reportCode, unit, basePrice, accent, ctaHref 
         </ResponsiveContainer>
       </div>
 
-      <a
-        href={ctaHref}
-        className="inline-flex items-center gap-2 text-[13px] group"
-        style={{ fontFamily: '"Elms Sans", sans-serif', color: ink, fontWeight: 500 }}
-      >
-        <span style={{ borderBottom: `1px solid ${brass}`, paddingBottom: 1 }}>
-          Shop {label.toLowerCase()} jewelry
-        </span>
-        <span className="transition-transform duration-200 group-hover:translate-x-1" style={{ color: brass }}>
-          →
-        </span>
-      </a>
+     
     </motion.div>
   );
 }
