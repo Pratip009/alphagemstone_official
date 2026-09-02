@@ -3,18 +3,17 @@ import { connectDB } from '@/lib/db';
 import { signup } from '@/services/auth.service';
 import { errorResponse } from '@/lib/api-response';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { emailSchema } from '@/lib/validation';
 import { z } from 'zod';
 
 const signupSchema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.string().email(),
+  name: z.string().trim().min(2).max(100),
+  email: emailSchema,
   password: z.string().min(6).max(100),
 });
 
 export async function POST(req: NextRequest) {
   try {
-    // Signup is a bcrypt hash + DB write per request — cap it so a script
-    // can't mass-create accounts or burn CPU on hashing.
     const ipLimit = await rateLimit(req, { id: 'signup-ip', limit: 5, windowSec: 600 });
     if (!ipLimit.success) return rateLimitResponse(ipLimit);
 
@@ -29,32 +28,28 @@ export async function POST(req: NextRequest) {
     const { name, email, password } = parsed.data;
     const result = await signup(name, email, password);
 
-    // Only `user` goes in the JSON body. The token is set below as an
-    // httpOnly cookie — putting it in the body too would hand any XSS
-    // the same plaintext token that httpOnly is meant to keep out of JS.
     const response = NextResponse.json(
       { success: true, data: { user: result.user } },
       { status: 201 }
     );
 
     response.cookies.set('auth_token', result.token, {
-      httpOnly: true,                                    // ✅ fixed: no JS access
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
-response.cookies.set('has_session', '1', {
-  httpOnly: false,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 60 * 60 * 24 * 7,
-  path: '/',
-});
+    response.cookies.set('has_session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
     return response;
   } catch (err) {
     console.error('[signup]', err);
-    // ✅ fixed: generic message to prevent email enumeration
     return errorResponse('Could not create account. Please try again.', 500);
   }
 }

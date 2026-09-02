@@ -4,8 +4,9 @@ import { connectDB } from '@/lib/db';
 import '@/lib/registerModels';
 import { sendForgotPasswordOtp } from '@/services/otp.service';
 import { successResponse } from '@/lib/api-response';
+import { emailSchema } from '@/lib/validation';
 
-const schema = z.object({ email: z.string().email() });
+const schema = z.object({ email: emailSchema });
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,5 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[forgot-password]', err);
   }
-  // Always 200 — prevent email enumeration
   return successResponse({ message: 'If an account exists with that email, a code has been sent.' });
 }

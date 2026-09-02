@@ -27,13 +27,28 @@ export function toPublicUser(user: IUser | (IUser & { _id: unknown })) {
 
 // ─── Signup ───────────────────────────────────────────────────────────────────
 export async function signup(name: string, email: string, password: string) {
-  const existing = await User.findOne({ email: email.toLowerCase() }).lean();
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = await User.findOne({ email: normalizedEmail })
+    .collation({ locale: 'en', strength: 2 })
+    .lean();
   if (existing) {
     throw new Error('Email already registered');
   }
 
-  const user = new User({ name, email, password, role: 'user' });
-  await user.save();
+  let user;
+  try {
+    user = new User({ name, email: normalizedEmail, password, role: 'user' });
+    await user.save();
+  } catch (err: any) {
+    // Race-condition guard: two concurrent signups for the same email can
+    // both pass the findOne check above before either has saved. The
+    // unique index catches it at write time — surface it as the same
+    // friendly message rather than a raw duplicate-key error.
+    if (err?.code === 11000) {
+      throw new Error('Email already registered');
+    }
+    throw err;
+  }
 
   const token = signToken({
     userId: user._id.toString(),
@@ -46,7 +61,10 @@ export async function signup(name: string, email: string, password: string) {
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 export async function login(email: string, password: string) {
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail })
+    .collation({ locale: 'en', strength: 2 })
+    .select('+password');
   if (!user) {
     throw new Error('Invalid credentials');
   }

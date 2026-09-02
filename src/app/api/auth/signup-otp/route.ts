@@ -4,10 +4,11 @@ import { connectDB } from '@/lib/db';
 import '@/lib/registerModels';
 import { sendSignupOtp } from '@/services/otp.service';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { emailSchema } from '@/lib/validation';
 
 const schema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.string().email(),
+  name: z.string().trim().min(2).max(100),
+  email: emailSchema,
   password: z.string().min(6).max(100),
 });
 

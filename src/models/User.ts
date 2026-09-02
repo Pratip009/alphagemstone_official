@@ -11,10 +11,6 @@ export interface IUserAddress {
 }
 
 // ─── Memo trade-vetting status ─────────────────────────────────────────────────
-// Memo is not something every customer gets by default — shipping a loose
-// one-of-a-kind stone to an unverified buyer on trust is how the business
-// loses money. This is a lightweight KYC/trade-vetting layer gating access
-// to the memo feature (see src/services/memo.service.ts).
 export const MEMO_USER_STATUSES = ['none', 'pending', 'approved', 'suspended'] as const;
 export type MemoUserStatus = (typeof MEMO_USER_STATUSES)[number];
 
@@ -29,22 +25,13 @@ export interface IUser extends Document {
   address?: IUserAddress;
   role: 'admin' | 'user';
 
-  // ── Memo trade-vetting fields ──────────────────────────────────────────
-  // Gates whether this user may request a memo at all (see
-  // POST /api/memos, which rejects unless memoStatus === 'approved').
   memoStatus: MemoUserStatus;
-  // Max total retail value this user may hold on memo at once, summed
-  // across all their outstanding (non-terminal) memos. Set by an admin at
-  // approval time — see PUT /api/admin/memo-eligibility/[userId].
   memoCreditLimit: number;
-  // Collected at application time (POST /api/memo-eligibility/apply).
   memoBusinessName?: string;
   memoResaleCertNumber?: string;
   memoReferences?: string;
   memoApprovedAt?: Date | null;
   memoApprovedBy?: mongoose.Types.ObjectId | null;
-  // Set when an admin suspends memo privileges — e.g. after a force-convert
-  // on a non-returned item. Cleared on re-approval.
   memoSuspendedReason?: string | null;
 
   createdAt: Date;
@@ -75,7 +62,10 @@ const UserSchema = new Schema<IUser>(
     email: {
       type: String,
       required: [true, 'Email is required'],
-      unique: true,
+      // NOTE: uniqueness is enforced by the explicit collated index below
+      // (`email_unique_ci`), not by `unique: true` here — a second,
+      // case-sensitive unique index on the same field would let
+      // "user@x.com" and "User@x.com" coexist as two separate accounts.
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
@@ -92,14 +82,10 @@ const UserSchema = new Schema<IUser>(
       maxlength: [20, 'Phone number is too long'],
       default: '',
     },
-    // Cloudinary secure_url for the current avatar. Safe to expose to the client.
     avatarUrl: {
       type: String,
       default: '',
     },
-    // Cloudinary public_id for the current avatar — kept off the wire (select: false)
-    // so it never leaks to the client; only used server-side to delete the old
-    // asset when the avatar is replaced or removed.
     avatarPublicId: {
       type: String,
       default: '',
@@ -115,7 +101,6 @@ const UserSchema = new Schema<IUser>(
       default: 'user',
     },
 
-    // ── Memo trade-vetting fields ────────────────────────────────────────
     memoStatus: {
       type: String,
       enum: { values: MEMO_USER_STATUSES, message: 'Invalid memoStatus: {VALUE}' },
@@ -183,6 +168,19 @@ UserSchema.methods.comparePassword = async function (
 
 UserSchema.index({ role: 1 });
 UserSchema.index({ memoStatus: 1 });
+
+// Case-insensitive unique index on email. The schema already lowercases
+// email before save, but a case-sensitive unique index (the default) can
+// diverge from that if any document was ever inserted a different way
+// (a migration script, `insertOne` bypassing the schema, manual DB edit,
+// etc.) — that divergence is exactly the kind of thing that produces
+// "this email is already registered" for an email that looks new, or the
+// reverse. Explicit unique index kept in sync with the collation used by
+// every lookup query in auth.service.ts / otp.service.ts.
+UserSchema.index(
+  { email: 1 },
+  { unique: true, collation: { locale: 'en', strength: 2 }, name: 'email_unique_ci' }
+);
 
 const User = (() => {
   if (mongoose.models && mongoose.models.User) {
