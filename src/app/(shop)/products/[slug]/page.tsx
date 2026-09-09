@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connectDB } from "@/lib/db";
-import { getProductById } from "@/services/product.service";
+import mongoose from "mongoose";
+import { getProductById, getProductBySlug } from "@/services/product.service";
 import Product from "@/models/Product";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import { optimizedImageUrl } from "@/lib/image-url";
 type ProductDoc = {
   _id: unknown;
   name: string;
+  slug: string;
   price: number;
   productKind?: "diamond" | "gemstone" | "watch" | "jewelry";
 
@@ -78,6 +80,7 @@ type ProductDoc = {
 
 type RelatedItem = {
   id: string;
+  slug?: string;
   name: string;
   price: number;
   img: string;
@@ -94,26 +97,43 @@ type ProductKind = "watch" | "diamond" | "gemstone" | "jewelry";
 
 type Spec = { label: string; value: string; highlight?: boolean };
 
-// Wrap the existing getProductById() with React's cache() so that
-// generateMetadata() and the page component — which both need the same
-// product for the same request — share one underlying DB lookup instead
-// of querying twice. product.service.ts itself is untouched.
-const getCachedProduct = cache((id: string) => getProductById(id));
+// Wrap the resolver with React's cache() so that generateMetadata() and the
+// page component — which both need the same product for the same request —
+// share one underlying DB lookup instead of resolving twice.
+//
+// Resolution order: slug first (the canonical, public-facing URL). If that
+// misses and the param happens to be a valid Mongo ObjectId, fall back to
+// the old id-based lookup — this is what keeps every link/bookmark made
+// before products had slugs from turning into a dead 404. The page
+// component below is responsible for redirecting those to the canonical
+// slug URL once resolved; generateMetadata just needs *a* product to
+// describe, so it doesn't redirect itself.
+const getCachedProduct = cache(async (param: string) => {
+  const bySlug = await getProductBySlug(param);
+  if (bySlug) return { product: bySlug, resolvedBy: "slug" as const };
+
+  if (mongoose.Types.ObjectId.isValid(param)) {
+    const byId = await getProductById(param);
+    if (byId) return { product: byId, resolvedBy: "id" as const };
+  }
+
+  return null;
+});
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   await connectDB();
-  const { id } = await params;
-  const raw = await getCachedProduct(id);
+  const { slug } = await params;
+  const resolved = await getCachedProduct(slug);
 
-  if (!raw) {
+  if (!resolved) {
     return { title: "Product Not Found | Alpha Gemstone" };
   }
 
-  const p = raw as unknown as ProductDoc;
+  const p = resolved.product as unknown as ProductDoc;
 
   const description = p.description?.trim()
     ? p.description.trim().slice(0, 160)
@@ -573,6 +593,7 @@ async function getRelatedProducts(
 
   return docs.map((r) => ({
     id: String(r._id),
+    slug: r.slug as string | undefined,
     name: r.name as string,
     price: r.price as number,
     img: (r.images as string[])?.[0] ?? "",
@@ -686,16 +707,24 @@ const TESTIMONIALS = [
 export default async function ProductDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>; // ✅ Promise in Next.js 15+
+  params: Promise<{ slug: string }>; // ✅ Promise in Next.js 15+
 }) {
   await connectDB();
 
-  const { id } = await params; // ✅ unwrap first
+  const { slug } = await params; // ✅ unwrap first
 
-  const raw = await getCachedProduct(id);
-  if (!raw) notFound();
+  const resolved = await getCachedProduct(slug);
+  if (!resolved) notFound();
 
-  const rawObj = raw as unknown as ProductDoc;
+  // Old links/bookmarks still pointing at the raw Mongo _id: send them to
+  // the canonical /products/<slug> URL instead of silently rendering the
+  // page at the id-shaped URL (which would mean two different URLs serving
+  // the same product — bad for SEO and for anyone re-sharing the link).
+  if (resolved.resolvedBy === "id") {
+    redirect(`/products/${(resolved.product as unknown as ProductDoc).slug}`);
+  }
+
+  const rawObj = resolved.product as unknown as ProductDoc;
   const p: ProductDoc = { ...rawObj, _id: String(rawObj._id) };
   const kind = getProductKind(p);
   const watch = kind === "watch";
@@ -1280,7 +1309,7 @@ export default async function ProductDetailPage({
                   {related.map((item) => (
                     <Link
                       key={item.id}
-                      href={`/products/${item.id}`}
+                      href={`/products/${item.slug ?? item.id}`}
                       className="pd-related-item"
                     >
                       <div className="pd-related-thumb">

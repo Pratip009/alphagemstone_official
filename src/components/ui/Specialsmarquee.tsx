@@ -11,6 +11,7 @@ interface PopulatedCategory {
 
 interface ApiProduct {
   _id: string;
+  slug?: string;
   name: string;
   category: PopulatedCategory;
   subcategory?: PopulatedCategory;
@@ -53,7 +54,7 @@ function ProductCard({
 
   return (
     <Link
-      href={`/products/${product._id}`}
+      href={`/products/${product.slug ?? product._id}`}
       style={{ textDecoration: "none", display: "block" }}
       className="product-card"
     >

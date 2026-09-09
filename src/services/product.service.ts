@@ -309,6 +309,18 @@ export async function getProductById(id: string) {
     .lean();
 }
 
+// The public product page (/products/[slug]) resolves on this instead of
+// getProductById now — see Product.slug in the model for how the slug
+// itself gets set. Kept as a twin of getProductById (same populate chain)
+// rather than a wrapper around it, since the two take different query keys.
+export async function getProductBySlug(slug: string) {
+  return Product.findOne({ slug, isActive: true })
+    .populate('category', 'name slug')
+    .populate('subcategory', 'name slug')
+    .populate('subSubcategory', 'name slug')
+    .lean();
+}
+
 // Used by the "Recently Viewed" feature to hydrate a list of localStorage
 // ids into full product docs in one round trip. Silently drops invalid
 // ObjectId strings and inactive/deleted products rather than erroring, so a

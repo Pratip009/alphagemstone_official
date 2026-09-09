@@ -72,6 +72,12 @@ export const MEMO_MAX_DAYS_CEILING = 14;
 export interface IProduct extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
+  // URL-safe identifier used for the public product page (/products/[slug])
+  // instead of the raw Mongo _id. Auto-generated from `name` on save (see
+  // the pre('validate') hook below) — never set this by hand except when
+  // deliberately re-slugging a product, since existing links/SEO depend on
+  // it staying stable.
+  slug: string;
   category: mongoose.Types.ObjectId;
   subcategory?: mongoose.Types.ObjectId;
   // Third-level taxonomy — e.g. Tanzanite (subcategory) > "Oval Tanzanite".
@@ -188,6 +194,17 @@ const ProductSchema = new Schema<IProduct>(
       required: [true, 'Product name is required'],
       trim: true,
       maxlength: [200, 'Name cannot exceed 200 characters'],
+    },
+    // See IProduct.slug above — auto-populated by the pre('validate') hook
+    // near the bottom of this file. `sparse` lets the ~existing catalogue
+    // keep working (no unique-index conflict on many docs with no slug yet)
+    // until scripts/backfill-product-slugs.mjs has run once.
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
     },
     category: {
       type: Schema.Types.ObjectId,
@@ -477,6 +494,59 @@ ProductSchema.index({ name: 'text', description: 'text' });
 
 // Memo index
 ProductSchema.index({ memoEligible: 1 });
+
+// (slug's unique+sparse index is declared inline on the field above, like
+// Category/Subcategory/Blog — no separate .index() call needed here.)
+
+// ─── Slug auto-generation ───────────────────────────────────────────────────
+// Same slugify() used by category.service.ts (Category/Subcategory slugs).
+// Kept as a private copy here rather than imported — this file has no
+// existing dependency on the services layer and shouldn't grow one just for
+// six lines of string munging.
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// Auto-assigns `slug` from `name` on create, and re-derives it whenever
+// `name` changes on a doc that has no slug yet (covers docs created before
+// this field existed, once they're next saved/updated). Deliberately does
+// NOT reslug on every name edit once a slug already exists — changing an
+// existing product's slug silently breaks any links/bookmarks/SEO already
+// pointing at it, so that has to be an explicit, intentional action instead.
+//
+// Runs on pre('validate') rather than pre('save') because
+// bulkCreateProducts() (product.service.ts) validates each doc with
+// doc.validate() before handing plain objects to insertMany() — insertMany
+// itself never fires 'save' hooks, but it does fire 'validate' hooks per
+// document, so this is the one hook guaranteed to run on every creation
+// path (single save() AND bulk CSV import) without duplicating the logic
+// in both places.
+ProductSchema.pre('validate', async function () {
+  if (this.slug && !this.isModified('name')) return;
+  if (!this.name) return; // the `required` validator will reject this anyway
+
+  const base = slugify(this.name) || 'product';
+  const ProductModel = this.constructor as mongoose.Model<IProduct>;
+
+  let candidate = base;
+  let suffix = 1;
+  // Defensive cap — with real product names this should resolve in one or
+  // two iterations; the cap just guarantees the hook can never spin forever
+  // against a pathological run of identical names.
+  while (suffix <= 1000) {
+    const clash = await ProductModel.findOne({ slug: candidate, _id: { $ne: this._id } })
+      .select('_id')
+      .lean();
+    if (!clash) break;
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+
+  this.slug = candidate;
+});
 
 const Product = (() => {
   if (mongoose.models && mongoose.models.Product) {

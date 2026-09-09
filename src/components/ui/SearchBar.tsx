@@ -1022,12 +1022,13 @@ export default function SearchBar({
         );
       } else if (r.type === "product") {
         setQuery("");
-        // Product detail page is keyed on Mongo _id (see getProductById), and
-        // the Product schema has no `slug` field, so `slug` here is always
-        // undefined — routing on it silently 404'd. Every other product link
-        // in the app (ProductCard, Specialsmarquee, etc.) already uses _id,
-        // so match that instead of falling back to a fuzzy search listing.
-        router.push(`/products/${r.item._id}`);
+        // Product detail page is keyed on the slug now (see
+        // getProductBySlug/product.service.ts and the [slug] route) — the
+        // /api/products/search route was updated to actually select+return
+        // `slug`, so this no longer silently 404's the way it used to when
+        // Product had no slug field at all. `_id` stays as a fallback for
+        // any stray result that somehow has no slug (e.g. mid-migration).
+        router.push(`/products/${r.item.slug ?? r.item._id}`);
       } else if (r.type === "attr") {
         setQuery("");
         const catParam = WATCH_KINDS.has(r.match.kind)

@@ -158,13 +158,14 @@ export async function GET(req: NextRequest) {
     $or: or,
   })
     .select(
-      "name price images image category subcategory subSubcategory productKind watchBrand watchModel gemstoneName legacySku description size caratWeight weight dimensions approxWeight shape color clarity certification"
+      "name slug price images image category subcategory subSubcategory productKind watchBrand watchModel gemstoneName legacySku description size caratWeight weight dimensions approxWeight shape color clarity certification"
     )
-    // The Product schema has no `slug` field, so it was never actually
-    // returned — the client fell back to a fuzzy `/products?search=` link
-    // for every result instead of going straight to the product. Populating
-    // `category` here (previously left as a bare ObjectId) also fixes the
-    // category name shown under each result in the dropdown.
+    // Product now has a real `slug` field (see Product.slug in the model) —
+    // it's included above so the client can route straight to
+    // /products/<slug> instead of falling back to a fuzzy
+    // /products?search= listing for every result. Populating `category`
+    // here (previously left as a bare ObjectId) also fixes the category
+    // name shown under each result in the dropdown.
     //
     // `subcategory`/`subSubcategory` are populated too so the dropdown can
     // show the full taxonomy path a product lives under (e.g.

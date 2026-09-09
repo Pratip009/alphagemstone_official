@@ -8,6 +8,7 @@ interface ProductCardProps {
   productType?: "watch" | "diamond" | "gemstone";
   product: {
     _id: string;
+    slug?: string;
     name: string;
     price: number;
     shape?: string | string[];
@@ -727,7 +728,7 @@ export default function ProductCard({
         }
       `}</style>
 
-      <Link href={`/products/${product._id}`} className="apc">
+      <Link href={`/products/${product.slug ?? product._id}`} className="apc">
         <article className="apc-card">
           {/* Header */}
           <div className="apc-header">
