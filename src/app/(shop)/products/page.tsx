@@ -409,14 +409,14 @@ function EmptyState() {
 function SidebarSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
-      <div className="h-4 bg-[#F5EDD6] rounded w-3/4 mx-auto" />
-      <div className="h-8 bg-[#F9F5EE] rounded-lg" />
+      <div className="h-4 bg-neutral-200 rounded w-3/4 mx-auto" />
+      <div className="h-8 bg-neutral-100 rounded-lg" />
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="space-y-2 pt-3 border-t border-[#EDE3D0]">
-          <div className="h-3 bg-[#F5EDD6] rounded w-1/2" />
-          <div className="h-2.5 bg-[#FAF7F1] rounded w-3/4" />
-          <div className="h-2.5 bg-[#FAF7F1] rounded w-2/3" />
-          <div className="h-2.5 bg-[#FAF7F1] rounded w-4/5" />
+        <div key={i} className="space-y-2 pt-3 border-t border-neutral-100">
+          <div className="h-3 bg-neutral-200 rounded w-1/2" />
+          <div className="h-2.5 bg-neutral-100 rounded w-3/4" />
+          <div className="h-2.5 bg-neutral-100 rounded w-2/3" />
+          <div className="h-2.5 bg-neutral-100 rounded w-4/5" />
         </div>
       ))}
     </div>
