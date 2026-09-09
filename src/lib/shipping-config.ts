@@ -10,13 +10,13 @@
 import type { ShippingAddress, PackageDimensions } from '@/types/shipping';
 
 export const STORE_ORIGIN: ShippingAddress = {
-  fullName:   'Alpha Gemstone Fulfilment',
-  street1:    process.env.STORE_STREET1  ?? '123 Diamond Way',
-  city:       process.env.STORE_CITY     ?? 'New York',
-  state:      process.env.STORE_STATE    ?? 'NY',
-  postalCode: process.env.STORE_POSTAL   ?? '10001',
+  fullName:   'Alpha Imports NY Inc. / Alpha Gemstone',
+  street1:    process.env.STORE_STREET1  ?? '3600 Sun River Point',
+  city:       process.env.STORE_CITY     ?? 'Raleigh',
+  state:      process.env.STORE_STATE    ?? 'NC',
+  postalCode: process.env.STORE_POSTAL   ?? '27601',
   country:    process.env.STORE_COUNTRY  ?? 'US',
-  phone:      process.env.STORE_PHONE    ?? '2125550100',
+  phone:      process.env.STORE_PHONE    ?? '914-310-1480',
 };
 
 // Tiered service fee brackets, based on the raw carrier rate.
