@@ -32,7 +32,11 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    // NOT /sitemap.xml — that literal path collides with the sitemap.ts
+    // metadata-route convention itself (see sitemap-index.xml/route.ts for
+    // why) and breaks the production build. Crawlers only need this
+    // robots.txt directive to find it; the filename doesn't matter to them.
+    sitemap: `${BASE_URL}/sitemap-index.xml`,
     host: BASE_URL,
   };
 }

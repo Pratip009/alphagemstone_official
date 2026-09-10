@@ -4,20 +4,14 @@ import Category from "@/models/Category";
 import Product from "@/models/Product";
 import Blog from "@/models/Blog";
 import { listSubcategoriesWithChildFlagAll } from "@/services/category.service";
+import {
+  PRODUCTS_PER_SITEMAP,
+  STATIC_SITEMAP_ID,
+  getSitemapChunkCount,
+} from "@/lib/sitemapConfig";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
-
-// Google/Bing cap a single <urlset> at 50,000 URLs. We stay well under that
-// per file so sitemaps keep generating (and re-crawling) fast even as the
-// catalogue grows well past its current ~31k products.
-const PRODUCTS_PER_SITEMAP = 10000;
-
-// Sitemap id 0 carries every non-product URL (static marketing pages,
-// categories, subcategories, blog posts). Ids 1..N each carry one page of
-// products. Splitting this way means adding products never touches the
-// (much more stable) content sitemap, and vice versa.
-const STATIC_SITEMAP_ID = 0;
 
 /**
  * Every static/marketing/legal route that isn't generated from the DB.
@@ -137,21 +131,13 @@ async function categoryAndBlogRoutes(now: Date): Promise<MetadataRoute.Sitemap> 
 }
 
 /**
- * Tells Next.js how many sitemap files to generate. Product count is
- * re-checked on every regeneration, so the sitemap automatically grows an
- * extra page once the catalogue crosses another 10,000-product boundary —
- * nothing to remember to bump by hand.
+ * Tells Next.js how many sitemap files to generate. Delegates the actual
+ * count to getSitemapChunkCount() (shared with the /sitemap.xml index
+ * route below) so the two can never disagree about how many chunks exist.
  */
 export async function generateSitemaps() {
-  try {
-    await connectDB();
-    const totalActiveProducts = await Product.countDocuments({ isActive: true });
-    const productChunks = Math.max(1, Math.ceil(totalActiveProducts / PRODUCTS_PER_SITEMAP));
-    return Array.from({ length: productChunks + 1 }, (_, i) => ({ id: i }));
-  } catch (err) {
-    console.error("[sitemap] generateSitemaps failed, falling back to 1 chunk:", err);
-    return [{ id: STATIC_SITEMAP_ID }];
-  }
+  const chunkCount = await getSitemapChunkCount();
+  return Array.from({ length: chunkCount }, (_, i) => ({ id: i }));
 }
 
 export default async function sitemap({
@@ -161,20 +147,35 @@ export default async function sitemap({
 }): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
+  // Next.js's route param plumbing passes `id` through as a string at
+  // runtime (it comes off a URL segment) even though generateSitemaps()
+  // returns it as a number and our own type signature above says `number`.
+  // Comparing the raw value against STATIC_SITEMAP_ID with strict equality
+  // silently misclassified id="0" as a product chunk (falling through to
+  // chunkIndex = "0" - 1 = -1, then a negative, DB-rejected `skip`) instead
+  // of the static/category/blog chunk. Coercing explicitly here is what
+  // actually fixes it — the arithmetic below only works correctly once
+  // `numericId` is guaranteed to be a real number.
+  const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+
   try {
     await connectDB();
   } catch (err) {
     console.error("[sitemap] DB connection failed:", err);
-    return id === STATIC_SITEMAP_ID ? staticRoutes(now) : [];
+    return numericId === STATIC_SITEMAP_ID ? staticRoutes(now) : [];
   }
 
-  if (id === STATIC_SITEMAP_ID) {
+  if (numericId === STATIC_SITEMAP_ID) {
     const dynamicEntries = await categoryAndBlogRoutes(now);
     return [...staticRoutes(now), ...dynamicEntries];
   }
 
   // id 1 -> chunk 0, id 2 -> chunk 1, ...
-  const chunkIndex = id - 1;
+  const chunkIndex = numericId - 1;
+  if (chunkIndex < 0) {
+    console.error(`[sitemap] received unexpected id "${id}" (numeric ${numericId}), refusing to query with a negative skip`);
+    return [];
+  }
   const skip = chunkIndex * PRODUCTS_PER_SITEMAP;
 
   try {
