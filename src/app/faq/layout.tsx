@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { faqs } from "./page";
+import { faqs } from "./faq-data";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
