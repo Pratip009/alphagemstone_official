@@ -1,4 +1,26 @@
 import FooterPageLayout from '@/components/footer-pages/footer-page-layout';
+import type { Metadata } from "next";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
+const CANONICAL = `${SITE_URL}/where-is-my-order`;
+const TITLE = "Where Is My Order? | Alpha Gemstone";
+const DESCRIPTION =
+  "Track your Alpha Gemstone order using your shipment details or account information.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: CANONICAL },
+  openGraph: {
+    type: "website",
+    url: CANONICAL,
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: "Alpha Gemstone",
+  },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
+};
 
 const page = () => {
   return (

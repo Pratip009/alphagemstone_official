@@ -13,6 +13,7 @@ import ProductReviews from "@/components/products/ProductReviews";
 import type { Metadata } from "next";
 import { cache } from "react";
 import { optimizedImageUrl } from "@/lib/image-url";
+import { getRatingStats } from "@/services/review.service";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -120,6 +121,9 @@ const getCachedProduct = cache(async (param: string) => {
   return null;
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
+
 export async function generateMetadata({
   params,
 }: {
@@ -130,20 +134,84 @@ export async function generateMetadata({
   const resolved = await getCachedProduct(slug);
 
   if (!resolved) {
-    return { title: "Product Not Found | Alpha Gemstone" };
+    return {
+      title: "Product Not Found | Alpha Gemstone",
+      robots: { index: false, follow: true },
+    };
   }
 
+  // Old id-shaped URLs get redirected to the canonical slug by the page
+  // component below, but generateMetadata runs independently of that
+  // redirect — make sure crawlers are only ever pointed at the slug URL
+  // that will actually keep resolving.
   const p = resolved.product as unknown as ProductDoc;
+  const canonical = `${SITE_URL}/products/${p.slug}`;
+
+  const kindLabel =
+    p.category?.name ??
+    (p.productKind
+      ? p.productKind.charAt(0).toUpperCase() + p.productKind.slice(1)
+      : "Fine Jewelry");
 
   const description = p.description?.trim()
     ? p.description.trim().slice(0, 160)
-    : `Shop ${p.name}${
-        p.category?.name ? ` — ${p.category.name}` : ""
-      } at Alpha Gemstone, offering fine diamonds, gemstones & jewelry.`;
+    : `Shop ${p.name} — ${kindLabel} at Alpha Gemstone. Certified quality, ` +
+      `secure checkout, and expert support on every fine jewelry order.`;
+
+  const title = `${p.name} | ${kindLabel} | Alpha Gemstone`;
+
+  const image = (p.images ?? []).filter(Boolean)[0];
+  const keywords = Array.from(
+    new Set(
+      [
+        p.name,
+        kindLabel,
+        p.category?.name,
+        p.subcategory?.name,
+        p.gemstoneName,
+        "Alpha Gemstone",
+      ].filter((v): v is string => !!v),
+    ),
+  );
+
+  const inStock = (p.stock ?? 0) > 0;
 
   return {
-    title: `${p.name} | Alpha Gemstone`,
+    title,
     description,
+    keywords,
+    alternates: { canonical },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title,
+      description,
+      siteName: "Alpha Gemstone",
+      images: image
+        ? [{ url: image, width: 1200, height: 1200, alt: p.name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+    other: {
+      "product:price:amount": String(p.price),
+      "product:price:currency": "USD",
+      "product:availability": inStock ? "in stock" : "out of stock",
+    },
   };
 }
 
@@ -732,6 +800,83 @@ export default async function ProductDetailPage({
 
   const related = await getRelatedProducts(p, String(p._id), 4);
 
+  // Best-effort — a review-aggregation hiccup shouldn't take down the whole
+  // product page, it just means the JSON-LD omits aggregateRating.
+  const ratingStats = await getRatingStats(String(p._id)).catch(() => null);
+
+  const canonicalUrl = `${SITE_URL}/products/${p.slug}`;
+  const kindLabelForLd =
+    p.category?.name ??
+    (p.productKind
+      ? p.productKind.charAt(0).toUpperCase() + p.productKind.slice(1)
+      : "Fine Jewelry");
+  const ldImages = (p.images ?? []).filter(Boolean);
+
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${canonicalUrl}#product`,
+    name: p.name,
+    description:
+      p.description?.trim() ||
+      `${p.name} — ${kindLabelForLd} at Alpha Gemstone.`,
+    image: ldImages.length ? ldImages : undefined,
+    sku: String(p._id),
+    category: kindLabelForLd,
+    brand: { "@type": "Brand", name: "Alpha Gemstone" },
+    offers: {
+      "@type": "Offer",
+      url: canonicalUrl,
+      priceCurrency: "USD",
+      price: p.price,
+      availability:
+        (p.stock ?? 0) > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+      itemCondition: "https://schema.org/NewCondition",
+      seller: { "@type": "Organization", name: "Alpha Gemstone" },
+    },
+    ...(ratingStats && ratingStats.total > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: ratingStats.average,
+            reviewCount: ratingStats.total,
+          },
+        }
+      : {}),
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: p.category?.name ?? (watch ? "Watches" : "Diamonds"),
+        item: `${SITE_URL}/products`,
+      },
+      ...(p.subcategory?.name
+        ? [
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: p.subcategory.name,
+              item: `${SITE_URL}/products?subcategory=${p.subcategory.slug ?? ""}`,
+            },
+          ]
+        : []),
+      {
+        "@type": "ListItem",
+        position: p.subcategory?.name ? 4 : 3,
+        name: p.name,
+        item: canonicalUrl,
+      },
+    ],
+  };
+
   // Single main product photo — the legacy layout shows one image only,
   // no thumbnail strip.
   const mainImage = (p.images ?? []).filter(Boolean)[0] ?? null;
@@ -779,6 +924,14 @@ export default async function ProductDetailPage({
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <RecordRecentlyViewed productId={String(p._id)} inStock={p.stock > 0} />
 
       <style>{`

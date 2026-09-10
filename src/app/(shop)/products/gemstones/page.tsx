@@ -6,9 +6,46 @@ import FilterBar from "@/components/filters/FilterBar";
 import SortBar from "@/components/products/SortBar";
 import Pagination from "@/components/ui/Pagination";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>; // ✅ fixed
+}
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
+const CORE_PARAMS = ["subcategory"] as const;
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
+  const filterBits = [sp.shape, sp.subcategory, sp.q].filter(Boolean);
+  const title = filterBits.length
+    ? `${filterBits.join(" ")} Gemstones | Alpha Gemstone`
+    : "Certified Natural Gemstones | Alpha Gemstone";
+  const description =
+    "Shop certified natural gemstones at Alpha Gemstone — sapphires, rubies, emeralds, and rare colored stones.";
+
+  const coreQuery = new URLSearchParams();
+  for (const key of CORE_PARAMS) if (sp[key]) coreQuery.set(key, sp[key]);
+  const qs = coreQuery.toString();
+  const canonical = qs
+    ? `${SITE_URL}/products/gemstones?${qs}`
+    : `${SITE_URL}/products/gemstones`;
+
+  const hasNonCoreParams = Object.keys(sp).some(
+    (key) => !(CORE_PARAMS as readonly string[]).includes(key) && sp[key],
+  );
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: hasNonCoreParams
+      ? { index: false, follow: true }
+      : { index: true, follow: true },
+    openGraph: { type: "website", url: canonical, title, description, siteName: "Alpha Gemstone" },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 export default async function GemstonesPage({ searchParams }: PageProps) {

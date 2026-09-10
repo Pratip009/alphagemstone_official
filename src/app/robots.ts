@@ -20,6 +20,15 @@ export default function robots(): MetadataRoute.Robots {
           "/forgot-password",
           "/wishlist",
           "/compare",
+          "/orders",
+          // Faceted/filter query strings on the product listing create
+          // near-infinite low-value URL combinations (sort order, pagination
+          // noise, price sliders). The canonical + noindex meta on those
+          // pages already keeps them out of the index; blocking the noisiest
+          // params here too just saves crawl budget for pages worth ranking.
+          "/products?*sortBy=*",
+          "/products?*page=*",
+          "/*?*utm_",
         ],
       },
     ],

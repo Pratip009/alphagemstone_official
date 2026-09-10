@@ -56,6 +56,18 @@ function resolveProductType(
 
   return "diamond";
 }
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
+
+// Query params that define a genuinely distinct, worth-indexing landing
+// page (a category/subcategory combo). Everything else (price sliders,
+// shape/color/clarity facets, sort order, search terms, pagination beyond
+// page 1) multiplies into thousands of near-duplicate URLs that would
+// otherwise flood the index with thin content — those get a self-canonical
+// back to the clean landing page and a noindex,follow so link equity still
+// flows but the combination itself never competes for a SERP slot.
+const CORE_PARAMS = ["category", "subcategory", "subSubcategory"] as const;
+
 export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
@@ -78,13 +90,45 @@ export async function generateMetadata({
     ? `${filterBits.join(" ")} ${label} | Alpha Gemstone`
     : `${label} | Alpha Gemstone`;
 
+  const description = isWatch
+    ? "Shop luxury timepieces at Alpha Gemstone — exceptional horological craftsmanship."
+    : isGemstone
+      ? "Shop certified natural gemstones at Alpha Gemstone."
+      : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Gemstone.";
+
+  // Build the canonical URL from only the core taxonomy params, in a fixed
+  // order, so /products?category=diamonds&subcategory=round and
+  // /products?subcategory=round&category=diamonds canonicalize identically.
+  const coreQuery = new URLSearchParams();
+  for (const key of CORE_PARAMS) {
+    if (sp[key]) coreQuery.set(key, sp[key]);
+  }
+  const coreQueryString = coreQuery.toString();
+  const canonical = coreQueryString
+    ? `${SITE_URL}/products?${coreQueryString}`
+    : `${SITE_URL}/products`;
+
+  // Any param outside the core set (a facet, a sort, a search term, page
+  // beyond 1) makes this a filtered view worth crawling but not indexing.
+  const hasNonCoreParams = Object.keys(sp).some(
+    (key) => !(CORE_PARAMS as readonly string[]).includes(key) && sp[key],
+  );
+
   return {
     title,
-    description: isWatch
-      ? "Shop luxury timepieces at Alpha Gemstone — exceptional horological craftsmanship."
-      : isGemstone
-        ? "Shop certified natural gemstones at Alpha Gemstone."
-        : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Gemstone.",
+    description,
+    alternates: { canonical },
+    robots: hasNonCoreParams
+      ? { index: false, follow: true }
+      : { index: true, follow: true },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title,
+      description,
+      siteName: "Alpha Gemstone",
+    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 export default async function ProductsPage({ searchParams }: PageProps) {

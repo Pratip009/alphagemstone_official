@@ -3,14 +3,14 @@
 import { useState } from "react";
 import FooterPageLayout from '@/components/footer-pages/footer-page-layout';
 
-interface FAQItem {
+export interface FAQItem {
   id: number;
   question: string;
   answer: string;
   category: string;
 }
 
-const faqs: FAQItem[] = [
+export const faqs: FAQItem[] = [
   {
     id: 1,
     category: "Pricing",

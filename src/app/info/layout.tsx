@@ -1,20 +1,18 @@
-import ContactPage from '@/components/ui/Contactpage'
-import React from 'react'
 import type { Metadata } from "next";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
-const TITLE = "Contact Us | Alpha Gemstone";
+const TITLE = "Customer Info & Policies | Alpha Gemstone";
 const DESCRIPTION =
-  "Get in touch with Alpha Gemstone NY Inc. for product questions, order support, or wholesale inquiries.";
+  "Shipping, returns, certification, and other customer information for shopping with Alpha Gemstone.";
 
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: `${SITE_URL}/contact` },
+  alternates: { canonical: `${SITE_URL}/info` },
   openGraph: {
     type: "website",
-    url: `${SITE_URL}/contact`,
+    url: `${SITE_URL}/info`,
     title: TITLE,
     description: DESCRIPTION,
     siteName: "Alpha Gemstone",
@@ -22,13 +20,6 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
-const page = () => {
-  return (
-    <>
-    <ContactPage/>
-    </>
-  )
+export default function InfoLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }
-
-export default page
-    

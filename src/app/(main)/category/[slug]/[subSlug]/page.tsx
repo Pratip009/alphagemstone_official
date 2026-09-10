@@ -4,27 +4,47 @@ import Category from "@/models/Category";
 import Subcategory from "@/models/Subcategory";
 import { notFound, redirect } from "next/navigation";
 import CategoryClientPage from "../CategoryClientPage";
+import type { Metadata } from "next";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
 
 interface PageProps {
   params: Promise<{ slug: string; subSlug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   await connectDB();
   const { slug, subSlug } = await params;
   const category = await Category.findOne({ slug, isActive: true }).lean();
-  if (!category) return { title: "Not Found" };
+  if (!category) return { title: "Not Found", robots: { index: false, follow: true } };
   const subcategory = await Subcategory.findOne({
     slug: subSlug,
     category: (category as any)._id,
     isActive: true,
   }).lean();
-  if (!subcategory) return { title: "Not Found" };
+  if (!subcategory) return { title: "Not Found", robots: { index: false, follow: true } };
+
+  const catName = (category as any).name as string;
+  const subName = (subcategory as any).name as string;
+  const title = `${subName} — ${catName} | Alpha Gemstone`;
+  const description =
+    (subcategory as any).description ??
+    `Browse ${subName} ${catName} at Alpha Gemstone — certified quality, expertly curated.`;
+  const canonical = `${SITE_URL}/category/${slug}/${subSlug}`;
+
   return {
-    title: `${(subcategory as any).name} — ${(category as any).name} | Alpha Gemstone`,
-    description:
-      (subcategory as any).description ??
-      `Browse ${(subcategory as any).name} by type.`,
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title,
+      description,
+      siteName: "Alpha Gemstone",
+    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -75,12 +95,39 @@ export default async function SubSubcategoryPage({ params }: PageProps) {
     },
   }));
 
+  const canonical = `${SITE_URL}/category/${slug}/${subSlug}`;
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: (category as any).name,
+        item: `${SITE_URL}/category/${slug}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: serializedSubcategory.name,
+        item: canonical,
+      },
+    ],
+  };
+
   return (
-    <CategoryClientPage
-      category={serializedSubcategory}
-      subcategories={serializedItems}
-      mode="subsubcategory"
-      parentSubcategorySlug={subSlug}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <CategoryClientPage
+        category={serializedSubcategory}
+        subcategories={serializedItems}
+        mode="subsubcategory"
+        parentSubcategorySlug={subSlug}
+      />
+    </>
   );
 }

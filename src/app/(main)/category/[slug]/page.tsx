@@ -4,19 +4,46 @@ import Category from "@/models/Category";
 import { notFound } from "next/navigation";
 import CategoryClientPage from "./CategoryClientPage";
 import { SPECIALS_VIRTUAL_SUBCATEGORIES } from "@/lib/specialsVirtualSubcategories";
+import type { Metadata } from "next";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   await connectDB();
   const { slug } = await params;
   const category = await Category.findOne({ slug, isActive: true }).lean();
-  if (!category) return { title: "Category Not Found" };
+  if (!category) {
+    return { title: "Category Not Found", robots: { index: false, follow: true } };
+  }
+
+  const name = (category as any).name as string;
+  const description =
+    (category as any).description ??
+    `Browse our ${name} collection at Alpha Gemstone — certified diamonds, gemstones, and fine jewelry.`;
+  const canonical = `${SITE_URL}/category/${slug}`;
+  const title = `${name} Collection | Alpha Gemstone`;
+
   return {
-    title: `${(category as any).name} — Collections`,
-    description: (category as any).description ?? `Browse our ${(category as any).name} collection`,
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title,
+      description,
+      siteName: "Alpha Gemstone",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -73,10 +100,55 @@ export default async function CategoryPage({ params }: PageProps) {
     description: (category as any).description ?? null,
   };
 
+  const canonical = `${SITE_URL}/category/${slug}`;
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: serializedCategory.name,
+        item: canonical,
+      },
+    ],
+  };
+
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${canonical}#collection`,
+    name: `${serializedCategory.name} Collection`,
+    description:
+      serializedCategory.description ??
+      `Browse the ${serializedCategory.name} collection at Alpha Gemstone.`,
+    url: canonical,
+    ...(subcategories.length > 0 && {
+      hasPart: subcategories.map((s) => ({
+        "@type": "CollectionPage",
+        name: s.name,
+        url: s.hasChildren
+          ? `${SITE_URL}/category/${slug}/${s.slug}`
+          : `${SITE_URL}/products?category=${slug}&subcategory=${s.slug}`,
+      })),
+    }),
+  };
+
   return (
-    <CategoryClientPage
-      category={serializedCategory}
-      subcategories={subcategories}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
+      <CategoryClientPage
+        category={serializedCategory}
+        subcategories={subcategories}
+      />
+    </>
   );
 }
