@@ -14,6 +14,30 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
 
 /**
+ * Next.js's sitemap XML serializer does NOT escape special characters in
+ * the `url` field before writing it into `<loc>...</loc>` — confirmed in
+ * production, where the unescaped "&" in the
+ * /products?category=X&subcategory=Y URLs (built for leaf subcategories
+ * below) broke the XML at that exact entry and silently truncated
+ * everything after it for any parser reading the file top to bottom,
+ * Googlebot included. "&" is perfectly valid inside a URL itself, just not
+ * as raw text inside XML, so every url gets run through this before it's
+ * returned.
+ */
+function escapeXmlUrl(url: string): string {
+  return url
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function withEscapedUrls(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
+  return entries.map((entry) => ({ ...entry, url: escapeXmlUrl(entry.url) }));
+}
+
+/**
  * Every static/marketing/legal route that isn't generated from the DB.
  * changeFrequency/priority are tuned by how often the page's content
  * actually changes and how much it matters for organic discovery —
@@ -162,12 +186,12 @@ export default async function sitemap({
     await connectDB();
   } catch (err) {
     console.error("[sitemap] DB connection failed:", err);
-    return numericId === STATIC_SITEMAP_ID ? staticRoutes(now) : [];
+    return withEscapedUrls(numericId === STATIC_SITEMAP_ID ? staticRoutes(now) : []);
   }
 
   if (numericId === STATIC_SITEMAP_ID) {
     const dynamicEntries = await categoryAndBlogRoutes(now);
-    return [...staticRoutes(now), ...dynamicEntries];
+    return withEscapedUrls([...staticRoutes(now), ...dynamicEntries]);
   }
 
   // id 1 -> chunk 0, id 2 -> chunk 1, ...
@@ -186,14 +210,16 @@ export default async function sitemap({
       .limit(PRODUCTS_PER_SITEMAP)
       .lean();
 
-    return (products as any[])
-      .filter((p) => !!p.slug)
-      .map((p) => ({
-        url: `${BASE_URL}/products/${p.slug}`,
-        lastModified: p.updatedAt ?? now,
-        changeFrequency: "weekly" as const,
-        priority: 0.7,
-      }));
+    return withEscapedUrls(
+      (products as any[])
+        .filter((p) => !!p.slug)
+        .map((p) => ({
+          url: `${BASE_URL}/products/${p.slug}`,
+          lastModified: p.updatedAt ?? now,
+          changeFrequency: "weekly" as const,
+          priority: 0.7,
+        })),
+    );
   } catch (err) {
     console.error(`[sitemap] product chunk ${chunkIndex} failed:`, err);
     return [];
