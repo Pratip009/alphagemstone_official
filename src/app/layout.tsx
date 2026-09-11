@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import Providers from "./providers";
-import StartupLoader from "./StartupLoader";
 import "./global.css";
 import CookieConsent from "@/components/ui/Cookieconsent";
 import HomeOnlyWidgets from "./HomeOnlyWidgets";
@@ -234,7 +233,7 @@ export default async function RootLayout({
         }}
       >
         <Providers>
-          <StartupLoader>{children}</StartupLoader>
+          {children}
           <HomeOnlyWidgets />
         </Providers>
         <CookieConsent />
