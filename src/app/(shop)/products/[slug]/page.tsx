@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { optimizedImageUrl } from "@/lib/image-url";
 import { getRatingStats } from "@/services/review.service";
+import { buildProductSpecs, type Spec } from "@/lib/productSpecs";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -95,8 +96,6 @@ type RelatedItem = {
 };
 
 type ProductKind = "watch" | "diamond" | "gemstone" | "jewelry";
-
-type Spec = { label: string; value: string; highlight?: boolean };
 
 // Wrap the resolver with React's cache() so that generateMetadata() and the
 // page component — which both need the same product for the same request —
@@ -224,10 +223,6 @@ function display(val?: string | string[]): string {
   if (!val) return "";
   return Array.isArray(val) ? val.join(", ") : val;
 }
-function capitalize(val?: string | string[]): string {
-  const s = first(val);
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
-}
 function certDisplay(val?: string | string[]): string {
   if (!val) return "—";
   const arr = Array.isArray(val) ? val : [val];
@@ -251,143 +246,12 @@ function getProductKind(p: ProductDoc): ProductKind {
   return "jewelry";
 }
 
-// "metalMaterial" -> "Metal Material" — used only for legacyAttributes keys
-// that aren't already surfaced under a named label below, so nothing
-// captured at import time silently disappears from the page.
-function titleCase(key: string): string {
-  return key
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/^./, (c) => c.toUpperCase());
-}
-
-// legacyAttributes keys that are internal bookkeeping, not customer-facing
-// specs, and should never render even as a leftover row.
-const SKIP_ATTR_KEYS = new Set(["legacyCategoryRaw", "shippingWeight"]);
-
 // ─── Spec table builder ────────────────────────────────────────────────────
-// Builds the "spec sheet" rows for a product, tailored per productKind.
-// Every row is only added when a value actually exists — no hardcoded "—"
-// placeholders for fields that were never captured on that product, and no
-// bleed-through of irrelevant fields (a gemstone won't show "Movement", a
-// watch won't show "Clarity").
+// The actual row-building logic now lives in src/lib/productSpecs.ts,
+// shared with the ProductCard Quick View modal so the two can never drift
+// apart — see that file's header comment.
 function buildSpecs(p: ProductDoc, kind: ProductKind): Spec[] {
-  const attrs = p.legacyAttributes ?? {};
-  const rows: Spec[] = [];
-  const usedAttrKeys = new Set<string>();
-
-  const push = (
-    label: string,
-    value: string | number | undefined | null,
-    opts?: { highlight?: boolean },
-  ) => {
-    if (value === undefined || value === null || value === "") return;
-    rows.push({ label, value: String(value), highlight: opts?.highlight });
-  };
-  // Reads a legacyAttributes key and marks it "already shown" so it isn't
-  // duplicated in the leftover-attributes pass at the end.
-  const attr = (key: string): string | undefined => {
-    usedAttrKeys.add(key);
-    return attrs[key] || undefined;
-  };
-
-  if (kind === "diamond") {
-    push("Item", "Diamond");
-    push("Polish", attr("polish"));
-    push("Shape", p.shapeRaw || capitalize(p.shape));
-    push("Cut", p.cutType || attr("cut"));
-    push("Color", p.colorRaw || display(p.color));
-    push("Size", p.dimensions || attr("dimensions"));
-    push("Depth", attr("depth"));
-    push("Treatment", p.treatment || attr("treatment"));
-    push("Clarity", p.clarityRaw || display(p.clarity));
-    const cert = certDisplay(p.certification);
-    if (cert !== "—") push("Certification", cert);
-    const diamondApproxWeightAttr = p.approxWeight || attr("approxWeight");
-    push(
-      "Approx Weight",
-      diamondApproxWeightAttr
-        ? `${diamondApproxWeightAttr} ct.`
-        : p.caratWeight
-          ? `${p.caratWeight} ct.`
-          : p.size
-            ? `${p.size} ct.`
-            : undefined,
-    );
-  } else if (kind === "gemstone") {
-    push("Name", p.gemstoneName || p.name);
-    push("Shape", p.shapeRaw || capitalize(p.shape));
-    push("Cut", p.cutType || attr("cut"));
-    push("Color", p.colorRaw || display(p.color));
-    push("Origin", p.origin || attr("origin"));
-    push("Size", p.dimensions || attr("dimensions"));
-    push("Luster", p.luster || attr("luster"));
-    push("Treatment", p.treatment || attr("treatment"));
-    push("Hardness", p.hardness || attr("hardness"));
-    push("Clarity", p.clarityRaw || display(p.clarity));
-    // attr() must be called unconditionally here — if it only runs on the
-    // right side of `||` (i.e. only when p.gradeRaw is empty), the 'grade'
-    // key never gets marked "used" on products that have both, and it
-    // resurfaces a second time in the leftover-attributes pass below,
-    // producing a duplicate "Grade" row (and a React duplicate-key error).
-    const gradeAttr = attr("grade");
-    push("Grade", p.gradeRaw || gradeAttr);
-    const approxWeightAttr = p.approxWeight || attr("approxWeight");
-    push(
-      "Approx Weight",
-      approxWeightAttr
-        ? `${approxWeightAttr} ct.`
-        : p.caratWeight
-          ? `${p.caratWeight} ct.`
-          : p.size
-            ? `${p.size} ct.`
-            : undefined,
-    );
-  } else if (kind === "watch") {
-    push("Brand", p.watchBrand);
-    push("Model", p.watchModel);
-    push("Movement", p.watchMovement);
-    push("Gender", p.watchGender);
-    push("Style", p.watchStyle);
-    push("Strap", p.watchStrapType);
-    push("Case Material", p.watchCaseMaterial);
-    push("Dial Color", p.watchDialColor);
-    push("Case Size", p.watchCaseSize);
-    push("Features", p.watchFeatures?.join(", "));
-  } else {
-    // jewelry / silver / vouchers / anything without a dedicated kind
-    push("Metal", attr("metalMaterial"));
-    push("Metal Weight", attr("metalWeight"));
-    push("Ring Size", attr("ringSize"));
-    push("Size Range", attr("sizeRange"));
-    push("Carat Range", attr("caratRange"));
-    push("Shape", p.shapeRaw || capitalize(p.shape));
-    push("Color", p.colorRaw || display(p.color));
-  }
-
-  // Fields captured on every product kind from the legacy "matched
-  // categories" export, not just diamonds/gemstones/watches.
-  push("Number of Stones", p.numberOfStones);
-  push("Item Weight", p.weight ? `${p.weight} g` : undefined);
-  push("Manufacturer", p.manufacturerId);
-  if (p.minOrder && p.minOrder > 1) {
-    push("Minimum Order Qty", p.minOrder);
-  }
-  if (p.makeAnOffer) push("Make An Offer", "Available on this item");
-
-  // Anything still sitting in legacyAttributes that wasn't already pulled
-  // out above — keeps the page honest instead of quietly dropping data
-  // that was captured at import time (e.g. a diamond row that happens to
-  // also carry an "origin" value, or a gemstone with a stray "ringSize").
-  for (const [key, value] of Object.entries(attrs)) {
-    if (usedAttrKeys.has(key) || SKIP_ATTR_KEYS.has(key) || !value) continue;
-    push(titleCase(key), value);
-  }
-
-  push("Availability", p.stock > 0 ? `${p.stock} in stock` : "Out of stock", {
-    highlight: p.stock > 0,
-  });
-
-  return rows;
+  return buildProductSpecs(p, kind);
 }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
