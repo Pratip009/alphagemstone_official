@@ -30,7 +30,7 @@ const FOOTER_COLUMNS = [
         href: "/shipping-policy",
       },
       {
-        label: "Drop Shipping Program",
+        label: "💎 Sell With Alpha (Dropship)",
         href: "/drop-shipping",
       },
       {

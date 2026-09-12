@@ -9,6 +9,7 @@ import SearchBar from "./SearchBar";
 import CartSidebar from "./CartSidebar";
 import { useWishlist } from "@/hooks/useWishlist";
 import { trackCTA, trackEvent } from "@/lib/analytics";
+import { Gem } from "lucide-react";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface NavSubcategory {
@@ -544,17 +545,16 @@ export default function Navbar({
 
         /* ── Top Row ── */
         .nav-top-row {
-          max-width: 1280px;
-          margin: 0 auto;
+          width: 100%;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 24px;
-          height: 72px;
-          padding: 0 12px;
+          gap: 16px;
+          min-height: 72px;
+          padding: 10px 12px;
         }
         @media (min-width: 768px) {
-          .nav-top-row { height: 80px; padding: 0 40px; }
+          .nav-top-row { min-height: 80px; padding: 10px 16px; gap: 20px; }
         }
 
         /* ── Logo ── */
@@ -616,7 +616,9 @@ export default function Navbar({
           flex-direction: column;
           align-items: flex-end;
           gap: 6px;
-          flex-shrink: 0;
+          flex-shrink: 1;
+          min-width: 0;
+          max-width: 100%;
         }
         @media (min-width: 768px) {
           .nav-right { display: flex; }
@@ -624,7 +626,18 @@ export default function Navbar({
         .nav-actions-row {
           display: flex;
           align-items: center;
+          justify-content: flex-end;
           gap: 2px;
+          flex-wrap: nowrap;
+          max-width: 100%;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .nav-actions-row::-webkit-scrollbar { display: none; }
+        @media (min-width: 768px) and (max-width: 1200px) {
+          .nav-actions-row { gap: 0; }
+          .nav-link { padding: 6px 8px; font-size: 13px; }
         }
 
         /* ── Nav links ── */
@@ -746,6 +759,56 @@ export default function Navbar({
           box-shadow: 0 6px 20px rgba(124,58,237,0.38);
         }
 
+        /* ── Dropship CTA button ── */
+        .nav-dropship-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--label);
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          color: #8a6e2a;
+          background: #fdfaf2;
+          border: 1px solid #c9a84c;
+          text-decoration: none;
+          padding: 7px 14px;
+          border-radius: 6px;
+          margin: 0 8px;
+          white-space: nowrap;
+          transition: background 0.18s, color 0.18s, border-color 0.18s;
+        }
+        .nav-dropship-btn:hover {
+          background: #c9a84c;
+          color: #fff;
+          border-color: #c9a84c;
+        }
+        .nav-dropship-label { white-space: nowrap; }
+        @media (min-width: 768px) and (max-width: 1200px) {
+          /* Icon-only on tighter desktop/tablet widths so the row never crowds */
+          .nav-dropship-btn { padding: 7px; margin: 0 4px; }
+          .nav-dropship-label { display: none; }
+        }
+        .nav-dropship-btn-mobile {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          text-decoration: none;
+          color: #8a6e2a;
+          background: #fdfaf2;
+          border: 1px solid #c9a84c;
+          flex-shrink: 0;
+          transition: background 0.18s, color 0.18s;
+        }
+        .nav-dropship-btn-mobile:hover,
+        .nav-dropship-btn-mobile:active {
+          background: #c9a84c;
+          color: #fff;
+        }
+
         /* ── Admin badge ── */
         .nav-admin-badge {
           font-family: var(--label);
@@ -768,6 +831,7 @@ export default function Navbar({
         .nav-contact-row {
           display: flex;
           align-items: center;
+          justify-content: flex-end;
           gap: 20px;
 
         }
@@ -1558,6 +1622,16 @@ export default function Navbar({
               >
                 Contact
               </Link>
+              <Link
+                href="/drop-shipping"
+                className="nav-dropship-btn"
+                data-track-click="nav_dropship"
+                title="Dropship Program"
+                onClick={() => trackCTA("dropship_program", "desktop")}
+              >
+                <Gem size={14} strokeWidth={1.8} />
+                <span className="nav-dropship-label">Dropship Program</span>
+              </Link>
 
               {user ? (
                 <>
@@ -1745,6 +1819,16 @@ export default function Navbar({
           >
             {user && <WishlistNavButton mobile />}
             {user && <CartIconButton mobile />}
+            <Link
+              href="/drop-shipping"
+              aria-label="Dropship Program"
+              title="Dropship Program"
+              className="nav-dropship-btn-mobile"
+              data-track-click="nav_dropship_mobile"
+              onClick={() => trackCTA("dropship_program", "mobile")}
+            >
+              <Gem size={16} strokeWidth={1.8} />
+            </Link>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Toggle menu"
@@ -2084,6 +2168,7 @@ export default function Navbar({
             { href: "/about", label: "About" },
             { href: "/blogs", label: "Blog" },
             { href: "/contact", label: "Contact Us" },
+            { href: "/drop-shipping", label: "Dropship Program" },
           ].map(({ href, label }) => (
             <Link
               key={href}

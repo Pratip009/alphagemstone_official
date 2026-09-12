@@ -19,7 +19,8 @@ import {
   UserCheck,
   BarChart3,
   UsersRound,
-  MessageSquareText
+  MessageSquareText,
+  Package,
 } from "lucide-react";
 
 const NAV = [
@@ -46,6 +47,16 @@ const NAV = [
     href: "/admin/memo-eligibility",
     label: "Memo Applications",
     icon: UserCheck,
+  },
+  {
+    href: "/admin/dropship-applications",
+    label: "Dropship Applications",
+    icon: Gem,
+  },
+  {
+    href: "/admin/dropship-orders",
+    label: "Dropship Orders",
+    icon: Package,
   },
 ];
 

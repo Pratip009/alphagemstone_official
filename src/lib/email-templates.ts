@@ -795,3 +795,302 @@ export function couponEmailHtml(data: CouponEmailData): string {
 
   return emailWrapper(body, `Your ${discountPercent}% off code: ${code}`);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dropship Program
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DropshipApplicationReceivedData {
+  fullName: string;
+}
+
+export function dropshipApplicationReceivedEmailHtml(
+  data: DropshipApplicationReceivedData
+): string {
+  const firstName = data.fullName.split(' ')[0] || data.fullName;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Dropship Program</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:32px;font-weight:400;color:#FFFFFF;line-height:1.25;">Application received</h1>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:46px 52px 42px;">
+      <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:18px;color:${T.textPrimary};">Dear ${firstName},</p>
+      <p style="margin:0 0 30px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
+        Thank you for applying to the Alpha Gemstone Dropship Program. Our team is reviewing your application now and typically responds within 1–2 business days.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:34px;">
+        <tr>
+          <td style="background-color:#FAFAF8;border:1px solid ${T.border};border-top:3px solid ${T.accentGold};padding:24px 26px;">
+            <p style="margin:0;font-family:${T.sansStack};font-size:13px;color:${T.textMuted};line-height:1.7;">
+              Once approved, we'll email you a private link to your Dropship Seller Portal — no password needed — where you can submit orders and track fulfillment.
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;font-family:${T.sansStack};font-size:12px;color:${T.textLight};line-height:1.8;">
+        Questions in the meantime? Reach us at <a href="mailto:${SUPPORT_EMAIL}" style="color:${T.accentGold};text-decoration:none;">${SUPPORT_EMAIL}</a>.
+      </p>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, 'We received your Alpha Gemstone Dropship Program application');
+}
+
+export interface AdminNewDropshipApplicationData {
+  applicationId: string;
+  fullName: string;
+  businessName?: string;
+  email: string;
+  phone?: string;
+  website?: string;
+  sellingChannels: string[];
+}
+
+export function adminNewDropshipApplicationEmailHtml(
+  data: AdminNewDropshipApplicationData
+): string {
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textMuted};">${label}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};font-weight:700;text-align:right;">${value}</td>
+    </tr>`;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:36px 52px 30px;">
+      <p style="margin:0 0 12px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">New dropship application</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:27px;font-weight:400;color:#FFFFFF;">${data.fullName} wants to join</h1>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:38px 52px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${row('Applicant', data.fullName)}
+        ${row('Business', data.businessName || '—')}
+        ${row('Email', data.email)}
+        ${row('Phone', data.phone || '—')}
+        ${row('Website', data.website || '—')}
+        ${row('Sells on', data.sellingChannels.join(', ') || '—')}
+      </table>
+      <div style="margin-top:30px;">
+        ${ctaButton('Review Application', `${SITE_URL}/admin/dropship-applications`)}
+      </div>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `New dropship application from ${data.fullName}`);
+}
+
+export interface DropshipApplicationApprovedData {
+  fullName: string;
+  portalUrl: string;
+}
+
+export function dropshipApplicationApprovedEmailHtml(
+  data: DropshipApplicationApprovedData
+): string {
+  const firstName = data.fullName.split(' ')[0] || data.fullName;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:52px 52px 44px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">You're approved</p>
+      <h1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:34px;font-weight:400;color:#FFFFFF;line-height:1.2;">Welcome to the program, ${firstName}.</h1>
+      <p style="margin:0;font-family:${T.sansStack};font-size:14px;color:rgba(255,255,255,0.55);">Your store. Our inventory. We ship. You profit.</p>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:46px 52px 24px;">
+      <p style="margin:0 0 30px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
+        Your Alpha Gemstone Dropship Program application has been approved. Bookmark your private Seller Portal link below — it's your no-password access to submit orders and track every shipment.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+        <tr>
+          <td align="center" style="background-color:${T.headerBg};padding:26px 24px;">
+            ${sectionHeading('Your seller portal')}
+            <p style="margin:12px 0 0;">
+              <a href="${data.portalUrl}" style="font-family:${T.monoStack};font-size:13px;color:${T.accentGold};word-break:break-all;">${data.portalUrl}</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+      <div style="text-align:center;margin-bottom:8px;">
+        ${ctaButton('Open Seller Portal', data.portalUrl)}
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td class="email-pad" style="padding:0 52px 42px;">
+      <p style="margin:0;font-family:${T.sansStack};font-size:12px;color:${T.textLight};line-height:1.8;">
+        Keep this link private — it's how you'll place dropship orders going forward. Save it somewhere safe; treat it like a password.
+      </p>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `You're approved for the Alpha Gemstone Dropship Program`);
+}
+
+export interface DropshipApplicationRejectedData {
+  fullName: string;
+  reason?: string;
+}
+
+export function dropshipApplicationRejectedEmailHtml(
+  data: DropshipApplicationRejectedData
+): string {
+  const firstName = data.fullName.split(' ')[0] || data.fullName;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Dropship Program</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:30px;font-weight:400;color:#FFFFFF;line-height:1.3;">Update on your application</h1>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:46px 52px 42px;">
+      <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:18px;color:${T.textPrimary};">Dear ${firstName},</p>
+      <p style="margin:0 0 24px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
+        Thank you for your interest in the Alpha Gemstone Dropship Program. After review, we're not able to approve your application at this time.
+      </p>
+      ${data.reason ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+        <tr>
+          <td style="background-color:${T.warnBg};border-left:3px solid ${T.warnBdr};padding:16px 20px;">
+            <p style="margin:0;font-family:${T.sansStack};font-size:13px;color:#78350F;line-height:1.6;">${data.reason}</p>
+          </td>
+        </tr>
+      </table>` : ''}
+      <p style="margin:0;font-family:${T.sansStack};font-size:13px;color:${T.textLight};line-height:1.8;">
+        If you'd like to discuss this further or reapply later, contact us at <a href="mailto:${SUPPORT_EMAIL}" style="color:${T.accentGold};text-decoration:none;">${SUPPORT_EMAIL}</a>.
+      </p>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `An update on your Alpha Gemstone Dropship Program application`);
+}
+
+export interface DropshipOrderConfirmationData {
+  sellerName: string;
+  productName: string;
+  quantity: number;
+  amount: number;
+  customerName: string;
+  portalUrl: string;
+}
+
+export function dropshipOrderConfirmationEmailHtml(
+  data: DropshipOrderConfirmationData
+): string {
+  const firstName = data.sellerName.split(' ')[0] || data.sellerName;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Payment received</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:30px;font-weight:400;color:#FFFFFF;line-height:1.3;">We'll take it from here, ${firstName}.</h1>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:46px 52px 42px;">
+      <p style="margin:0 0 26px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
+        Payment of <strong style="color:${T.textPrimary};">$${data.amount.toFixed(2)}</strong> for <strong style="color:${T.textPrimary};">${data.quantity} × ${data.productName}</strong> has been received, shipping directly to <strong style="color:${T.textPrimary};">${data.customerName}</strong>. Alpha will now prepare, pack, and ship it — no Alpha branding or pricing included.
+      </p>
+      ${ctaButton('View Portal', data.portalUrl)}
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `Payment received — your dropship order for ${data.customerName} is on its way to fulfillment`);
+}
+
+export interface DropshipOrderPaymentFailedData {
+  sellerName: string;
+  productName: string;
+  portalUrl: string;
+}
+
+export function dropshipOrderPaymentFailedEmailHtml(
+  data: DropshipOrderPaymentFailedData
+): string {
+  const firstName = data.sellerName.split(' ')[0] || data.sellerName;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:44px 52px 38px;">
+      <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Payment not completed</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:30px;font-weight:400;color:#FFFFFF;line-height:1.3;">We couldn't complete your payment, ${firstName}.</h1>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:46px 52px 42px;">
+      <p style="margin:0 0 26px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.7;">
+        Your order for <strong style="color:${T.textPrimary};">${data.productName}</strong> wasn't charged, so it hasn't moved into fulfillment. You can try again any time from your seller portal.
+      </p>
+      ${ctaButton('Try Payment Again', data.portalUrl)}
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `Payment not completed for your dropship order`);
+}
+
+export interface AdminNewDropshipOrderData {
+  orderId: string;
+  sellerBusinessName?: string;
+  sellerEmail: string;
+  productName: string;
+  quantity: number;
+  amount: number;
+  customerName: string;
+  city: string;
+  country: string;
+}
+
+export function adminNewDropshipOrderEmailHtml(
+  data: AdminNewDropshipOrderData
+): string {
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textMuted};">${label}</td>
+      <td style="padding:12px 0;border-bottom:1px solid ${T.divider};font-family:${T.sansStack};font-size:13px;color:${T.textPrimary};font-weight:700;text-align:right;">${value}</td>
+    </tr>`;
+
+  const body = `
+  <tr>
+    <td style="background-color:${T.headerBg};padding:36px 52px 30px;">
+      <p style="margin:0 0 12px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">Paid dropship order — ready to fulfill</p>
+      <h1 style="margin:0;font-family:${T.fontStack};font-size:27px;font-weight:400;color:#FFFFFF;">${data.quantity} × ${data.productName}</h1>
+    </td>
+  </tr>
+  ${facetRule()}
+
+  <tr>
+    <td class="email-pad" style="padding:38px 52px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${row('Seller', `${data.sellerBusinessName || '—'} (${data.sellerEmail})`)}
+        ${row('Amount paid', `$${data.amount.toFixed(2)}`)}
+        ${row('Ship to', `${data.customerName} — ${data.city}, ${data.country}`)}
+      </table>
+      <div style="margin-top:30px;">
+        ${ctaButton('Open in Admin', `${SITE_URL}/admin/dropship-orders`)}
+      </div>
+    </td>
+  </tr>`;
+
+  return emailWrapper(body, `Paid dropship order ready to fulfill — ${data.quantity} × ${data.productName}`);
+}
