@@ -630,11 +630,7 @@ export default function Navbar({
           gap: 2px;
           flex-wrap: nowrap;
           max-width: 100%;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
         }
-        .nav-actions-row::-webkit-scrollbar { display: none; }
         @media (min-width: 768px) and (max-width: 1200px) {
           .nav-actions-row { gap: 0; }
           .nav-link { padding: 6px 8px; font-size: 13px; }

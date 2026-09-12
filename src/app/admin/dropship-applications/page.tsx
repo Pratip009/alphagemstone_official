@@ -145,6 +145,7 @@ export default function DropshipApplicationsAdminPage() {
         <div className="flex flex-col gap-3">
           {apps.map((a) => {
             const meta = STATUS_META[a.status];
+            const isActive = a.active !== false;
             return (
               <div key={a._id} className="rounded-2xl px-6 py-5" style={{ border: '1px solid #ede9e1', background: '#fff' }}>
                 <div className="flex items-start justify-between flex-wrap gap-4">
@@ -161,12 +162,12 @@ export default function DropshipApplicationsAdminPage() {
                         <span
                           className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
                           style={
-                            a.active
+                            isActive
                               ? { background: '#f0fdf4', color: '#15803d' }
                               : { background: '#fef2f2', color: '#dc2626' }
                           }
                         >
-                          {a.active ? 'Active' : 'Deactivated'}
+                          {isActive ? 'Active' : 'Deactivated'}
                         </span>
                       )}
                     </div>
@@ -215,7 +216,7 @@ export default function DropshipApplicationsAdminPage() {
 
                   {a.status === 'approved' && (
                     <div>
-                      {a.active ? (
+                      {isActive ? (
                         <button
                           disabled={actingOn === a._id}
                           onClick={() => act(a._id, 'deactivate')}

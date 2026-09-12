@@ -30,7 +30,7 @@ const EMPTY_FORM: ShippingForm = {
   city: "",
   state: "",
   postalCode: "",
-  country: "IN",
+  country: "US",
   phone: "",
 };
 

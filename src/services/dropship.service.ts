@@ -7,6 +7,17 @@ import DropshipOrder, { IDropshipOrder } from '@/models/DropshipOrder';
 import Product from '@/models/Product';
 import { createPayPalOrder, capturePayPalOrder } from './paypal.service';
 import {
+  getShipEngineRates,
+  purchaseLabelFromRate,
+} from './shipengine.service';
+import {
+  STORE_ORIGIN,
+  DEFAULT_PACKAGE,
+  applyShippingServiceFee,
+} from '@/lib/shipping-config';
+import { buildTrackingUrl } from '@/models/ORDER_SHIPPING_FIELDS';
+import type { ShippingAddress } from '@/types/shipping';
+import {
   dropshipApplicationReceivedEmailHtml,
   adminNewDropshipApplicationEmailHtml,
   dropshipApplicationApprovedEmailHtml,
@@ -151,7 +162,79 @@ export async function getApplicationByToken(
   return DropshipApplication.findOne({ portalToken: token }).lean() as any;
 }
 
+// ─── Shipping ─────────────────────────────────────────────────────────────────
+
+export interface ShippingDestinationInput {
+  street1: string;
+  street2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country?: string;
+}
+
+/**
+ * Live ShipEngine/ShipStation rates for a dropship order, using the exact
+ * same store origin/package defaults and tiered service fee as the normal
+ * customer checkout (see order.service.ts / shipping-config.ts) — each rate
+ * comes back with both the raw carrier rate and the fee-inclusive cost the
+ * seller will actually be charged.
+ */
+export async function getDropshipShippingRates(
+  token: string,
+  destination: ShippingDestinationInput
+) {
+  await connectDB();
+
+  const application = await DropshipApplication.findOne({ portalToken: token });
+  if (!application) throw new DropshipError('Invalid portal link', 404);
+  if (application.status !== 'approved') {
+    throw new DropshipError('Your dropship application is not yet approved', 403);
+  }
+  if (application.active === false) {
+    throw new DropshipError('This dropship account has been deactivated.', 403);
+  }
+
+  // ShipStation rejects anything but an exact 2-letter code for US/CA
+  // addresses with an opaque error — catching it here gives the seller a
+  // clear, actionable message instead of a raw carrier-API exception.
+  const state = (destination.state || '').trim().toUpperCase();
+  if (state.length !== 2) {
+    throw new DropshipError(
+      'Please select a valid state/province before getting shipping rates.',
+      400
+    );
+  }
+
+  const destAddr: ShippingAddress = {
+    fullName: 'Dropship Customer',
+    street1: destination.street1,
+    street2: destination.street2,
+    city: destination.city,
+    state,
+    postalCode: destination.postalCode,
+    country: destination.country || 'US',
+  };
+
+  const rates = await getShipEngineRates(STORE_ORIGIN, destAddr, DEFAULT_PACKAGE);
+
+  return rates.map((r) => ({
+    ...r,
+    costWithFee: applyShippingServiceFee(r.rate),
+  }));
+}
+
 // ─── Orders ───────────────────────────────────────────────────────────────────
+
+export interface DropshipShippingSelection {
+  carrier: string;
+  service: string;
+  serviceCode: string;
+  rateId: string;
+  rate: number; // raw carrier rate, as quoted by getDropshipShippingRates
+  estimatedDays?: number;
+  estimatedDelivery?: string;
+}
 
 export interface SubmitDropshipOrderInput {
   productId: string;
@@ -163,10 +246,10 @@ export interface SubmitDropshipOrderInput {
   addressLine1: string;
   addressLine2?: string;
   city: string;
-  state?: string;
+  state: string;
   postalCode: string;
   country?: string;
-  shippingMethod?: string;
+  shippingSelection: DropshipShippingSelection;
   specialInstructions?: string;
 }
 
@@ -174,7 +257,9 @@ export interface SubmitDropshipOrderInput {
  * Creates a dropship order against a real catalog product and atomically
  * reserves its stock (mirrors reserveStockForItems in order.service.ts) —
  * the order starts life as pending_payment / unpaid, and does NOT get
- * handed to fulfillment until PayPal payment is captured.
+ * handed to fulfillment until PayPal payment is captured. Shipping is a
+ * real ShipEngine rate the seller picked, with the same tiered service fee
+ * as the normal customer checkout — never a free-text guess.
  */
 export async function submitDropshipOrder(
   token: string,
@@ -187,11 +272,15 @@ export async function submitDropshipOrder(
   if (application.status !== 'approved') {
     throw new DropshipError('Your dropship application is not yet approved', 403);
   }
-  if (!application.active) {
+  if (application.active === false) {
     throw new DropshipError(
       'This dropship account has been deactivated. Contact Alpha Gemstone for help.',
       403
     );
+  }
+
+  if (!input.shippingSelection?.rateId) {
+    throw new DropshipError('Please select a shipping method before continuing.', 400);
   }
 
   const quantity = Math.max(1, input.quantity || 1);
@@ -216,6 +305,14 @@ export async function submitDropshipOrder(
     );
   }
 
+  // Same tiered fee logic as normal checkout — computed once here from the
+  // raw rate so nothing downstream has to re-derive it (see the identical
+  // comment/reasoning in order.service.ts createOrderFromCart).
+  const productAmount = Math.round(product.price * quantity * 100) / 100;
+  const shippingCost = applyShippingServiceFee(input.shippingSelection.rate);
+  const serviceFee = Math.round((shippingCost - input.shippingSelection.rate) * 100) / 100;
+  const amount = Math.round((productAmount + shippingCost) * 100) / 100;
+
   try {
     const order = await DropshipOrder.create({
       application: application._id,
@@ -226,7 +323,8 @@ export async function submitDropshipOrder(
       productImage: Array.isArray((product as any).images) ? (product as any).images[0] : (product as any).image,
       unitPrice: product.price,
       quantity,
-      amount: Math.round(product.price * quantity * 100) / 100,
+      productAmount,
+      amount,
       specifications: input.specifications,
       customerName: input.customerName,
       customerEmail: input.customerEmail,
@@ -237,7 +335,15 @@ export async function submitDropshipOrder(
       state: input.state,
       postalCode: input.postalCode,
       country: input.country || 'United States',
-      shippingMethod: input.shippingMethod,
+      shippingCarrier: input.shippingSelection.carrier,
+      shippingService: input.shippingSelection.service,
+      shippingServiceCode: input.shippingSelection.serviceCode,
+      shippingRateId: input.shippingSelection.rateId,
+      shippingRate: input.shippingSelection.rate,
+      shippingCost,
+      serviceFee,
+      shippingEstimatedDays: input.shippingSelection.estimatedDays,
+      shippingEstimatedDelivery: input.shippingSelection.estimatedDelivery,
       specialInstructions: input.specialInstructions,
       stockReserved: true,
     });
@@ -275,7 +381,7 @@ export async function initiateDropshipPayment(
 
   const application = await DropshipApplication.findOne({ portalToken: token });
   if (!application) throw new DropshipError('Invalid portal link', 404);
-  if (!application.active) {
+  if (application.active === false) {
     throw new DropshipError('This dropship account has been deactivated.', 403);
   }
 
@@ -345,7 +451,58 @@ export async function captureDropshipPayment(
   void sendOrderPaidEmail(order, application);
   void sendAdminNewOrderEmail(order);
 
+  // Auto-purchase the ShipEngine label using the rate the seller picked at
+  // checkout — same as order.service.ts's capturePayment. Best-effort: a
+  // failure here must never undo the payment we already took; it's logged
+  // and left for admin to retry manually (see adminPurchaseDropshipLabel).
+  if (order.shippingRateId) {
+    try {
+      await purchaseAndSaveDropshipLabel(order);
+    } catch (err) {
+      console.error(`[ShipEngine] Auto-label failed for dropship order ${order._id}:`, err);
+    }
+  }
+
   return order;
+}
+
+/**
+ * Purchases a ShipEngine label for a paid dropship order using its stored
+ * shippingRateId, and saves labelId/labelUrl/trackingNumber/trackingUrl/
+ * shippedAt. Mirrors order.service.ts's purchaseAndSaveLabel. Safe to call
+ * more than once — a label already on the order is left untouched.
+ */
+export async function purchaseAndSaveDropshipLabel(
+  order: IDropshipOrder
+): Promise<IDropshipOrder> {
+  if (order.paymentStatus !== 'completed') {
+    throw new DropshipError('Cannot purchase a label before payment is completed.', 409);
+  }
+  if (order.labelId) return order; // already purchased — no-op
+
+  if (!order.shippingRateId) {
+    throw new DropshipError('This order has no shipping rate on file.', 400);
+  }
+
+  const label = await purchaseLabelFromRate(order.shippingRateId);
+  const trackingUrl = buildTrackingUrl(order.shippingCarrier ?? null, label.trackingNumber);
+
+  order.labelId = label.labelId;
+  order.labelUrl = label.labelUrl;
+  order.trackingNumber = label.trackingNumber;
+  order.trackingUrl = trackingUrl ?? undefined;
+  order.shippedAt = new Date();
+  await order.save();
+
+  return order;
+}
+
+/** Admin manual retry when auto-purchase-on-payment failed or needs redoing. */
+export async function adminPurchaseDropshipLabel(orderId: string): Promise<IDropshipOrder> {
+  await connectDB();
+  const order = await DropshipOrder.findById(orderId);
+  if (!order) throw new DropshipError('Order not found', 404);
+  return purchaseAndSaveDropshipLabel(order);
 }
 
 export async function adminListOrders(params: {

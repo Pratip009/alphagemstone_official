@@ -23,7 +23,8 @@ export interface IDropshipOrder extends Document {
   productImage?: string;
   unitPrice: number;
   quantity: number;
-  amount: number; // unitPrice * quantity — what the seller pays Alpha
+  productAmount: number; // unitPrice * quantity — goods only, before shipping
+  amount: number; // productAmount + shippingCost — the actual PayPal charge
   specifications?: string; // free-text note only (carat/color prefs etc.) — never affects price
 
   // Where Alpha ships it — the seller's end customer
@@ -37,7 +38,24 @@ export interface IDropshipOrder extends Document {
   postalCode: string;
   country: string;
 
-  shippingMethod?: string;
+  // Real ShipEngine/ShipStation rate the seller picked — same rates system,
+  // same tiered service fee, and same auto-label-purchase-on-payment flow
+  // used for normal customer checkout (see order.service.ts).
+  shippingCarrier?: string;
+  shippingService?: string;
+  shippingServiceCode?: string;
+  shippingRateId?: string; // ShipEngine rate id — used to purchase the label
+  shippingRate: number; // raw carrier-quoted rate
+  shippingCost: number; // shippingRate + serviceFee — what's actually charged
+  serviceFee: number;
+  shippingEstimatedDays?: number;
+  shippingEstimatedDelivery?: string;
+
+  // Populated automatically once payment completes (purchaseLabelFromRate)
+  labelId?: string;
+  labelUrl?: string;
+  shippedAt?: Date;
+
   specialInstructions?: string;
 
   status: DropshipOrderStatus;
@@ -74,6 +92,7 @@ const DropshipOrderSchema = new Schema<IDropshipOrder>(
     productImage: { type: String, trim: true },
     unitPrice: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1, default: 1 },
+    productAmount: { type: Number, required: true, min: 0 },
     amount: { type: Number, required: true, min: 0 },
     specifications: { type: String, trim: true },
 
@@ -87,7 +106,20 @@ const DropshipOrderSchema = new Schema<IDropshipOrder>(
     postalCode: { type: String, required: true, trim: true },
     country: { type: String, required: true, trim: true, default: "United States" },
 
-    shippingMethod: { type: String, trim: true },
+    shippingCarrier: { type: String, trim: true },
+    shippingService: { type: String, trim: true },
+    shippingServiceCode: { type: String, trim: true },
+    shippingRateId: { type: String, trim: true },
+    shippingRate: { type: Number, required: true, min: 0, default: 0 },
+    shippingCost: { type: Number, required: true, min: 0, default: 0 },
+    serviceFee: { type: Number, required: true, min: 0, default: 0 },
+    shippingEstimatedDays: { type: Number },
+    shippingEstimatedDelivery: { type: String, trim: true },
+
+    labelId: { type: String, trim: true },
+    labelUrl: { type: String, trim: true },
+    shippedAt: { type: Date },
+
     specialInstructions: { type: String, trim: true },
 
     // Orders start life unable to be fulfilled until payment completes —

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 const GOLD = "#c9a84c";
@@ -47,6 +47,13 @@ export default function DropshipApplyForm() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (serverError) {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [serverError]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -154,10 +161,11 @@ export default function DropshipApplyForm() {
 
       {serverError && (
         <div
+          ref={errorRef}
           className="mb-6 rounded-lg border px-4 py-3 text-sm"
           style={{ borderColor: "#e5b8ab", background: "#fbede8", color: "#a6402b" }}
         >
-          {serverError}
+          <strong>We couldn't submit your application.</strong> {serverError}
         </div>
       )}
 

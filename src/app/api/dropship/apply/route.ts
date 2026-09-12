@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const rate = await rateLimit(req, {
       id: 'dropship-apply',
-      limit: 5,
+      limit: 10,
       windowSec: 3600,
     });
     if (!rate.success) return rateLimitResponse(rate);

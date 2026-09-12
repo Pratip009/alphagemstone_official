@@ -56,7 +56,18 @@ async function shipstationFetch<T>(path: string, options: RequestInit = {}): Pro
       },
     });
   } catch (err: any) {
-    throw new Error(`ShipStation request failed (network error): ${err?.message ?? err}`);
+    // Node's fetch (undici) wraps the actual underlying reason — DNS
+    // failure, connection refused, TLS error, corporate proxy/firewall
+    // block, etc. — in err.cause, and reports only the generic "fetch
+    // failed" as err.message. Surfacing cause here is the difference
+    // between a useless error and one that actually says what's wrong.
+    const cause = err?.cause ? ` — ${err.cause.code || ''} ${err.cause.message || err.cause}`.trim() : '';
+    throw new Error(
+      `ShipStation request failed (network error): ${err?.message ?? err}${cause}. ` +
+      `This means the request never reached ShipStation at all — check that this ` +
+      `machine has outbound internet/HTTPS access to api.shipstation.com (no VPN, ` +
+      `proxy, or firewall blocking it), and that Node can resolve DNS.`
+    );
   }
 
   const raw = await res.text();
@@ -181,6 +192,15 @@ export async function getShipEngineRates(
 
   const rates: ShippingRate[] = rawRates
     .filter((r) => r.rate_type === 'shipment' && (!r.error_messages || r.error_messages.length === 0))
+    // Media Mail is USPS-restricted to books/media and legally cannot be
+    // used for jewelry or gemstones — excluded everywhere rates are
+    // fetched (this function is shared by normal checkout and the
+    // dropship portal), not just filtered out in one UI.
+    .filter((r) => {
+      const code = (r.service_code ?? '').toLowerCase();
+      const type = (r.service_type ?? '').toLowerCase();
+      return !code.includes('media_mail') && !type.includes('media mail');
+    })
     .map((r): ShippingRate => ({
       carrier: r.carrier_friendly_name ?? r.carrier_id ?? 'Unknown',
       carrierId: r.carrier_id ?? '',

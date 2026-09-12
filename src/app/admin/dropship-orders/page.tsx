@@ -17,6 +17,7 @@ interface Order {
   productName: string;
   unitPrice: number;
   quantity: number;
+  productAmount: number;
   amount: number;
   specifications?: string;
   customerName: string;
@@ -28,7 +29,13 @@ interface Order {
   state?: string;
   postalCode: string;
   country: string;
-  shippingMethod?: string;
+  shippingCarrier?: string;
+  shippingService?: string;
+  shippingRate: number;
+  shippingCost: number;
+  serviceFee: number;
+  shippingEstimatedDays?: number;
+  labelUrl?: string;
   specialInstructions?: string;
   status: Status;
   paymentStatus: PaymentStatus;
@@ -116,6 +123,20 @@ export default function DropshipOrdersAdminPage() {
       await load();
     } catch (e: any) {
       setError(e.message || 'Failed to update order');
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function purchaseLabel(id: string) {
+    setSaving(id);
+    setError(null);
+    try {
+      await apiFetch(`/api/admin/dropship/orders/${id}/purchase-label`, { method: 'POST' });
+      setNotice('Label purchased — tracking added.');
+      await load();
+    } catch (e: any) {
+      setError(e.message || 'Failed to purchase label');
     } finally {
       setSaving(null);
     }
@@ -213,13 +234,18 @@ export default function DropshipOrdersAdminPage() {
                 {isOpen && (
                   <div className="mt-4 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6" style={{ borderTop: '1px solid #f0ede6' }}>
                     <div className="text-xs space-y-1" style={{ color: '#5c5852' }}>
-                      <p><span className="font-semibold">Unit price:</span> ${o.unitPrice.toFixed(2)}</p>
+                      <p><span className="font-semibold">Product:</span> {o.quantity} × ${o.unitPrice.toFixed(2)} = ${o.productAmount.toFixed(2)}</p>
                       {o.specifications && <p><span className="font-semibold">Notes:</span> {o.specifications}</p>}
                       <p><span className="font-semibold">Address:</span> {o.addressLine1}{o.addressLine2 ? `, ${o.addressLine2}` : ''}, {o.city}{o.state ? `, ${o.state}` : ''} {o.postalCode}, {o.country}</p>
                       {o.customerEmail && <p><span className="font-semibold">Customer email:</span> {o.customerEmail}</p>}
                       {o.customerPhone && <p><span className="font-semibold">Customer phone:</span> {o.customerPhone}</p>}
-                      {o.shippingMethod && <p><span className="font-semibold">Shipping method:</span> {o.shippingMethod}</p>}
+                      {o.shippingCarrier && (
+                        <p><span className="font-semibold">Shipping:</span> {o.shippingCarrier} {o.shippingService} — ${o.shippingRate.toFixed(2)} + ${o.serviceFee.toFixed(2)} fee = ${o.shippingCost.toFixed(2)}</p>
+                      )}
                       {o.specialInstructions && <p><span className="font-semibold">Instructions:</span> {o.specialInstructions}</p>}
+                      {o.labelUrl && (
+                        <p><a href={o.labelUrl} target="_blank" rel="noreferrer" className="font-semibold underline" style={{ color: '#c9a84c' }}>Download shipping label →</a></p>
+                      )}
                     </div>
 
                     <div className="space-y-3">
@@ -227,6 +253,16 @@ export default function DropshipOrdersAdminPage() {
                         <div className="rounded-lg px-3 py-2 text-[11px]" style={{ background: '#fffbeb', color: '#92400e' }}>
                           This order hasn't been paid yet — it can only be cancelled until payment completes.
                         </div>
+                      )}
+                      {!unpaid && !o.trackingNumber && (
+                        <button
+                          disabled={saving === o._id}
+                          onClick={() => purchaseLabel(o._id)}
+                          className="w-full px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-60"
+                          style={{ border: '1px solid #c9a84c', color: '#c9a84c' }}
+                        >
+                          {saving === o._id ? 'Purchasing…' : 'Purchase Shipping Label'}
+                        </button>
                       )}
                       <div>
                         <label className="block text-[11px] font-semibold mb-1" style={{ color: '#1a1714' }}>Status</label>

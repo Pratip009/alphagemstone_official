@@ -4,6 +4,16 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { submitDropshipOrder, DropshipError } from '@/services/dropship.service';
 
+const shippingSelectionSchema = z.object({
+  carrier: z.string().min(1),
+  service: z.string().min(1),
+  serviceCode: z.string().min(1),
+  rateId: z.string().min(1),
+  rate: z.number().nonnegative(),
+  estimatedDays: z.number().optional(),
+  estimatedDelivery: z.string().optional(),
+});
+
 const schema = z.object({
   productId: z.string().min(1, 'Please select a product'),
   quantity: z.number().int().positive().optional(),
@@ -14,10 +24,10 @@ const schema = z.object({
   addressLine1: z.string().min(2, 'Shipping address is required'),
   addressLine2: z.string().optional(),
   city: z.string().min(1, 'City is required'),
-  state: z.string().optional(),
+  state: z.string().length(2, 'A valid 2-letter state/province code is required'),
   postalCode: z.string().min(1, 'Postal code is required'),
   country: z.string().optional(),
-  shippingMethod: z.string().optional(),
+  shippingSelection: shippingSelectionSchema,
   specialInstructions: z.string().optional(),
 });
 
