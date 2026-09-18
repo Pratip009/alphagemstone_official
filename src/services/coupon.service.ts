@@ -160,6 +160,29 @@ export async function redeemCoupon(code: string, orderId: string, subtotal: numb
   return calculateDiscountAmount(subtotal, coupon.discountPercent);
 }
 
+// ─── Admin: renew (reset) a used or expired coupon ───────────────────────────
+
+/**
+ * Resets a coupon back to usable: clears isUsed/usedAt/usedByOrderId and
+ * gives it a fresh VALIDITY_DAYS expiry from now. Intended for support cases
+ * where a coupon was burned incorrectly (e.g. by a pending order that was
+ * never actually paid for) and the customer should get their code back.
+ * Does NOT send an email — call resendCouponEmail (or sendCouponEmail
+ * directly) afterward if the customer should be notified.
+ */
+export async function renewCoupon(id: string): Promise<ICoupon> {
+  const coupon = await Coupon.findById(id);
+  if (!coupon) throw new Error('Coupon not found');
+
+  coupon.isUsed        = false;
+  coupon.usedAt         = undefined;
+  coupon.usedByOrderId  = undefined;
+  coupon.expiresAt      = new Date(Date.now() + VALIDITY_DAYS * 24 * 60 * 60 * 1000);
+  await coupon.save();
+
+  return coupon;
+}
+
 // ─── Admin: list coupons ──────────────────────────────────────────────────────
 
 interface ListOptions {

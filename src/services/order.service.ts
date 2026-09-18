@@ -235,9 +235,12 @@ export async function createOrderFromCart(
 
     await order.save();
 
-    if (appliedCouponCode) {
-      await redeemCoupon(appliedCouponCode, order._id.toString(), subtotal);
-    }
+    // NOTE: the coupon is deliberately NOT redeemed here. This order is still
+    // 'pending'/unpaid — redeeming now would burn the code for a checkout
+    // that's abandoned, cancelled, or superseded by a fresh order (e.g. the
+    // customer goes back to add another item to their cart). The coupon is
+    // only marked used once payment actually completes — see redeemCoupon()
+    // call in capturePayment() below.
 
     return order;
   } catch (err) {
@@ -402,6 +405,26 @@ export async function capturePayment(
       'Please do NOT pay again — contact support with your order reference ' +
       `${order._id.toString().slice(-8).toUpperCase()} and we\'ll sort it out.`
     );
+  }
+
+  // Payment is now confirmed — this is the right moment to actually burn the
+  // coupon (if one was applied). Re-validate rather than trusting the
+  // discount baked in at order creation: the code could have expired, or
+  // been redeemed by another of the customer's own pending orders, in the
+  // time between checkout and payment. If it's no longer valid, we honor the
+  // discount already reflected in this order's totalAmount (the customer
+  // authorized/paid that amount) but don't touch the coupon record.
+  if (order.appliedCouponCode) {
+    const stillValid = await validateCoupon(order.appliedCouponCode, order.subtotal);
+    if (stillValid.valid) {
+      await redeemCoupon(order.appliedCouponCode, order._id.toString(), order.subtotal);
+    } else {
+      console.warn(
+        `[capturePayment] Coupon ${order.appliedCouponCode} on order ${order._id} ` +
+        `was no longer valid at capture time (already used/expired) — not re-redeeming. ` +
+        `Order's discount amount is unaffected.`
+      );
+    }
   }
 
   await clearCart(order.user.toString());

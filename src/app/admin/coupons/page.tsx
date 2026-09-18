@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Tag, Search, Loader2, CheckCircle2, Clock, XCircle,
-  Copy, Check, Trash2, RefreshCw, BarChart2,
+  Copy, Check, Trash2, RefreshCw, BarChart2, RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -51,6 +51,7 @@ export default function AdminCouponsPage() {
   const [loading, setLoading]           = useState(false);
   const [copiedId, setCopiedId]         = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [renewLoading, setRenewLoading]   = useState<string | null>(null);
 
   // ─── Fetch stats ──────────────────────────────────────────────────────────
 
@@ -101,6 +102,22 @@ export default function AdminCouponsPage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete');
     } finally { setDeleteLoading(null); }
+  }
+
+  // ─── Renew (reset a used/expired coupon back to usable) ────────────────────
+
+  async function handleRenew(id: string) {
+    if (!confirm('Renew this coupon? It will become usable again with a fresh 30-day expiry.')) return;
+    setRenewLoading(id);
+    try {
+      const res  = await authFetch(`/api/admin/coupons/${id}/renew`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message ?? 'Failed to renew');
+      fetchCoupons();
+      fetchStats();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to renew');
+    } finally { setRenewLoading(null); }
   }
 
   function copyCode(id: string, code: string) {
@@ -273,22 +290,37 @@ export default function AdminCouponsPage() {
                         )}
                       </td>
 
-                      {/* Actions: delete only (no resend — emails are automatic) */}
+                      {/* Actions: delete (unused only) · renew (used/expired only) */}
                       <td className="px-5 py-4">
-                        {!c.isUsed ? (
-                          <button
-                            onClick={() => handleDelete(c._id)}
-                            disabled={deleteLoading === c._id}
-                            title="Delete coupon"
-                            className="p-1.5 rounded-lg text-[#6b6560] hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
-                          >
-                            {deleteLoading === c._id
-                              ? <Loader2 size={14} className="animate-spin" />
-                              : <Trash2 size={14} />}
-                          </button>
-                        ) : (
-                          <span className="text-[#c4bfb8] text-xs">—</span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {!c.isUsed && (
+                            <button
+                              onClick={() => handleDelete(c._id)}
+                              disabled={deleteLoading === c._id}
+                              title="Delete coupon"
+                              className="p-1.5 rounded-lg text-[#6b6560] hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+                            >
+                              {deleteLoading === c._id
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <Trash2 size={14} />}
+                            </button>
+                          )}
+                          {status !== 'active' && (
+                            <button
+                              onClick={() => handleRenew(c._id)}
+                              disabled={renewLoading === c._id}
+                              title="Renew coupon (make usable again)"
+                              className="p-1.5 rounded-lg text-[#6b6560] hover:bg-green-50 hover:text-green-700 transition-colors disabled:opacity-40"
+                            >
+                              {renewLoading === c._id
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <RotateCcw size={14} />}
+                            </button>
+                          )}
+                          {c.isUsed === false && status === 'active' && (
+                            <span className="text-[#c4bfb8] text-xs">—</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
