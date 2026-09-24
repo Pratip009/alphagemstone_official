@@ -1338,7 +1338,8 @@ export default function GemConsultant() {
                           className="text-sm leading-relaxed"
                           style={{ color: T.stone, fontFamily: '"Elms Sans", sans-serif' }}
                         >
-                          Good day. I&apos;m Victoria — your personal gemologist at GMStone.
+                          Good day. I&apos;m Victoria — Alpha Gemstone&apos;s AI gem consultant.
+                          
                           Whether you seek the perfect engagement diamond, a rare coloured stone, or
                           expert guidance on value, I&apos;m at your service.
                         </p>

@@ -15,6 +15,7 @@ import AwardsAccolades from "@/components/ui/AwardsAccolades";
 import DiamondStudsSection from "@/components/ui/DiamondStudsSection";
 import MetalPriceTicker from "@/components/ui/MetalPriceTicker";
 import CertificationMarquee from "@/components/ui/CertificationMarquee";
+import CompleteSource from "@/components/home/CompleteSource";
 
 // Statically generate this page (ISR): built once, served from cache, and
 // silently regenerated in the background at most once every 5 minutes.
@@ -46,17 +47,18 @@ export default async function HomePage() {
       <section className="overflow-hidden">
         <HeroCarousel initialSlides={initialSlides} />
       </section>
+      <CompleteSource />
       <TrustBadges />
       <CertificationMarquee/>
       <ShopByCategory />
       <WorldShipping/>
       <GemsPromise />
       <BirthstoneCarousel/>
-      <AwardsAccolades/>
+      {/* <AwardsAccolades/> */}
       <SpecialsMarquee />
       <DiamondStudsSection videoSrc="/video/shop.mp4" />
-      <Testimonials />
-      <FeaturedInNews />
+      {/* <Testimonials /> */}
+      {/* <FeaturedInNews /> */}
       <JewelryModal />
       <MetalPriceTicker/>
     </main>

@@ -1580,16 +1580,7 @@ export default function Navbar({
             />
           </Link>
 
-          {/* Desktop Search */}
-          <div
-            className="desktop-only"
-            style={{ flex: "1 1 auto", maxWidth: "340px" }}
-          >
-            <SearchBar
-              initialCategories={initialCategories}
-              variant="desktop"
-            />
-          </div>
+         
 
           {/* Desktop Right */}
           <div className="nav-right">
@@ -2042,14 +2033,7 @@ export default function Navbar({
             flexDirection: "column",
           }}
         >
-          {/* Mobile Search */}
-          <div className="mobile-search-wrap">
-            <SearchBar
-              initialCategories={initialCategories}
-              variant="mobile"
-              placeholder="Search gemstones…"
-            />
-          </div>
+          
 
           {/* Categories */}
           <p className="mobile-section-label">Collections</p>

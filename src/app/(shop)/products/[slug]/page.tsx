@@ -465,7 +465,7 @@ const LEARNING_CENTER_LINKS = [
   "Customer Support",
   "Contact Us",
   "FAQ",
-  "Testimonials",
+  
   "Ring Sizes",
 ];
 
@@ -614,26 +614,7 @@ const TRUST_ITEMS = [
 
 
 
-const TESTIMONIALS = [
-  {
-    quote: "Absolutely breathtaking quality. My fiancée was speechless.",
-    author: "James R.",
-    location: "New York",
-    stars: 5,
-  },
-  {
-    quote: "The craftsmanship is extraordinary. Worth every penny.",
-    author: "Priya M.",
-    location: "London",
-    stars: 5,
-  },
-  {
-    quote: "Flawless from order to delivery. Truly world-class.",
-    author: "Lucas T.",
-    location: "Sydney",
-    stars: 5,
-  },
-];
+
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ProductDetailPage({
@@ -1378,25 +1359,7 @@ export default async function ProductDetailPage({
               browsing history; hidden automatically when there's none. */}
           <RecentlyViewedProducts excludeId={String(p._id)} />
 
-          {/* Testimonials */}
-          <div className="pd-testimonials">
-            <div className="pd-section-head">
-              <h2 className="pd-section-title">What Our Clients Say</h2>
-              <Link href="#" className="pd-section-link">
-                All reviews
-              </Link>
-            </div>
-            <div className="pd-testimonial-grid">
-              {TESTIMONIALS.map((t) => (
-                <div key={t.author} className="pd-testimonial-card">
-                  <div className="pd-stars">{"★".repeat(t.stars)}</div>
-                  <div className="pd-testimonial-quote">{t.quote}</div>
-                  <div className="pd-testimonial-author">{t.author}</div>
-                  <div className="pd-testimonial-loc">{t.location}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+         
 
          
 

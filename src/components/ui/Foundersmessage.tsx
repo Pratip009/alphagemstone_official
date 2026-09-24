@@ -278,7 +278,7 @@ Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fin
                       marginBottom: "3px",
                     }}
                   >
-                    25+
+                    Since 1988
                   </p>
                   <p
                     style={{
@@ -287,9 +287,12 @@ Since 1988, our mission has been to offer beautiful diamonds, gemstones, and fin
                       letterSpacing: "0.3em",
                       textTransform: "uppercase",
                       color: "rgba(255,255,255,0.5)",
+                      maxWidth: "190px",
+                      lineHeight: 1.6,
                     }}
                   >
                     Years of Excellence
+                    Serving the Jewelry &amp; Gemstone Industry
                   </p>
                 </div>
               </div>

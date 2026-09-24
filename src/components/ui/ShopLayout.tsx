@@ -112,7 +112,7 @@ function LandingHero() {
       >
         Fine Jewelry, Since 1998
       </p>
-      <h1
+      <h2
         style={{
           fontFamily: '"Elms Sans", sans-serif',
           fontSize: "clamp(30px, 4vw, 50px)",
@@ -124,7 +124,7 @@ function LandingHero() {
         }}
       >
         Timeless pieces, crafted for every story.
-      </h1>
+      </h2>
     </div>
   );
 }
