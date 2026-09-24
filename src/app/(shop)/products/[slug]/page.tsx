@@ -15,6 +15,7 @@ import { cache } from "react";
 import { optimizedImageUrl } from "@/lib/image-url";
 import { getRatingStats } from "@/services/review.service";
 import { buildProductSpecs, type Spec } from "@/lib/productSpecs";
+import { isAlternativesCategoryName, isDiamondAlternative } from "@/lib/diamondAlternatives";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductDoc = {
   _id: unknown;
@@ -148,9 +149,7 @@ export async function generateMetadata({
 
   const kindLabel =
     p.category?.name ??
-    (p.productKind
-      ? p.productKind.charAt(0).toUpperCase() + p.productKind.slice(1)
-      : "Fine Jewelry");
+    kindTitle(getProductKind(p));
 
   const description = p.description?.trim()
     ? p.description.trim().slice(0, 160)
@@ -238,12 +237,21 @@ function isWatchDoc(p: ProductDoc): boolean {
 // be populated. Falls back to inference only for older records that predate
 // the productKind field.
 function getProductKind(p: ProductDoc): ProductKind {
-  if (p.productKind) return p.productKind;
+  // Moissanite, CZ and simulated/lab-created stones are never presented as
+  // diamonds — even if an old record still has productKind "diamond".
+  const alternative =
+    isDiamondAlternative(p.name, p.gemstoneName) || isAlternativesCategoryName(p.category?.name);
+  if (p.productKind) return alternative && p.productKind === "diamond" ? "gemstone" : p.productKind;
   if (isWatchDoc(p)) return "watch";
   const categoryName = (p.category?.name ?? "").toLowerCase();
-  if (categoryName.includes("diamond")) return "diamond";
+  if (categoryName.includes("diamond") && !alternative) return "diamond";
   if (p.gemstoneName) return "gemstone";
   return "jewelry";
+}
+
+function kindTitle(kind: ProductKind): string {
+  if (kind === "jewelry") return "Fine Jewelry";
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
 }
 
 // ─── Spec table builder ────────────────────────────────────────────────────
@@ -652,9 +660,7 @@ export default async function ProductDetailPage({
   const canonicalUrl = `${SITE_URL}/products/${p.slug}`;
   const kindLabelForLd =
     p.category?.name ??
-    (p.productKind
-      ? p.productKind.charAt(0).toUpperCase() + p.productKind.slice(1)
-      : "Fine Jewelry");
+    kindTitle(getProductKind(p));
   const ldImages = (p.images ?? []).filter(Boolean);
 
   const productJsonLd = {
@@ -1018,7 +1024,7 @@ export default async function ProductDetailPage({
             <Link href="/">Home</Link>
             <span className="sep">›</span>
             <Link href="/products">
-              {p.category?.name ?? (watch ? "Watches" : "Diamonds")}
+              {p.category?.name ?? (watch ? "Watches" : "Products")}
             </Link>
             {p.subcategory?.name && (
               <>

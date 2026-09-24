@@ -81,9 +81,19 @@ export async function generateMetadata({
     (!sp.category && WATCH_FILTER_PARAMS.some((k) => sp[k]));
   // Metadata runs before any DB query, so there's no product to check
   // productKind on yet — approximate off the category slug instead.
+  const isAlternative = /alternative|moissanite|simulat|\bcz\b/i.test(sp.category || "");
+  const isJewelry = /jewel/i.test(sp.category || "");
   const isGemstone = /gem|precious|special/i.test(sp.category || "");
 
-  const label = isWatch ? "Timepieces" : isGemstone ? "Gemstones" : "Diamonds";
+  const label = isWatch
+    ? "Timepieces"
+    : isAlternative
+      ? "Diamond Alternatives"
+      : isJewelry
+        ? "Jewelry"
+        : isGemstone
+          ? "Gemstones"
+          : "Diamonds";
 
   const filterBits = [sp.shape, sp.subcategory, sp.subSubcategory, sp.q ?? sp.search].filter(Boolean);
   const title = filterBits.length
@@ -92,9 +102,13 @@ export async function generateMetadata({
 
   const description = isWatch
     ? "Shop luxury timepieces at Alpha Gemstone — exceptional horological craftsmanship."
-    : isGemstone
-      ? "Shop natural gemstones at Alpha Gemstone."
-      : "Shop diamonds at Alpha Gemstone, with lab reports on applicable stones.";
+    : isAlternative
+      ? "Shop moissanite, cubic zirconia, simulated and lab-created stones at Alpha Gemstone."
+      : isJewelry
+        ? "Shop fine jewelry at Alpha Gemstone."
+        : isGemstone
+          ? "Shop natural gemstones at Alpha Gemstone."
+          : "Shop diamonds at Alpha Gemstone, with lab reports on applicable stones.";
 
   // Build the canonical URL from only the core taxonomy params, in a fixed
   // order, so /products?category=diamonds&subcategory=round and

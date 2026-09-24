@@ -3,6 +3,11 @@ import {
   SHAPES, COLORS, CLARITIES, WATCH_BRANDS, WATCH_GENDERS,
   type Shape, type Color, type Clarity, type WatchBrand, type WatchGender,
 } from '@/models/Product';
+import {
+  ALTERNATIVE_SUBCATEGORIES,
+  DIAMOND_ALTERNATIVES_CATEGORY,
+  classifyAlternative,
+} from '@/lib/diamondAlternatives';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -270,6 +275,10 @@ function detectProductKind(
   const gemLower = gemstoneName.toLowerCase();
   const catLower = categoryName.toLowerCase();
 
+  // Moissanite, CZ, simulated and lab-created (non-diamond) stones are never
+  // typed as diamonds, even when a legacy name says "Synthetic Diamond".
+  if (classifyAlternative(gemstoneName, categoryName)) return 'gemstone';
+
   if (gemLower.includes('diamond') || catLower.includes('diamond')) return 'diamond';
   if (catLower.includes('watch')) return 'watch';
   if (gemstoneName) return 'gemstone';
@@ -382,14 +391,14 @@ const CATEGORY_SUBCATEGORY_MAP: Record<string, { category: string; subcategory?:
   'loose beads': { category: 'Semi Precious', subcategory: 'Loose Beads' },
   'madeira citrine quartz': { category: 'Semi Precious', subcategory: 'Citrine' },
   'men\'s watches': { category: 'Watches', subcategory: 'Men\'s Watches' },
-  'moissanite synthetic': { category: 'Diamonds', subcategory: 'Moissanite Synthetic' },
+  'moissanite synthetic': { category: DIAMOND_ALTERNATIVES_CATEGORY, subcategory: ALTERNATIVE_SUBCATEGORIES.moissanite },
   'moonstone': { category: 'Semi Precious', subcategory: 'Moonstone' },
   'more gemstone rings': { category: 'Jewelry', subcategory: 'Gemstone Rings' },
   'movado, men\'s, series 800, two-tone, chronograph, watch, men\'s watch, movado watch, movado chronograph': { category: 'Watches', subcategory: 'Men\'s Watches' },
   'mozambique garnet': { category: 'Semi Precious', subcategory: 'Mozambique Garnet' },
   'multicolor diamonds': { category: 'Diamonds', subcategory: 'Multicolor Diamonds' },
   'multicolor sapphire': { category: 'Precious Gems', subcategory: 'Sapphire' },
-  'mystic cz': { category: 'Semi Precious', subcategory: 'Mystic CZ' },
+  'mystic cz': { category: DIAMOND_ALTERNATIVES_CATEGORY, subcategory: ALTERNATIVE_SUBCATEGORIES.cz },
   'mystic luxury topaz': { category: 'Semi Precious', subcategory: 'Mystic Luxury Topaz' },
   'mystic quartz': { category: 'Semi Precious', subcategory: 'Mystic Quartz' },
   'olive quartz': { category: 'Semi Precious', subcategory: 'Quartz' },
@@ -423,6 +432,9 @@ const CATEGORY_SUBCATEGORY_MAP: Record<string, { category: string; subcategory?:
   'silver rings': { category: 'Jewelry', subcategory: 'Silver Jewelry' },
   'silver solitaire pendants': { category: 'Jewelry', subcategory: 'Silver Jewelry' },
   'silver solitaire rings': { category: 'Jewelry', subcategory: 'Silver Jewelry' },
+  // Despite its name, this legacy category mostly holds NATURAL stones (Swiss
+  // Blue Topaz, Garnet, Citrine…). Only rows whose own name says simulated /
+  // synthetic are moved to Diamond Alternatives (see the override below).
   'simulated gemstones': { category: 'Semi Precious', subcategory: 'Simulated Gemstones' },
   'sky blue topaz': { category: 'Semi Precious', subcategory: 'Sky Blue Topaz' },
   'smoky quartz': { category: 'Semi Precious', subcategory: 'Quartz' },
@@ -491,8 +503,15 @@ function parseLegacyRow(r: Record<string, unknown>, rowNum: number, warnings: Pa
     });
     return null; // caller records this as a parseError too
   }
-  const categoryName = resolvedCategory.category;
-  const subcategoryName = resolvedCategory.subcategory;
+  // A simulant or synthetic stone filed under a natural-stone category in the
+  // legacy export (e.g. "Synthetic Padparadscha Quartz" under Fluorite) is
+  // moved to Diamond Alternatives. Jewelry and Specials keep their category.
+  const altKind = classifyAlternative(name, clean(r.gemstone_name), categoryRaw);
+  const looseStoneCategory = ['Diamonds', 'Precious Gems', 'Semi Precious'].includes(resolvedCategory.category);
+  const categoryName = altKind && looseStoneCategory ? DIAMOND_ALTERNATIVES_CATEGORY : resolvedCategory.category;
+  const subcategoryName = altKind && looseStoneCategory
+    ? ALTERNATIVE_SUBCATEGORIES[altKind]
+    : resolvedCategory.subcategory;
 
   const priceRaw = num(r.products_price);
   const price = priceRaw !== undefined ? priceRaw : 0;

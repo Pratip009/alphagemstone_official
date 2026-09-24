@@ -61,7 +61,7 @@ const SWATCH: Record<string, string> = {
   multi: "conic-gradient(#e0405a, #ee9b2c, #e8d12c, #3fb36b, #2f7fe0, #8a55d0, #e0405a)",
 };
 
-const CATEGORY_ORDER = [/^diamond/i, /^precious/i, /^semi/i, /^jewel/i, /^watch/i];
+const CATEGORY_ORDER = [/^diamonds?$/i, /alternative/i, /^precious/i, /^semi/i, /^jewel/i, /^watch/i];
 
 const SORT_LABEL: Record<FinderSort, string> = {
   relevance: "Best match",

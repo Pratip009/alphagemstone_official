@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductKind } from '@/models/Product';
 import './CompareStones.css';
+import { isDiamondAlternative } from '@/lib/diamondAlternatives';
 
 const KIND_LABELS: Record<ProductKind, string> = {
   diamond: 'Diamond',
@@ -69,7 +70,9 @@ function cap(v: string): string {
   return v ? v.charAt(0).toUpperCase() + v.slice(1) : '';
 }
 function kindOf(p: SearchProduct): ProductKind {
-  return p.productKind ?? (p.watchBrand ? 'watch' : p.gemstoneName ? 'gemstone' : 'diamond');
+  const kind = p.productKind ?? (p.watchBrand ? 'watch' : p.gemstoneName ? 'gemstone' : 'diamond');
+  // Moissanite, CZ and simulated/lab-created stones are never compared as diamonds.
+  return kind === 'diamond' && isDiamondAlternative(p.name, p.gemstoneName) ? 'gemstone' : kind;
 }
 
 // legacyAttributes keys that are internal bookkeeping, not customer-facing

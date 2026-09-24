@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useApi } from "@/hooks/useApi";
 import { cartEvents } from "@/hooks/useCart";
 import { buildProductSpecs, type ProductKind } from "@/lib/productSpecs";
+import { isDiamondAlternative } from "@/lib/diamondAlternatives"
 
 interface ProductCardProps {
   productType?: "watch" | "diamond" | "gemstone";
@@ -30,6 +31,10 @@ interface ProductCardProps {
     clarity?: string | string[];
     certification?: string | string[];
     gemstoneName?: string;
+    productKind?: string;
+    // Populated { name, slug } on every listing; a bare id elsewhere.
+    category?: unknown;
+    subcategory?: unknown;
     shapeRaw?: string;
     colorRaw?: string;
     clarityRaw?: string;
@@ -107,8 +112,21 @@ function deriveKind(
   watch: boolean,
 ): ProductKind {
   if (watch) return "watch";
+  // Moissanite, CZ and simulated/lab-created stones are never diamonds.
+  if (isDiamondAlternative(product.name, product.gemstoneName)) return "gemstone";
+  const stored = product.productKind;
+  if (stored === "diamond" || stored === "gemstone" || stored === "jewelry" || stored === "watch") return stored;
   if (product.gemstoneName) return "gemstone";
   return "diamond";
+}
+
+/** Subcategory name ("Blue Diamonds", "Moissanite"), else category name. */
+function categoryBadge(product: ProductCardProps["product"]): string {
+  const nameOf = (v: unknown): string =>
+    v && typeof v === "object" && typeof (v as { name?: unknown }).name === "string"
+      ? (v as { name: string }).name.trim()
+      : "";
+  return nameOf(product.subcategory) || nameOf(product.category);
 }
 
 function cap(s?: string): string {
@@ -197,8 +215,10 @@ function buildKicker(
     return `${parts.join(" ")} Watch`.replace(/^\s+/, "");
   }
   const shape = first(product.shape) || product.shapeRaw;
-  const stone = product.gemstoneName || "Diamond";
-  const shapePart = shape ? `${cap(shape)}-Cut` : "";
+  // Only the product's real gem name — never a default like "Diamond".
+  const stone = product.gemstoneName || "";
+  // "other" is a catch-all value, not a cut — never print "Other-Cut".
+  const shapePart = shape && shape.toLowerCase() !== "other" ? `${cap(shape)}-Cut` : "";
   return [shapePart, stone].filter(Boolean).join(" ");
 }
 
@@ -272,26 +292,6 @@ function buildParticulars(
 }
 
 // ── Icons ───────────────────────────────────────────────────────────────────
-
-function WatchIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M9 5.5V9l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="7" y="1" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="1" />
-      <rect x="7" y="14.7" width="4" height="2.3" rx="0.5" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  );
-}
-
-function GemIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M3 6.5L9 2l6 4.5-6 11.5-6-11.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <path d="M3 6.5h12M6.5 6.5L9 2M11.5 6.5L9 2M9 6.5l-3 6M9 6.5l3 6" stroke="currentColor" strokeWidth="0.8" />
-    </svg>
-  );
-}
 
 function ArrowIcon() {
   return (
@@ -584,6 +584,7 @@ export default function ProductCard({
 
   const kicker = buildKicker(product, watch);
   const subtitle = buildSubtitle(product, watch);
+  const badge = categoryBadge(product);
   const particulars = buildParticulars(product, watch);
   const lot = lotNumber(product._id);
 
@@ -682,16 +683,17 @@ export default function ProductCard({
         }
 
         .apc-type {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
+          max-width: 62%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
           font-size: 10px;
           font-weight: 600;
           letter-spacing: 0.07em;
           text-transform: uppercase;
           color: var(--accent);
           background: var(--accent-soft);
-          padding: 4px 9px 4px 7px;
+          padding: 4px 9px;
           border-radius: 999px;
         }
 
@@ -1307,10 +1309,11 @@ export default function ProductCard({
               <span>LOT</span>
               {lot}
             </div>
-            <div className="apc-type">
-              {watch ? <WatchIcon /> : <GemIcon />}
-              {watch ? "Watch" : "Gem"}
-            </div>
+            {badge && (
+              <div className="apc-type" title={badge}>
+                {badge}
+              </div>
+            )}
           </div>
 
           {/* Image */}
