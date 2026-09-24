@@ -1532,7 +1532,7 @@ export default function Navbar({
                   info@alphagemimports.com
                 </a>
                 <DiamondDot color="#c4b5fd" size={5} />
-                Certified Natural Gemstones &nbsp;·&nbsp; GIA Graded Diamonds
+                Natural, Lab-Grown &amp; Simulated Gemstones &nbsp;·&nbsp; Certification Available on Select Stones
                 <DiamondDot color="#7c3aed" size={4} />
                 Call us at&nbsp;
                 <a href="tel:+19143101480">1-914-310-1480</a>

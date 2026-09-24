@@ -30,7 +30,7 @@ const promiseItems = [
     report: 'GS–01',
     title: 'Largest Gemstone Inventory',
     description:
-      'Over 50,000 rare coloured gemstones, catalogued and certified — the stone you want is one search away.',
+      'Over 50,000 coloured gemstones, catalogued and searchable — the stone you want is one search away.',
     image:
       'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=1200',
     stone: 'Sapphire',
@@ -66,7 +66,7 @@ const promiseItems = [
     report: 'GS–04',
     title: 'Full Transparency',
     description:
-      'Every gemstone ships with its own certificate from an internationally recognised gemmological laboratory.',
+      'Many diamonds and fine gemstones are accompanied by independent laboratory reports. Certification information is shown on applicable products.',
     image:
       'https://images.unsplash.com/photo-1588449668365-d15e397f6787?q=80&w=1200',
     stone: 'Citrine',
@@ -75,7 +75,7 @@ const promiseItems = [
   },
 ];
 
-const certLabs = ['GIA', 'IGI', 'AGL', 'Gübelin', 'HRD'];
+const certLabs = ['GIA', 'IGI', 'AGL', 'HRD'];
 
 // ─── Facet icon ───────────────────────────────────────────────────────────────
 // A minimal faceted-stone glyph, recoloured per item. Stands in for a wax

@@ -154,7 +154,7 @@ export async function generateMetadata({
 
   const description = p.description?.trim()
     ? p.description.trim().slice(0, 160)
-    : `Shop ${p.name} — ${kindLabel} at Alpha Gemstone. Certified quality, ` +
+    : `Shop ${p.name} — ${kindLabel} at Alpha Gemstone. Expertly curated, ` +
       `secure checkout, and expert support on every fine jewelry order.`;
 
   const title = `${p.name} | ${kindLabel} | Alpha Gemstone`;

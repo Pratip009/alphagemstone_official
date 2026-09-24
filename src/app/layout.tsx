@@ -19,7 +19,7 @@ const SITE_NAME = "Alpha Gemstone";
 const OG_IMAGE = `${BASE_URL}/og-image.png`;
 
 const FALLBACK_DESCRIPTION =
-  "Discover premium natural diamonds, certified gemstones, sapphires, rubies, emeralds, and luxury fine jewelry collections crafted for elegance and trust.";
+  "Discover premium natural diamonds, fine gemstones, sapphires, rubies, emeralds, and luxury fine jewelry collections crafted for elegance and trust.";
 
 const BASE_KEYWORDS = [
   "diamonds",
@@ -78,11 +78,11 @@ export async function generateMetadata(): Promise<Metadata> {
       (topCategories.length > 1
         ? `, and ${topCategories[topCategories.length - 1]}`
         : topCategories[0])
-    : "natural diamonds, certified gemstones, sapphires, rubies, and emeralds";
+    : "natural diamonds, fine gemstones, sapphires, rubies, and emeralds";
 
   const description =
     activeCount > 0
-      ? `Shop ${activeCount.toLocaleString()}+ certified pieces across ${categoryPhrase}, and luxury fine jewelry — crafted for elegance, backed by certification, and built for trust.`
+      ? `Shop ${activeCount.toLocaleString()}+ pieces across ${categoryPhrase}, and luxury fine jewelry — with certification available on applicable products.`
       : FALLBACK_DESCRIPTION;
 
   const title =
@@ -187,7 +187,7 @@ export default async function RootLayout({
     image: OG_IMAGE,
     description:
       activeCount > 0
-        ? `${SITE_NAME} offers ${activeCount.toLocaleString()}+ certified natural diamonds, gemstones, and fine jewelry pieces.`
+        ? `${SITE_NAME} offers ${activeCount.toLocaleString()}+ diamonds, gemstones, and fine jewelry pieces, with certification available on applicable products.`
         : "Premium diamonds, gemstones and fine jewelry collections.",
     ...(categoryNames.length > 0 && {
       hasOfferCatalog: {

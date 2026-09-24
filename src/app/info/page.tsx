@@ -61,7 +61,7 @@ const TABS: Tab[] = [
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Are the gemstones natural?',
-    a: 'Yes. All our gemstones are natural. Most colored stones are Enhanced (E) or Treated (T) — methods may include heating, oiling, resin filling, diffusion, or irradiation, which is standard industry practice and disclosed on all products.',
+    a: 'We carry natural, lab-created (synthetic) and simulated gemstones. Each product listing identifies which it is. Most natural colored stones are Enhanced (E) or Treated (T) — methods may include heating, oiling, resin filling, diffusion, or irradiation, which is standard industry practice and is disclosed on the product.',
   },
   {
     q: 'How long does shipping take?',

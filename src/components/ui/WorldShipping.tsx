@@ -294,7 +294,7 @@ const STATS = [
 
 const FEATURES = [
   { icon: Plane, title: "Global Shipping", copy: "Fast, tracked delivery from our New York hub to 100 countries." },
-  { icon: ShieldCheck, title: "Certified Authenticity", copy: "Every gemstone ships with verified certification papers." },
+  { icon: ShieldCheck, title: "Certification Available", copy: "Laboratory reports accompany applicable diamonds and fine gemstones." },
   { icon: PackageCheck, title: "Insured Packaging", copy: "Fully insured, discreet packaging for high-value items." },
 ];
 
@@ -335,7 +335,7 @@ export default function WorldShipping() {
           </h2>
 
           <p className="mt-3 max-w-md text-sm leading-6 text-[#6B6459] lg:mt-4 lg:text-[15px] lg:leading-7">
-            From rare gemstones to certified jewelry, we ship our collections
+            From rare gemstones to fine jewelry, we ship our collections
             securely to customers across three continents, with trusted
             international logistics partners handling every leg of the
             journey.

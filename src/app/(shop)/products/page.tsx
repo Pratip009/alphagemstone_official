@@ -93,8 +93,8 @@ export async function generateMetadata({
   const description = isWatch
     ? "Shop luxury timepieces at Alpha Gemstone — exceptional horological craftsmanship."
     : isGemstone
-      ? "Shop certified natural gemstones at Alpha Gemstone."
-      : "Shop ethically sourced, GIA & IGI certified diamonds at Alpha Gemstone.";
+      ? "Shop natural gemstones at Alpha Gemstone."
+      : "Shop diamonds at Alpha Gemstone, with lab reports on applicable stones.";
 
   // Build the canonical URL from only the core taxonomy params, in a fixed
   // order, so /products?category=diamonds&subcategory=round and
@@ -241,8 +241,8 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                       return productType === "watch"
                         ? "Exceptional horological craftsmanship"
                         : productType === "gemstone"
-                          ? "Certified natural gemstones"
-                          : "Ethically sourced · GIA & IGI certified";
+                          ? "Natural gemstones"
+                          : "Certification available on applicable stones";
                     })()}
                   </p>
                 </div>

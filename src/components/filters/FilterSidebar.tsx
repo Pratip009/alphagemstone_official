@@ -427,7 +427,7 @@ export default function FilterSidebar({ productType = 'diamond', facets }: Filte
       {/* ── Footer note ────────────────────────────────────────────────────── */}
       <div className="pt-5 pb-2 text-center">
         <p className="text-[9px] tracking-[0.2em] uppercase text-gray-300">
-          All stones GIA / IGI certified
+          Certification shown on applicable products
         </p>
       </div>
     </aside>

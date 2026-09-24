@@ -59,10 +59,10 @@ export default function AlphaImportsSection() {
                   color: "#9A7D3A",
                 }}
               >
-                Satisfaction
+                Easy Returns
               </p>
               <p style={{ fontSize: "13px", fontWeight: 400, color: "#1a1a1a" }}>
-                100% Guaranteed
+                See Return Policy
               </p>
             </div>
           </div>

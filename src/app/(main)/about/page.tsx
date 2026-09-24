@@ -9,7 +9,7 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.alphagemstone.com";
 const TITLE = "About Us | Alpha Gemstone";
 const DESCRIPTION =
-  "The story behind Alpha Gemstone NY Inc. — our founders, our sourcing standards, and our commitment to certified diamonds, gemstones, and fine jewelry.";
+  "The story behind Alpha Gemstone NY Inc. — our founders, our sourcing standards, and our commitment to quality diamonds, gemstones, and fine jewelry.";
 
 export const metadata: Metadata = {
   title: TITLE,

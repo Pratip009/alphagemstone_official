@@ -3,11 +3,10 @@ import { useState } from "react";
 import { View, BadgeCheck, ShieldCheck, BadgeDollarSign, Award } from "lucide-react";
 
 const badges = [
-  { icon: View,            label: "View Gems in 360°",    sub: "Immersive Preview" },
-  { icon: BadgeCheck,      label: "All Gems Certified",   sub: "GIA · IGI · AGS" },
-  { icon: ShieldCheck,     label: "100% Conflict Free",   sub: "Ethically Sourced" },
-  { icon: BadgeDollarSign, label: "Best Price Guarantee", sub: "Price Match Promise" },
-  { icon: Award,           label: "Lifetime Warranty",    sub: "Always Protected" },
+  { icon: BadgeCheck,      label: "Certification Available", sub: "On Applicable Products" },
+ { icon: ShieldCheck,     label: "Trusted Suppliers",    sub: "Responsible Sourcing" },
+ { icon: BadgeDollarSign, label: "Wholesale Pricing",    sub: "Volume Discounts" },
+ { icon: Award,           label: "Easy Returns",         sub: "See Return Policy" },
 ];
 
 const HEX = "polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)";

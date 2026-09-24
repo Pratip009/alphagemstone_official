@@ -21,9 +21,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const filterBits = [sp.shape, sp.subcategory, sp.q].filter(Boolean);
   const title = filterBits.length
     ? `${filterBits.join(" ")} Gemstones | Alpha Gemstone`
-    : "Certified Natural Gemstones | Alpha Gemstone";
+    : "Natural Gemstones | Alpha Gemstone";
   const description =
-    "Shop certified natural gemstones at Alpha Gemstone — sapphires, rubies, emeralds, and rare colored stones.";
+    "Shop natural gemstones at Alpha Gemstone — sapphires, rubies, emeralds, and rare colored stones.";
 
   const coreQuery = new URLSearchParams();
   for (const key of CORE_PARAMS) if (sp[key]) coreQuery.set(key, sp[key]);

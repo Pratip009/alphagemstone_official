@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const name = (category as any).name as string;
   const description =
     (category as any).description ??
-    `Browse our ${name} collection at Alpha Gemstone — certified diamonds, gemstones, and fine jewelry.`;
+    + `Browse our ${name} collection at Alpha Gemstone — diamonds, gemstones, and fine jewelry.`;
   const canonical = `${SITE_URL}/category/${slug}`;
   const title = `${name} Collection | Alpha Gemstone`;
 

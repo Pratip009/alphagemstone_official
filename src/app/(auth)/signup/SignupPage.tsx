@@ -323,7 +323,7 @@ export default function SignupPage() {
             </h2>
             <p className="auth-left-sub">
               Join a discerning circle of collectors with access to
-              GIA-certified diamonds, exclusive inventory, and expert guidance.
+              fine diamonds and gemstones, exclusive inventory, and expert guidance.
             </p>
             <div className="auth-stat-cards">
               <div className="auth-stat-card">
@@ -331,8 +331,8 @@ export default function SignupPage() {
                 <div className="auth-stat-label">Gemstones</div>
               </div>
               <div className="auth-stat-card">
-                <div className="auth-stat-number">GIA</div>
-                <div className="auth-stat-label">Certified</div>
+                <div className="auth-stat-number">Lab</div>
+                <div className="auth-stat-label">Reports Available</div>
               </div>
               <div className="auth-stat-card">
                 <div className="auth-stat-number">24h</div>

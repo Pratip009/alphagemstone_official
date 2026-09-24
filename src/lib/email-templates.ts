@@ -326,7 +326,7 @@ export function welcomeEmailHtml(name: string): string {
   const firstName = name.split(' ')[0] || name;
 
   const features = [
-    { color: T.gemSapphire, label: 'GIA-certified gemstones', desc: 'Browse thousands of certified diamonds, sapphires, rubies, and emeralds.' },
+    { color: T.gemSapphire, label: 'Diamonds & fine gemstones', desc: 'Browse thousands of stones, with certification on applicable products.' },
     { color: T.gemEmerald,  label: 'Expert consultation',      desc: 'Get guidance from our gemologists on sourcing and valuation.' },
     { color: T.gemRuby,     label: 'Secure checkout',          desc: 'PayPal-protected payments with full order tracking.' },
   ];
@@ -704,7 +704,7 @@ export function newsletterEmailHtml(data: NewsletterEmailData): string {
         <tr>
           <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:30px 34px;">
             <p style="margin:0 0 6px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.textLight};letter-spacing:0.18em;text-transform:uppercase;">Explore now</p>
-            <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:18px;color:${T.textPrimary};line-height:1.4;">Discover our latest collection of certified gemstones.</p>
+            <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:18px;color:${T.textPrimary};line-height:1.4;">Discover our latest collection of fine gemstones.</p>
             ${ctaButton('Shop the Collection', `${SITE_URL}/products`)}
           </td>
         </tr>

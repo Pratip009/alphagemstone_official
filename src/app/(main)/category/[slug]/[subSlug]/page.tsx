@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = `${subName} — ${catName} | Alpha Gemstone`;
   const description =
     (subcategory as any).description ??
-    `Browse ${subName} ${catName} at Alpha Gemstone — certified quality, expertly curated.`;
+    `Browse ${subName} ${catName} at Alpha Gemstone — quality stones, expertly curated.`;
   const canonical = `${SITE_URL}/category/${slug}/${subSlug}`;
 
   return {

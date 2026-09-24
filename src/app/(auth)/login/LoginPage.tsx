@@ -786,7 +786,7 @@ export default function LoginPage() {
               <em>Singular beauty.</em>
             </h2>
             <p className="auth-left-sub">
-              Access our curated collection of certified fancy-colour and white
+              Access our curated collection of fancy-colour and white
               diamonds, sourced from the world's finest cutting centres.
             </p>
             <div className="auth-stat-cards">
@@ -795,8 +795,8 @@ export default function LoginPage() {
                 <div className="auth-stat-label">Gemstones</div>
               </div>
               <div className="auth-stat-card">
-                <div className="auth-stat-number">GIA</div>
-                <div className="auth-stat-label">Certified</div>
+                <div className="auth-stat-number">Lab</div>
+                <div className="auth-stat-label">Reports Available</div>
               </div>
               <div className="auth-stat-card">
                 <div className="auth-stat-number">24h</div>
