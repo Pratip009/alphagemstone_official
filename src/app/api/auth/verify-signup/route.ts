@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import '@/lib/registerModels';
 import { verifySignupOtp } from '@/services/otp.service';
 import { errorResponse } from '@/lib/api-response';
+import { setSessionCookies } from '@/lib/auth-cookies';
 import { emailSchema, firstZodErrorMessage } from '@/lib/validation';
 
 const schema = z.object({
@@ -27,20 +28,7 @@ export async function POST(req: NextRequest) {
     const result = await verifySignupOtp(email, otp);
 
     const response = NextResponse.json({ success: true, data: { user: result.user } }, { status: 201 });
-    response.cookies.set('auth_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-    response.cookies.set('has_session', '1', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    setSessionCookies(response, result.token);
     return response;
   } catch (err) {
     console.error('[verify-signup]', err);

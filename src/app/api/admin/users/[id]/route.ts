@@ -16,7 +16,7 @@ export const GET = withAdmin(async (_req, context: { params: Promise<{ id: strin
 
     await connectDB();
 
-    const user = await User.findById(id).select('-password').lean();
+    const user = await User.findById(id).select('-password -googleId -avatarPublicId').lean();
     if (!user) {
       return errorResponse('User not found', 404);
     }

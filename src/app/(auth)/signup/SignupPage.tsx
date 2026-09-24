@@ -5,10 +5,13 @@ import Link from "next/link";
 import OtpInput from "@/components/ui/OtpInput";
 import { useAuth } from "@/hooks/useAuth";
 import { runAuthRequest } from "@/lib/api-client-error";
+import GoogleButton from "@/components/auth/GoogleButton";
+import { googleAuthErrorMessage } from "@/lib/google-auth-messages";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
 type Step = "form" | "otp";
 
-export default function SignupPage() {
+export default function SignupPage({ googleEnabled = false }: { googleEnabled?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { verifyOtp } = useAuth();
@@ -23,6 +26,16 @@ export default function SignupPage() {
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+
+  // Only same-site relative paths are ever followed after signup.
+  const redirectParam = searchParams.get("redirect");
+  const redirectTarget = safeRedirectPath(redirectParam, "/products");
+
+  // Errors coming back from the Google flow arrive as ?error=<code>.
+  useEffect(() => {
+    const message = googleAuthErrorMessage(searchParams.get("error"));
+    if (message) setError(message);
+  }, [searchParams]);
   useEffect(
     () => () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -72,8 +85,7 @@ export default function SignupPage() {
     try {
       await verifyOtp(form.email, otp);
       setRedirecting(true);
-      const redirect = searchParams.get("redirect") || "/products";
-      router.push(redirect);
+      router.push(redirectTarget);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed. Please try again.");
       setLoading(false);
@@ -184,6 +196,8 @@ export default function SignupPage() {
         @keyframes spin{to{transform:rotate(360deg);}}
         .auth-terms{font-family:var(--label);font-size:11px;font-weight:300;letter-spacing:0.04em;color:var(--silver);text-align:center;margin-top:14px;line-height:1.7;}
         .auth-terms a{color:var(--deep);text-decoration:none;font-weight:500;}
+        .auth-google{margin-bottom:0;}
+        .auth-divider.auth-divider-tight{margin:22px 0;}
         .auth-divider{display:flex;align-items:center;gap:14px;margin:24px 0;}
         .auth-divider-line{flex:1;height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);}
         .auth-divider-text{font-family:var(--label);font-size:10px;font-weight:400;letter-spacing:0.14em;text-transform:uppercase;color:var(--silver);}
@@ -366,6 +380,24 @@ export default function SignupPage() {
                   Join Alpha Gemstone — we'll verify your email
                 </p>
 
+                {googleEnabled && (
+                  <>
+                    <div className="auth-google">
+                      <GoogleButton
+                        from="signup"
+                        label="Sign up with Google"
+                        redirect={redirectParam ? redirectTarget : null}
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="auth-divider auth-divider-tight">
+                      <div className="auth-divider-line" />
+                      <span className="auth-divider-text">or sign up with email</span>
+                      <div className="auth-divider-line" />
+                    </div>
+                  </>
+                )}
+
                 <form onSubmit={handleFormSubmit}>
                   <div className="auth-field">
                     <label className="auth-label">Full name</label>
@@ -520,8 +552,8 @@ export default function SignupPage() {
 
                 <p className="auth-terms">
                   By continuing you agree to our{" "}
-                  <a href="#">Terms of Service</a> and{" "}
-                  <a href="#">Privacy Policy</a>
+                  <Link href="/terms-and-conditions">Terms of Service</Link> and{" "}
+                  <Link href="/privacy-policy">Privacy Policy</Link>
                 </p>
                 <div className="auth-divider">
                   <div className="auth-divider-line" />
@@ -529,7 +561,10 @@ export default function SignupPage() {
                   <div className="auth-divider-line" />
                 </div>
                 <div className="auth-footer">
-                  Already have an account? <Link href="/login">Sign in</Link>
+                  Already have an account?{" "}
+                  <Link href={redirectParam ? `/login?redirect=${encodeURIComponent(redirectTarget)}` : "/login"}>
+                    Sign in
+                  </Link>
                 </div>
               </>
             ) : (

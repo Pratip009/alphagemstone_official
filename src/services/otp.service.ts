@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import Otp from '@/models/Otp';
 import User from '@/models/User';
 import { signToken } from '@/lib/jwt';
+import { resolveAuthProviders, toPublicUser } from '@/services/auth.service';
 import { otpEmailHtml, welcomeEmailHtml } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -109,7 +110,9 @@ export async function sendSignupOtp(
     .collation({ locale: 'en', strength: 2 })
     .lean();
   if (existing) {
-    throw new Error('An account with this email already exists.');
+    throw new Error(
+      'An account with this email already exists. Sign in instead — with your password or with Google.'
+    );
   }
 
   await checkRateLimit(normalizedEmail, 'signup');
@@ -175,6 +178,13 @@ export async function verifySignupOtp(
       email: normalizedEmail,
       password: record.pendingPassword,
       role: 'user',
+      authProviders: ['password'],
+      emailVerified: true,
+      phone: '',
+      avatarUrl: '',
+      address: { line1: '', line2: '', city: '', state: '', postalCode: '', country: '' },
+      memoStatus: 'none',
+      memoCreditLimit: 0,
       createdAt: now,
       updatedAt: now,
     });
@@ -211,14 +221,23 @@ export async function verifySignupOtp(
     html: welcomeEmailHtml(record.pendingName),
   });
 
+  // Return the same shape as login / me so the client context is complete
+  // straight after signup (previously address/phone/avatar were missing
+  // until the next page load).
+  const created = await User.findById(result.insertedId).lean();
   return {
     token,
-    user: {
-      id: result.insertedId.toString(),
-      name: record.pendingName,
-      email: normalizedEmail,
-      role: 'user',
-    },
+    user: created
+      ? toPublicUser(created as any)
+      : {
+          id: result.insertedId.toString(),
+          name: record.pendingName,
+          email: normalizedEmail,
+          role: 'user',
+          authProviders: ['password'],
+          hasPassword: true,
+          googleLinked: false,
+        },
   };
 }
 
@@ -289,6 +308,11 @@ export async function resetPasswordWithOtp(
   if (!user) throw new Error('Account not found.');
 
   user.password = newPassword; // pre-save hook will hash this
+  // Resetting via an emailed code proves ownership of the address, and gives
+  // Google-only accounts a password so they can use either method.
+  user.emailVerified = true;
+  const providers = resolveAuthProviders(user);
+  user.authProviders = providers.includes('password') ? providers : [...providers, 'password'];
   await user.save();
 
   await Otp.deleteOne({ _id: record._id });

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { googleAuthErrorMessage } from "@/lib/google-auth-messages";
 
 /**
  * ── Palette (flat, no gradients) — shared with /contact ──
@@ -75,7 +76,7 @@ function initialsFrom(name: string) {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, loading: authLoading, updateUser, logout } = useAuth();
+  const { user, loading: authLoading, updateUser, logout, unlinkGoogle } = useAuth();
 
   const [form, setForm] = useState<FormState>({
     name: "",
@@ -97,6 +98,11 @@ export default function AccountPage() {
   const [saved, setSaved] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
 
+  // ── Sign-in methods ──
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [signInNotice, setSignInNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [unlinking, setUnlinking] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -106,6 +112,50 @@ export default function AccountPage() {
       router.replace("/login?redirect=/account");
     }
   }, [authLoading, user, router]);
+
+  // Which providers this deployment supports, and any result coming back
+  // from the "Connect Google" round trip (?linked=google or ?error=…).
+  // Read from window.location rather than useSearchParams so this page
+  // doesn't need a Suspense boundary.
+  useEffect(() => {
+    fetch("/api/auth/providers")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setGoogleAvailable(Boolean(d?.data?.google)))
+      .catch(() => setGoogleAvailable(false));
+
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get("linked");
+    const errorCode = params.get("error");
+    if (linked === "google") {
+      setSignInNotice({ tone: "ok", text: "Google is now connected. You can sign in with Google or your password." });
+    } else if (errorCode) {
+      const text = googleAuthErrorMessage(errorCode);
+      if (text) setSignInNotice({ tone: "error", text });
+    }
+    if (linked || errorCode) {
+      params.delete("linked");
+      params.delete("error");
+      const qs = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    }
+  }, []);
+
+  const handleUnlinkGoogle = async () => {
+    if (!window.confirm("Disconnect Google? You'll sign in with your email and password from now on.")) return;
+    setUnlinking(true);
+    setSignInNotice(null);
+    try {
+      await unlinkGoogle();
+      setSignInNotice({ tone: "ok", text: "Google disconnected. Sign in with your email and password from now on." });
+    } catch (err) {
+      setSignInNotice({
+        tone: "error",
+        text: err instanceof Error ? err.message : "Could not disconnect Google. Try again.",
+      });
+    } finally {
+      setUnlinking(false);
+    }
+  };
 
   // Hydrate the form from the session exactly once, so it doesn't clobber
   // in-progress edits if `user` is refreshed elsewhere in the app.
@@ -135,6 +185,11 @@ export default function AccountPage() {
 
   const displayedAvatar =
     pendingPreview ?? (avatarRemoved ? null : user?.avatarUrl || null);
+
+      // Fall back to the initial if the photo URL can't be loaded (e.g. an
+  // expired Google profile photo). Retried whenever the photo changes.
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => setAvatarFailed(false), [displayedAvatar]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -412,9 +467,15 @@ export default function AccountPage() {
               <div className="p-8 flex flex-col items-center text-center">
                 <div className="relative">
                   <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-[#E4DFD2] bg-[#1F4D3E]/8 flex items-center justify-center">
-                    {displayedAvatar ? (
+                                        {displayedAvatar && !avatarFailed ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={displayedAvatar} alt="Your profile photo" className="w-full h-full object-cover" />
+                      <img
+                        src={displayedAvatar}
+                        alt="Your profile photo"
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                        onError={() => setAvatarFailed(true)}
+                      />
                     ) : (
                       <span
                         className="text-3xl text-[#1F4D3E]"
@@ -564,6 +625,98 @@ export default function AccountPage() {
                   </a>
                 ))}
               </nav>
+            </div>
+
+            {/* Sign-in methods */}
+            <div className="bg-[#FFFDF9] rounded-2xl border border-[#E4DFD2] shadow-xl shadow-black/[0.04] overflow-hidden mt-6">
+              <div className="bg-[#15181C] px-6 py-4">
+                <h2 className="text-base text-white" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
+                  Sign-in methods
+                </h2>
+                <p className="text-white/55 text-xs mt-0.5">Ways you can get into this account.</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {signInNotice && (
+                  <div
+                    role={signInNotice.tone === "error" ? "alert" : "status"}
+                    className={
+                      signInNotice.tone === "error"
+                        ? "bg-[#FBEDE8] border border-[#A6402B]/25 text-[#A6402B] rounded-lg px-4 py-3 text-sm"
+                        : "bg-[#1F4D3E]/[0.07] border border-[#1F4D3E]/20 text-[#1F4D3E] rounded-lg px-4 py-3 text-sm"
+                    }
+                  >
+                    {signInNotice.text}
+                  </div>
+                )}
+
+                {/* Email + password */}
+                <div className="flex items-center gap-3">
+                  <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#1F4D3E]/8 text-[#1F4D3E] flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold text-[#23201A]">Email and password</span>
+                    <span className="block text-xs text-[#96907F]">
+                      {user?.hasPassword !== false ? "Password set" : "No password yet"}
+                    </span>
+                  </span>
+                  {user?.hasPassword === false ? (
+                    <a href="/forgot-password" className="text-sm font-semibold text-[#A9814A] hover:text-[#8C6A3A] transition-colors">
+                      Set password
+                    </a>
+                  ) : (
+                    <a href="/forgot-password" className="text-sm font-semibold text-[#96907F] hover:text-[#A9814A] transition-colors">
+                      Change
+                    </a>
+                  )}
+                </div>
+
+                {/* Google */}
+                {(googleAvailable || user?.googleLinked) && (
+                  <div className="flex items-center gap-3 pt-4 border-t border-[#E4DFD2]">
+                    <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-[#E4DFD2] flex items-center justify-center">
+                      <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                      </svg>
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-[#23201A]">Google</span>
+                      <span className="block text-xs text-[#96907F]">
+                        {user?.googleLinked ? "Connected" : "Not connected"}
+                      </span>
+                    </span>
+                    {user?.googleLinked ? (
+                      user?.hasPassword === false ? (
+                        <span className="text-xs text-[#96907F] text-right max-w-[9rem]">
+                          Set a password to disconnect
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleUnlinkGoogle}
+                          disabled={unlinking}
+                          className="text-sm font-semibold text-[#96907F] hover:text-[#A6402B] disabled:opacity-60 transition-colors"
+                        >
+                          {unlinking ? "Disconnecting…" : "Disconnect"}
+                        </button>
+                      )
+                    ) : (
+                      <a
+                        href="/api/auth/google?mode=link&from=account"
+                        className="text-sm font-semibold text-[#A9814A] hover:text-[#8C6A3A] transition-colors"
+                      >
+                        Connect
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

@@ -20,6 +20,10 @@ interface User {
   phone?: string;
   avatarUrl?: string;
   address?: UserAddress;
+  /** How this account can sign in. */
+  authProviders?: ('password' | 'google')[];
+  hasPassword?: boolean;
+  googleLinked?: boolean;
 }
 
 interface AuthContextType {
@@ -30,6 +34,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (partial: Partial<User>) => void;
   refreshUser: () => Promise<void>;
+  /** Disconnect Google. Rejects if Google is the only sign-in method. */
+  unlinkGoogle: () => Promise<void>;
   isAdmin: boolean;
   loading: boolean;
 }
@@ -114,6 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const unlinkGoogle = useCallback(async () => {
+    const data = await runAuthRequest<{ data: { user: User } }>('/api/auth/google/unlink', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    setUser(data.data.user);
+  }, []);
+
   const updateUser = useCallback((partial: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...partial } : prev));
   }, []);
@@ -135,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       updateUser,
       refreshUser,
+      unlinkGoogle,
       isAdmin: user?.role === 'admin',
       loading,
     }}>

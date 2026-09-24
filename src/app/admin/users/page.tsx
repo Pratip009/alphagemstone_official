@@ -15,6 +15,7 @@ interface AdminUserRow {
   email: string;
   phone?: string;
   role: 'admin' | 'user';
+  authProviders?: ('password' | 'google')[];
   createdAt: string;
   orderCount: number;
   totalSpent: number;
@@ -213,7 +214,17 @@ export default function AdminUsersPage() {
                       {u.name}
                       <ArrowUpRight size={11} strokeWidth={2} className="opacity-0 group-hover:opacity-100 transition-opacity text-[#c9a84c]" />
                     </div>
-                    <div className="text-[0.68rem] text-[#a09a90] truncate">{u.email}</div>
+                    <div className="text-[0.68rem] text-[#a09a90] truncate flex items-center gap-1.5">
+                      <span className="truncate">{u.email}</span>
+                      {u.authProviders?.includes('google') && (
+                        <span
+                          title={u.authProviders.includes('password') ? 'Signs in with Google or password' : 'Signs in with Google only'}
+                          className="shrink-0 px-1.5 py-px rounded text-[0.55rem] font-semibold text-[#4285F4] bg-[#4285F4]/10 border border-[#4285F4]/20"
+                        >
+                          Google
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { signup } from '@/services/auth.service';
 import { errorResponse } from '@/lib/api-response';
+import { setSessionCookies } from '@/lib/auth-cookies';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { emailSchema, firstZodErrorMessage } from '@/lib/validation';
 import { z } from 'zod';
@@ -43,21 +44,7 @@ export async function POST(req: NextRequest) {
       { success: true, data: { user: result.user } },
       { status: 201 }
     );
-
-    response.cookies.set('auth_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-    response.cookies.set('has_session', '1', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
+    setSessionCookies(response, result.token);
     return response;
   } catch (err) {
     console.error('[signup]', err);

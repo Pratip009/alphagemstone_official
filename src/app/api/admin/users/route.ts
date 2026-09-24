@@ -26,7 +26,7 @@ export const GET = withAdmin(async (req) => {
 
     const [users, total, filteredTotal, adminCount, newThisMonth] = await Promise.all([
       User.find(filter)
-        .select('name email role phone createdAt')
+        .select('name email role phone authProviders createdAt')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

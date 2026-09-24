@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useAuth } from '@/hooks/useAuth';
+import AvatarImage from '@/components/ui/AvatarImage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserDetail {
@@ -19,6 +20,7 @@ interface UserDetail {
   avatarUrl?: string;
   address?: { line1?: string; city?: string; state?: string; country?: string; postalCode?: string };
   memoStatus?: string;
+  authProviders?: ('password' | 'google')[];
   createdAt: string;
 }
 
@@ -194,12 +196,7 @@ export default function AdminUserDetailPage() {
               border: `1px solid ${user.role === 'admin' ? '#c9a84c30' : '#7ab0c930'}`,
             }}
           >
-            {user.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-full object-cover" />
-            ) : (
-              user.name.charAt(0).toUpperCase()
-            )}
+                        <AvatarImage src={user.avatarUrl} name={user.name} email={user.email} className="w-full h-full rounded-full object-cover" />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -222,6 +219,12 @@ export default function AdminUserDetailPage() {
                 </span>
               )}
               <span className="flex items-center gap-1.5"><Calendar size={12} strokeWidth={1.8} />Joined {formatDate(user.createdAt)}</span>
+              <span className="flex items-center gap-1.5">
+                Signs in with{' '}
+                {(user.authProviders?.length ? user.authProviders : ['password'])
+                  .map((p) => (p === 'google' ? 'Google' : 'email and password'))
+                  .join(' or ')}
+              </span>
             </div>
           </div>
         </div>

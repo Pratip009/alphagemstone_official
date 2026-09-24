@@ -237,7 +237,9 @@ export default function ForgotPasswordPage() {
             {step === 'email' && (
               <>
                 <h1 className="auth-heading">Forgot password?</h1>
-                <p className="auth-subheading">Enter your email and we'll send a reset code</p>
+                <p className="auth-subheading">
+                  Enter your email and we&apos;ll send a reset code. Signed up with Google? This also lets you add a password.
+                </p>
                 <form onSubmit={handleEmailSubmit}>
                   <div className="auth-field">
                     <label className="auth-label">Email address</label>

@@ -10,6 +10,7 @@ import CartSidebar from "./CartSidebar";
 import { useWishlist } from "@/hooks/useWishlist";
 import { trackCTA, trackEvent } from "@/lib/analytics";
 import { Gem } from "lucide-react";
+import AvatarImage from "./AvatarImage";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface NavSubcategory {
@@ -1634,18 +1635,7 @@ export default function Navbar({
                       onClick={() => setProfileOpen(!profileOpen)}
                     >
                       <div className="nav-avatar">
-                        {user.avatarUrl ? (
-                          <Image
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            width={26}
-                            height={26}
-                            unoptimized
-                            className="nav-avatar-img"
-                          />
-                        ) : (
-                          user.name?.charAt(0).toUpperCase()
-                        )}
+                        <AvatarImage src={user.avatarUrl} name={user.name} email={user.email} className="nav-avatar-img" />
                       </div>
                       Account
                       <svg
@@ -1670,18 +1660,7 @@ export default function Navbar({
                     >
                       <div className="profile-dropdown-header profile-dropdown-header-row">
                         <div className="nav-avatar nav-avatar-lg">
-                          {user.avatarUrl ? (
-                            <Image
-                              src={user.avatarUrl}
-                              alt={user.name}
-                              width={38}
-                              height={38}
-                              unoptimized
-                              className="nav-avatar-img"
-                            />
-                          ) : (
-                            user.name?.charAt(0).toUpperCase()
-                          )}
+                          <AvatarImage src={user.avatarUrl} name={user.name} email={user.email} className="nav-avatar-img" />
                         </div>
                         <div>
                           <p className="profile-dropdown-label">Signed in as</p>
@@ -2168,18 +2147,7 @@ export default function Navbar({
               </p>
               <div className="mobile-user-block">
                 <div className="mobile-user-avatar">
-                  {user.avatarUrl ? (
-                    <Image
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      width={42}
-                      height={42}
-                      unoptimized
-                      className="nav-avatar-img"
-                    />
-                  ) : (
-                    user.name?.charAt(0).toUpperCase()
-                  )}
+                  <AvatarImage src={user.avatarUrl} name={user.name} email={user.email} className="nav-avatar-img" />
                 </div>
                 <div>
                   <p className="mobile-user-name">{user.name}</p>

@@ -1,10 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import GoogleButton from "@/components/auth/GoogleButton";
+import { googleAuthErrorMessage } from "@/lib/google-auth-messages";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
-export default function LoginPage() {
+export default function LoginPage({ googleEnabled = false }: { googleEnabled?: boolean }) {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,18 +17,33 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [showGoogleHint, setShowGoogleHint] = useState(false);
+
+  // Sanitised once: only same-site relative paths are ever followed.
+  const redirectParam = searchParams.get("redirect");
+  const redirectTarget = safeRedirectPath(redirectParam, "/");
+
+  // Errors coming back from the Google flow arrive as ?error=<code>.
+  useEffect(() => {
+    const message = googleAuthErrorMessage(searchParams.get("error"));
+    if (message) setError(message);
+  }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setShowGoogleHint(false);
     setLoading(true);
     try {
       await login(form.email, form.password);
       setRedirecting(true);
-      const redirect = searchParams.get("redirect") || "/";
-      router.push(redirect);
+      router.push(redirectTarget);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign you in. Please try again.");
+      // Accounts created with Google have no password. The server keeps its
+      // generic "invalid email or password" (so it can't be used to probe
+      // which emails exist), and the page offers the likely fix instead.
+      setShowGoogleHint(googleEnabled);
       setLoading(false);
     }
   };
@@ -579,6 +597,18 @@ export default function LoginPage() {
           transition: color 0.2s, border-color 0.2s;
         }
         .auth-footer a:hover { color: var(--violet); border-color: var(--violet); }
+
+        /* ── Google ── */
+        .auth-google { animation: formSlideUp 0.7s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .auth-divider.auth-divider-tight { margin: 24px 0; animation-delay: 0.13s; }
+        .auth-hint {
+          font-family: var(--label);
+          font-size: 12px;
+          line-height: 1.6;
+          color: #6b6880;
+          margin: -12px 0 22px;
+        }
+        .auth-hint a { color: var(--deep); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
       `}</style>
 
       <div className="auth-root">
@@ -838,13 +868,28 @@ export default function LoginPage() {
               Sign in to your account to continue
             </p>
 
+            {googleEnabled && (
+              <>
+                <div className="auth-google">
+                  <GoogleButton from="login" redirect={redirectParam ? redirectTarget : null} disabled={loading} />
+                </div>
+                <div className="auth-divider auth-divider-tight">
+                  <div className="auth-divider-line" />
+                  <span className="auth-divider-text">or sign in with email</span>
+                  <div className="auth-divider-line" />
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleSubmit}>
               {/* Email */}
               <div className="auth-field">
-                <label className="auth-label">Email address</label>
+                <label className="auth-label" htmlFor="login-email">Email address</label>
                 <div className="auth-input-wrap">
                   <input
+                    id="login-email"
                     type="email"
+                    autoComplete="email"
                     className="auth-input"
                     placeholder="you@example.com"
                     value={form.email}
@@ -861,10 +906,12 @@ export default function LoginPage() {
 
               {/* Password */}
               <div className="auth-field">
-                <label className="auth-label">Password</label>
+                <label className="auth-label" htmlFor="login-password">Password</label>
                 <div className="auth-input-wrap">
                   <input
+                    id="login-password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     className="auth-input has-eye"
                     placeholder="••••••••"
                     value={form.password}
@@ -975,8 +1022,14 @@ export default function LoginPage() {
                       strokeLinecap="round"
                     />
                   </svg>
-                  {error}
+                  <span role="alert">{error}</span>
                 </div>
+              )}
+              {showGoogleHint && (
+                <p className="auth-hint">
+                  Created your account with Google? Use Continue with Google above, or{" "}
+                  <Link href="/forgot-password">set a password</Link> to sign in with email too.
+                </p>
               )}
 
               <button type="submit" disabled={loading} className="auth-btn">
@@ -994,7 +1047,10 @@ export default function LoginPage() {
             </div>
 
             <div className="auth-footer">
-              Don&apos;t have an account? <Link href="/signup">Create one</Link>
+              Don&apos;t have an account?{" "}
+              <Link href={redirectParam ? `/signup?redirect=${encodeURIComponent(redirectTarget)}` : "/signup"}>
+                Create one
+              </Link>
             </div>
           </div>
         </div>
