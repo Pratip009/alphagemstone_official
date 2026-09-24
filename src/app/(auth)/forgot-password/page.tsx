@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import LoginPage from './LoginPage';
+import LoginPage from '../login/LoginPage';
 import { isGoogleAuthConfigured } from '@/lib/google-oauth';
 
 // Read env at request time so enabling Google doesn't require a rebuild.
