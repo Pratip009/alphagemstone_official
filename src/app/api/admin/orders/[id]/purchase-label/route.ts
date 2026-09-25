@@ -14,6 +14,11 @@ import { connectDB } from '@/lib/db';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { purchaseAndSaveLabel } from '@/services/order.service';
+import mongoose from 'mongoose';
+import Order from '@/models/Order';
+import DropshipOrder from '@/models/DropshipOrder';
+import { adminPurchaseDropshipLabel, DropshipError } from '@/services/dropship.service';
+import { getUnifiedDropshipOrder } from '@/services/adminOrders.service';
 
 async function handler(
   req: NextRequest,
@@ -24,6 +29,21 @@ async function handler(
     const { id } = await context.params;
 
     await connectDB();
+
+    // Dropship orders show in the same Orders tab — same button, same result.
+    if (
+      mongoose.isValidObjectId(id) &&
+      !(await Order.exists({ _id: id })) &&
+      (await DropshipOrder.exists({ _id: id }))
+    ) {
+      try {
+        await adminPurchaseDropshipLabel(id);
+      } catch (e) {
+        if (e instanceof DropshipError) return apiError(e.message, e.status);
+        throw e;
+      }
+      return apiSuccess({ order: await getUnifiedDropshipOrder(id) });
+    }
 
     const body = await req.json().catch(() => ({}));
     const rateIdOverride: string | undefined = body?.rateId ?? undefined;

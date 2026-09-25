@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { releaseExpiredPendingOrders } from '@/services/order.service';
+import { releaseStaleDropshipOrders } from '@/services/dropship.service';
 
 // Same auth pattern as src/app/api/cron/sync-deliveries/route.ts:
 // Authorization: Bearer <CRON_SECRET>  OR  ?secret=<CRON_SECRET>
@@ -31,7 +32,19 @@ export async function GET(req: NextRequest) {
 
   try {
     const released = await releaseExpiredPendingOrders(30);
-    return NextResponse.json({ success: true, data: { releasedCount: released } });
+    // Unpaid dropship orders: stock back after 60 min, auto-cancel after 7 days.
+    const dropship = await releaseStaleDropshipOrders().catch((err) => {
+      console.error('release-stale-orders: dropship sweep failed', err);
+      return { released: 0, cancelled: 0 };
+    });
+    return NextResponse.json({
+      success: true,
+      data: {
+        releasedCount: released,
+        dropshipStockReleased: dropship.released,
+        dropshipCancelled: dropship.cancelled,
+      },
+    });
   } catch (err) {
     console.error('release-stale-orders: failed', err);
     return NextResponse.json({ success: false, error: 'Failed to release stale orders' }, { status: 500 });

@@ -5,6 +5,52 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { buildTrackingUrl } from '@/models/ORDER_SHIPPING_FIELDS';
 import { Resend } from 'resend';
 import { orderShippedEmailHtml } from '@/lib/email-templates';
+import mongoose from 'mongoose';
+import DropshipOrder from '@/models/DropshipOrder';
+import {
+  adminUpdateOrder as adminUpdateDropshipOrder,
+  adminDeleteOrder as adminDeleteDropshipOrder,
+  DropshipError,
+} from '@/services/dropship.service';
+import {
+  getUnifiedDropshipOrder,
+  UNIFIED_TO_DROPSHIP,
+  DROPSHIP_ALLOWED_STATUSES,
+} from '@/services/adminOrders.service';
+
+// The Orders tab lists store AND dropship orders together, so every action
+// here first checks the normal Order collection and, if the id isn't there,
+// falls through to the dropship order with the same id. Ids are Mongo
+// ObjectIds, so they can never collide between the two collections.
+async function isDropshipOrder(id: string): Promise<boolean> {
+  if (!mongoose.isValidObjectId(id)) return false;
+  if (await Order.exists({ _id: id })) return false;
+  return Boolean(await DropshipOrder.exists({ _id: id }));
+}
+
+async function updateDropship(id: string, body: any) {
+  const { status, trackingNumber, shippingCarrier, trackingUrl, adminNotes, needsAttention } = body ?? {};
+  if (status && !DROPSHIP_ALLOWED_STATUSES.includes(status)) {
+    return errorResponse(
+      `Dropship orders can only be: Pending (awaiting payment), Processing, Shipped, Delivered or Cancelled.`,
+      400
+    );
+  }
+  try {
+    await adminUpdateDropshipOrder(id, {
+      status: status ? (UNIFIED_TO_DROPSHIP[status] as any) : undefined,
+      trackingNumber: typeof trackingNumber === 'string' ? trackingNumber : undefined,
+      trackingUrl: typeof trackingUrl === 'string' ? trackingUrl : undefined,
+      shippingCarrier: typeof shippingCarrier === 'string' ? shippingCarrier : undefined,
+      adminNotes: typeof adminNotes === 'string' ? adminNotes : undefined,
+      needsAttention: needsAttention === false ? false : undefined,
+    });
+  } catch (err) {
+    if (err instanceof DropshipError) return errorResponse(err.message, err.status);
+    throw err;
+  }
+  return successResponse(await getUnifiedDropshipOrder(id));
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
@@ -14,6 +60,7 @@ export const PUT = withAdmin(async (req: AuthenticatedRequest, context: { params
     await connectDB();
     const { id } = await context.params;
     const body = await req.json();
+    if (await isDropshipOrder(id)) return updateDropship(id, body);
     const { status, trackingNumber, shippingCarrier, trackingUrl } = body;
 
     const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
@@ -79,6 +126,7 @@ export const GET = withAdmin(async (req: AuthenticatedRequest, context: { params
   try {
     await connectDB();
     const { id } = await context.params;
+    if (await isDropshipOrder(id)) return successResponse(await getUnifiedDropshipOrder(id));
     const order = await Order.findById(id).populate('user', 'name email').lean();
     if (!order) return errorResponse('Order not found', 404);
     return successResponse(order);
@@ -91,6 +139,11 @@ export const DELETE = withAdmin(async (req: AuthenticatedRequest, context: { par
   try {
     await connectDB();
     const { id } = await context.params;
+    if (await isDropshipOrder(id)) {
+      // Also puts any reserved-but-unpaid stock back on the shelf.
+      await adminDeleteDropshipOrder(id);
+      return successResponse({ _id: id, deleted: true, source: 'dropship' });
+    }
     const order = await Order.findByIdAndDelete(id).lean();
     if (!order) return errorResponse('Order not found', 404);
     return successResponse({ _id: id, deleted: true });

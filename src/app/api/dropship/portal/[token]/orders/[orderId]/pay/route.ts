@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { initiateDropshipPayment, DropshipError } from '@/services/dropship.service';
 
 /**
@@ -13,6 +14,16 @@ export async function POST(
 ) {
   try {
     const { token, orderId } = await params;
+
+    const rate = await rateLimit(req, {
+      id: 'dropship-pay-init',
+      limit: 40,
+      windowSec: 3600,
+      extraKey: token,
+      scope: 'key',
+    });
+    if (!rate.success) return rateLimitResponse(rate);
+
     const result = await initiateDropshipPayment(token, orderId);
     return successResponse(result);
   } catch (err) {

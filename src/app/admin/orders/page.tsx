@@ -8,7 +8,7 @@ import {
   FileText, Printer, X, TrendingUp, DollarSign, AlertCircle,
   Eye, MoreVertical, ArrowUpRight, Filter, Download, Gem,
   MapPin, CreditCard, Calendar, Hash, ChevronDown, ChevronUp,
-  Trash2, Loader2,
+  Trash2, Loader2, Store, Send, AlertTriangle, StickyNote,
 } from 'lucide-react';
 import AdminOrderShipping, { type OrderShippingData } from '@/components/admin/AdminOrderShipping';
 
@@ -40,8 +40,25 @@ interface CarrierShipment {
   carrier: 'FedEx' | 'USPS' | 'UPS';
 }
 
+interface DropshipInfo {
+  applicationId?: string;
+  sellerName?: string;
+  sellerEmail?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  specifications?: string;
+  specialInstructions?: string;
+  adminNotes?: string;
+  needsAttention?: boolean;
+  attentionReason?: string;
+  rawStatus?: string;
+}
+
 interface Order {
   _id: string;
+  /** 'dropship' = placed by a dropship seller through their portal. Missing/'store' = normal website order. */
+  source?: 'store' | 'dropship';
+  dropship?: DropshipInfo;
   user: { _id: string; name: string; email: string };
   items: OrderItem[];
   shippingAddress: ShippingAddress;
@@ -71,6 +88,15 @@ interface Order {
   ups?: CarrierShipment;
 }
 
+interface OrderCounts {
+  all: number;
+  store: number;
+  dropship: number;
+  dropshipAwaitingPayment: number;
+  dropshipToShip: number;
+  dropshipAttention: number;
+}
+
 interface Pagination {
   total: number;
   page: number;
@@ -92,6 +118,31 @@ const STATUS_CONFIG: Record<string, {
 };
 
 const ALL_STATUSES = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+// Dropship orders go straight from "pending" (awaiting the seller's payment)
+// to "processing" once paid — there is no separate "paid" or "refunded" step.
+const DROPSHIP_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+const isDropship = (o: Order) => o.source === 'dropship';
+
+/** Status label, with dropship's "pending" spelled out so nobody ships an unpaid order. */
+function statusLabel(status: string, dropship = false) {
+  if (dropship && status === 'pending') return 'Awaiting payment';
+  return STATUS_CONFIG[status]?.label ?? status;
+}
+
+const DROPSHIP_ACCENT = '#0e7490';
+
+function DropshipBadge({ size = 'sm' }: { size?: 'sm' | 'md' }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 font-bold rounded-md ${size === 'sm' ? 'px-1.5 py-0.5 text-[0.56rem]' : 'px-2 py-1 text-[0.66rem]'}`}
+      style={{ background: '#ecfeff', color: DROPSHIP_ACCENT, border: '1px solid #a5f3fc', letterSpacing: '0.04em' }}
+      title="This order came from the Dropship program"
+    >
+      <Send size={size === 'sm' ? 8 : 10} /> DROPSHIP
+    </span>
+  );
+}
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -166,6 +217,13 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
                     <span style={{ fontWeight: 500, color: '#1a1714', fontFamily: mono ? 'monospace' : 'inherit' }}>{value}</span>
                   </div>
                 ))}
+                {isDropship(order) && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 20, letterSpacing: '0.08em', textTransform: 'uppercase', background: '#ecfeff', color: DROPSHIP_ACCENT, border: '1px solid #a5f3fc' }}>
+                      Dropship Order
+                    </span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 12px', borderRadius: 20, letterSpacing: '0.08em', textTransform: 'uppercase', background: order.paymentStatus === 'completed' ? '#edf7ed' : '#fdf5e6', color: order.paymentStatus === 'completed' ? '#2d6b2d' : '#8b5e1a', border: `1px solid ${order.paymentStatus === 'completed' ? '#80c880' : '#e0c070'}` }}>
                     {order.paymentStatus === 'completed' ? '✓ Paid' : 'Pending'}
@@ -177,8 +235,8 @@ function Invoice({ order, onClose }: { order: Order; onClose: () => void }) {
           <div style={{ height: 1, background: 'linear-gradient(90deg, #c9a84c50, #ede9e1, transparent)', marginBottom: 36 }} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginBottom: 40 }}>
             {[
-              { title: 'Bill To', lines: [{ text: order.user?.name ?? '—', bold: true, size: 14 }, { text: order.user?.email ?? '—', color: '#6b6560' }] },
-              { title: 'Ship To', lines: [{ text: order.shippingAddress.fullName, bold: true, size: 14 }, { text: order.shippingAddress.addressLine1 }, ...(order.shippingAddress.addressLine2 ? [{ text: order.shippingAddress.addressLine2 }] : []), { text: `${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postalCode}` }, { text: order.shippingAddress.country }] },
+              { title: isDropship(order) ? 'Bill To (Dropship Seller)' : 'Bill To', lines: [{ text: order.user?.name ?? '—', bold: true, size: 14 }, { text: order.user?.email ?? '—', color: '#6b6560' }] },
+              { title: isDropship(order) ? "Ship To (Seller's Customer)" : 'Ship To', lines: [{ text: order.shippingAddress.fullName, bold: true, size: 14 }, { text: order.shippingAddress.addressLine1 }, ...(order.shippingAddress.addressLine2 ? [{ text: order.shippingAddress.addressLine2 }] : []), { text: `${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postalCode}` }, { text: order.shippingAddress.country }] },
             ].map(({ title, lines }) => (
               <div key={title}>
                 <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#a09a90', fontWeight: 600, marginBottom: 12 }}>{title}</div>
@@ -262,14 +320,24 @@ function StatusBadge({ status, size = 'md' }: { status: string; size?: 'sm' | 'm
 }
 
 // ─── Status Dropdown ──────────────────────────────────────────────────────────
-function StatusSelect({ orderId, current, onUpdate }: {
+function StatusSelect({ orderId, current, onUpdate, dropship = false, paid = true }: {
   orderId: string; current: string; onUpdate: (id: string, status: string) => void;
+  dropship?: boolean; paid?: boolean;
 }) {
   const [updating, setUpdating] = useState(false);
   const authFetch = useAuthFetch();
 
   const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
+    if (newStatus === current) return;
+    if (newStatus === 'cancelled' && paid) {
+      const ok = window.confirm(
+        dropship
+          ? 'Cancel this PAID dropship order? The item goes back into stock. Remember to refund the seller in PayPal.'
+          : 'Cancel this order?'
+      );
+      if (!ok) return;
+    }
     setUpdating(true);
     try {
       const res = await authFetch(`/api/admin/orders/${orderId}`, {
@@ -277,9 +345,15 @@ function StatusSelect({ orderId, current, onUpdate }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) onUpdate(orderId, newStatus);
+      if (res.ok) {
+        onUpdate(orderId, newStatus);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || data.error || 'Could not change the status. Please try again.');
+      }
     } catch (err) {
       console.error('Failed to update order status', err);
+      alert('Could not change the status. Please check your connection and try again.');
     } finally {
       setUpdating(false);
     }
@@ -293,7 +367,7 @@ function StatusSelect({ orderId, current, onUpdate }: {
         className="appearance-none text-[0.65rem] font-semibold pl-2.5 pr-6 py-1 rounded-full outline-none cursor-pointer disabled:opacity-50 transition-all"
         style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}
       >
-        {ALL_STATUSES.map(s => <option key={s} value={s}>{STATUS_CONFIG[s]?.label ?? s}</option>)}
+        {(dropship ? DROPSHIP_STATUSES : ALL_STATUSES).map(s => <option key={s} value={s}>{statusLabel(s, dropship)}</option>)}
       </select>
       <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: cfg.text }} />
     </div>
@@ -317,6 +391,119 @@ function ShippingChip({ order }: { order: Order }) {
 }
 
 // ─── Expanded Order Detail ────────────────────────────────────────────────────
+// ─── Dropship info panel (shown at the top of an expanded dropship order) ─────
+function DropshipPanel({ order, onChange }: {
+  order: Order;
+  onChange: (orderId: string, updated: Partial<Order>) => void;
+}) {
+  const authFetch = useAuthFetch();
+  const d = order.dropship ?? {};
+  const [notes, setNotes] = useState(d.adminNotes ?? '');
+  const [saving, setSaving] = useState<'notes' | 'resolve' | null>(null);
+  const [saved, setSaved] = useState(false);
+  const unpaid = order.paymentStatus !== 'completed';
+
+  const save = async (payload: Record<string, unknown>, which: 'notes' | 'resolve') => {
+    setSaving(which);
+    setSaved(false);
+    try {
+      const res = await authFetch(`/api/admin/orders/${order._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Could not save');
+      if (data.data) onChange(order._id, data.data as Partial<Order>);
+      setSaved(true);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not save');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="px-6 pt-5">
+      <div className="rounded-2xl border-2 overflow-hidden" style={{ borderColor: '#a5f3fc', background: '#f0fdff' }}>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ background: '#ecfeff', borderBottom: '1px solid #cffafe' }}>
+          <DropshipBadge size="md" />
+          <p className="text-[0.78rem] font-semibold" style={{ color: '#164e63' }}>
+            This order is from the Dropship program — placed by seller <span className="underline decoration-dotted">{d.sellerName || d.sellerEmail}</span>.
+          </p>
+        </div>
+
+        <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-[0.74rem]" style={{ color: '#164e63' }}>
+          <div className="space-y-1.5">
+            {unpaid ? (
+              <p className="font-semibold" style={{ color: '#b45309' }}>
+                ⏳ Not paid yet — do not ship. The seller still has to pay for this order.
+              </p>
+            ) : (
+              <>
+                <p className="font-semibold">✓ Paid by the seller. Ship it to the customer shown under “Ship To”.</p>
+                <p>📦 Do <strong>not</strong> put an Alpha invoice or prices in the package — the customer bought from the seller.</p>
+              </>
+            )}
+            <p>
+              Seller contact: <a className="underline" href={`mailto:${d.sellerEmail}`}>{d.sellerEmail}</a>
+            </p>
+            {(d.customerEmail || d.customerPhone) && (
+              <p>Customer contact: {[d.customerEmail, d.customerPhone].filter(Boolean).join(' · ')}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {d.specifications && <p><strong>Seller’s notes:</strong> {d.specifications}</p>}
+            {d.specialInstructions && <p><strong>Special instructions:</strong> {d.specialInstructions}</p>}
+            {!d.specifications && !d.specialInstructions && <p className="opacity-70">No special notes from the seller.</p>}
+          </div>
+        </div>
+
+        {d.needsAttention && (
+          <div className="mx-4 mb-3 rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-3" style={{ background: '#fff7ed', border: '1px solid #fed7aa' }}>
+            <AlertTriangle size={14} style={{ color: '#c2410c' }} />
+            <p className="flex-1 text-[0.74rem] font-semibold" style={{ color: '#9a3412' }}>
+              Needs attention: {d.attentionReason || 'please review this order.'}
+            </p>
+            <button
+              onClick={() => save({ needsAttention: false }, 'resolve')}
+              disabled={saving !== null}
+              className="px-3 py-1.5 rounded-lg text-[0.68rem] font-bold disabled:opacity-50"
+              style={{ background: '#c2410c', color: '#fff' }}
+            >
+              {saving === 'resolve' ? 'Saving…' : 'Mark as sorted'}
+            </button>
+          </div>
+        )}
+
+        <div className="px-4 pb-4">
+          <label className="flex items-center gap-1.5 text-[0.66rem] font-bold mb-1.5" style={{ color: '#155e75' }}>
+            <StickyNote size={11} /> Private notes (only admins see these)
+          </label>
+          <div className="flex gap-2">
+            <textarea
+              value={notes}
+              onChange={e => { setNotes(e.target.value); setSaved(false); }}
+              rows={2}
+              className="flex-1 rounded-xl px-3 py-2 text-[0.74rem] outline-none"
+              style={{ background: '#fff', border: '1px solid #a5f3fc', color: '#1a1714' }}
+              placeholder="e.g. Called seller, customer wants gift wrap"
+            />
+            <button
+              onClick={() => save({ adminNotes: notes }, 'notes')}
+              disabled={saving !== null || notes === (d.adminNotes ?? '')}
+              className="px-4 rounded-xl text-[0.7rem] font-bold disabled:opacity-40"
+              style={{ background: DROPSHIP_ACCENT, color: '#fff' }}
+            >
+              {saving === 'notes' ? 'Saving…' : saved ? 'Saved ✓' : 'Save note'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrderDetail({ order, onShippingUpdate, onInvoice, onDelete, isDeleting }: {
   order: Order;
   onShippingUpdate: (orderId: string, updated: Partial<Order>) => void;
@@ -344,12 +531,15 @@ function OrderDetail({ order, onShippingUpdate, onInvoice, onDelete, isDeleting 
 
   return (
     <div className="border-t" style={{ borderColor: '#f0ece6', background: 'linear-gradient(180deg, #faf9f7 0%, #f5f3f0 100%)' }}>
+      {isDropship(order) && <DropshipPanel order={order} onChange={onShippingUpdate} />}
       <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Customer & Address */}
         <div className="space-y-4">
           <div>
-            <p className="text-[0.58rem] tracking-[0.2em] uppercase text-[#b0a898] font-bold mb-2.5">Customer</p>
+            <p className="text-[0.58rem] tracking-[0.2em] uppercase text-[#b0a898] font-bold mb-2.5">
+              {isDropship(order) ? 'Dropship seller (paid Alpha)' : 'Customer'}
+            </p>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #c9a84c20, #c9a84c10)', color: '#c9a84c', border: '1.5px solid #c9a84c30' }}>
@@ -362,7 +552,9 @@ function OrderDetail({ order, onShippingUpdate, onInvoice, onDelete, isDeleting 
             </div>
           </div>
           <div>
-            <p className="text-[0.58rem] tracking-[0.2em] uppercase text-[#b0a898] font-bold mb-2.5">Ship To</p>
+            <p className="text-[0.58rem] tracking-[0.2em] uppercase text-[#b0a898] font-bold mb-2.5">
+              {isDropship(order) ? "Ship To (seller's customer)" : 'Ship To'}
+            </p>
             <div className="flex gap-2">
               <MapPin size={12} className="text-[#c9a84c] flex-shrink-0 mt-0.5" />
               <div className="text-[0.72rem] text-[#5a5249] leading-relaxed">
@@ -383,9 +575,12 @@ function OrderDetail({ order, onShippingUpdate, onInvoice, onDelete, isDeleting 
           <div className="space-y-2">
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center gap-2.5 py-2 border-b border-[#ede9e1] last:border-0">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                   style={{ background: '#ede9e1' }}>
-                  <Gem size={12} style={{ color: '#c9a84c' }} />
+                  {item.image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={item.image} alt="" className="w-full h-full object-cover" />
+                    : <Gem size={12} style={{ color: '#c9a84c' }} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[0.72rem] font-medium text-[#1a1714] truncate">{item.name}</p>
@@ -524,18 +719,52 @@ export default function AdminOrdersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<'' | 'store' | 'dropship'>('');
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const [counts, setCounts] = useState<OrderCounts | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Links like /admin/orders?source=dropship (used in admin alert emails) open the right tab.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const src = sp.get('source');
+    if (src === 'dropship' || src === 'store') setSourceFilter(src);
+    if (sp.get('attention') === '1') setAttentionOnly(true);
+  }, []);
+
+  // Search runs on the server across ALL orders (not just this page).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = search.trim();
+      if (next !== debouncedSearch) {
+        setDebouncedSearch(next);
+        setPage(1);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search, debouncedSearch]);
 
   useEffect(() => {
     if (authLoading || !user) return;
     setLoading(true);
+    setLoadError(null);
     const params = new URLSearchParams({ page: String(page), limit: '15' });
     if (statusFilter) params.set('status', statusFilter);
+    if (sourceFilter) params.set('source', sourceFilter);
+    if (attentionOnly) params.set('attention', '1');
+    if (debouncedSearch) params.set('q', debouncedSearch);
     authFetch(`/api/admin/orders?${params}`)
-      .then(r => r.json())
-      .then(j => { setOrders(j.data ?? []); setPagination(j.pagination ?? null); })
-      .catch(e => console.error('[orders]', e))
+      .then(async r => {
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.message || 'Failed to load orders');
+        return j;
+      })
+      .then(j => { setOrders(j.data ?? []); setPagination(j.pagination ?? null); setCounts(j.counts ?? null); })
+      .catch(e => { console.error('[orders]', e); setLoadError('Could not load orders. Check your connection and press “Try again”.'); })
       .finally(() => setLoading(false));
-  }, [authLoading, user, page, statusFilter, authFetch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, user, page, statusFilter, sourceFilter, attentionOnly, debouncedSearch, reloadKey, authFetch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStatusUpdate = (id: string, newStatus: string) => {
     setOrders(prev => prev.map(o => o._id === id ? { ...o, status: newStatus } : o));
@@ -617,24 +846,21 @@ export default function AdminOrdersPage() {
   };
 
   const filtered = useMemo(() => {
-    let list = orders.filter(o =>
-      !search ||
-      o._id.toLowerCase().includes(search.toLowerCase()) ||
-      o.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      o.user?.email?.toLowerCase().includes(search.toLowerCase())
-    );
-    list = [...list].sort((a, b) => {
+    // Filtering/search happens on the server; only the date sort toggle is local.
+    const list = [...orders].sort((a, b) => {
       const ta = new Date(a.createdAt).getTime();
       const tb = new Date(b.createdAt).getTime();
       return sortDir === 'desc' ? tb - ta : ta - tb;
     });
     return list;
-  }, [orders, search, sortDir]);
+  }, [orders, sortDir]);
 
   const totalPages = pagination?.totalPages ?? 1;
 
   // Stats
-  const revenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const revenue = orders
+    .filter(o => o.paymentStatus === 'completed')
+    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const pendingCount = orders.filter(o => o.status === 'pending').length;
   const shippedCount = orders.filter(o => o.status === 'shipped' || o.status === 'delivered').length;
 
@@ -665,12 +891,73 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* ── Stats ──────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-        <StatCard label="Page Revenue" value={`$${revenue.toLocaleString()}`} sub={`${orders.length} orders shown`} icon={DollarSign} color="#c9a84c" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-7">
+        <StatCard label="Page Revenue" value={`$${revenue.toLocaleString()}`} sub="Paid orders on this page" icon={DollarSign} color="#c9a84c" />
         <StatCard label="Pending Review" value={String(pendingCount)} sub="Need attention" icon={AlertCircle} color="#f59e0b" />
         <StatCard label="Shipped / Done" value={String(shippedCount)} sub="In transit or delivered" icon={Truck} color="#6d28d9" />
-        <StatCard label="Total Orders" value={String(pagination?.total ?? orders.length)} sub="All time" icon={TrendingUp} color="#22c55e" />
+        <button
+          type="button"
+          onClick={() => { setSourceFilter('dropship'); setStatusFilter('processing'); setAttentionOnly(false); setPage(1); }}
+          className="text-left"
+          title="Show paid dropship orders that still need to be shipped"
+        >
+          <StatCard label="Dropship To Ship" value={String(counts?.dropshipToShip ?? 0)} sub="Paid, waiting to ship — click to view" icon={Send} color={DROPSHIP_ACCENT} />
+        </button>
+        <StatCard label="Total Orders" value={String(counts?.all ?? pagination?.total ?? orders.length)} sub={counts ? `Incl. ${counts.dropship} dropship` : 'All time'} icon={TrendingUp} color="#22c55e" />
       </div>
+
+      {/* ── Source tabs: all / website / dropship ────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {([
+          { value: '', label: 'All orders', count: counts?.all, icon: ShoppingBag },
+          { value: 'store', label: 'Website orders', count: counts?.store, icon: Store },
+          { value: 'dropship', label: 'Dropship orders', count: counts?.dropship, icon: Send },
+        ] as const).map(({ value, label, count, icon: Icon }) => {
+          const active = sourceFilter === value && !attentionOnly;
+          const accent = value === 'dropship' ? DROPSHIP_ACCENT : '#1a1714';
+          return (
+            <button
+              key={value || 'all'}
+              onClick={() => {
+                setSourceFilter(value);
+                setAttentionOnly(false);
+                // "paid"/"refunded" don't exist for dropship orders.
+                if (value === 'dropship' && (statusFilter === 'paid' || statusFilter === 'refunded')) setStatusFilter('');
+                setPage(1);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.78rem] font-semibold transition-all"
+              style={active
+                ? { background: accent, color: '#fff', border: `1px solid ${accent}` }
+                : { background: '#fff', color: '#5a5249', border: '1px solid #ede9e1' }}
+            >
+              <Icon size={14} /> {label}
+              {count !== undefined && (
+                <span className="px-1.5 py-0.5 rounded-md text-[0.66rem]" style={{ background: active ? 'rgba(255,255,255,0.2)' : '#f5f3f0' }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        {!!counts?.dropshipAttention && (
+          <button
+            onClick={() => { setAttentionOnly(true); setSourceFilter('dropship'); setStatusFilter(''); setPage(1); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.78rem] font-semibold"
+            style={attentionOnly
+              ? { background: '#c2410c', color: '#fff', border: '1px solid #c2410c' }
+              : { background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}
+          >
+            <AlertTriangle size={14} /> {counts.dropshipAttention} need{counts.dropshipAttention === 1 ? 's' : ''} attention
+          </button>
+        )}
+      </div>
+
+      {loadError && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-[0.78rem]" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+          <span>{loadError}</span>
+          <button onClick={() => setReloadKey(k => k + 1)} className="px-3 py-1.5 rounded-lg font-semibold" style={{ background: '#b91c1c', color: '#fff' }}>Try again</button>
+        </div>
+      )}
 
       {/* ── Filter + Search bar ─────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border mb-1.5 overflow-hidden" style={{ borderColor: '#ede9e1' }}>
@@ -678,7 +965,7 @@ export default function AdminOrdersPage() {
           {/* Status pills */}
           <div className="flex items-center gap-1.5 flex-wrap flex-1">
             <Filter size={12} className="text-[#b0a898] mr-1" />
-            {[{ label: 'All', value: '' }, ...ALL_STATUSES.map(s => ({ label: STATUS_CONFIG[s]?.label ?? s, value: s }))].map(({ label, value }) => {
+            {[{ label: 'All', value: '' }, ...(sourceFilter === 'dropship' ? DROPSHIP_STATUSES : ALL_STATUSES).map(s => ({ label: statusLabel(s, sourceFilter === 'dropship'), value: s }))].map(({ label, value }) => {
               const active = statusFilter === value;
               const cfg = value ? STATUS_CONFIG[value] : null;
               return (
@@ -698,9 +985,9 @@ export default function AdminOrdersPage() {
           <div className="relative flex-shrink-0">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c4bdb2]" />
             <input
-              type="text" placeholder="Search by order ID or customer…"
+              type="text" placeholder="Search order #, name, email, seller, product…"
               value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-2 text-[0.72rem] rounded-xl outline-none transition-all w-60"
+              className="pl-8 pr-3 py-2 text-[0.72rem] rounded-xl outline-none transition-all w-72"
               style={{ background: '#faf9f7', border: '1px solid #ede9e1', color: '#1a1714' }}
             />
           </div>
@@ -772,7 +1059,9 @@ export default function AdminOrdersPage() {
                 <ShoppingBag size={22} strokeWidth={1.2} className="text-[#d4cfc8]" />
               </div>
               <p className="text-[0.82rem] font-medium text-[#b0a898] mb-1">No orders found</p>
-              <p className="text-[0.7rem] text-[#c4bdb2]">Try adjusting your filters</p>
+              <p className="text-[0.7rem] text-[#c4bdb2]">
+                {debouncedSearch ? `Nothing matches “${debouncedSearch}”.` : 'Try adjusting your filters.'}
+              </p>
             </div>
           ) : (
             filtered.map(order => {
@@ -788,6 +1077,7 @@ export default function AdminOrdersPage() {
                       gridTemplateColumns: '22px 28px 1.1fr 1.5fr 0.8fr 80px 110px 100px 68px',
                       background: isSelected ? '#fef2f2' : isExpanded ? '#faf9f7' : undefined,
                       opacity: isDeleting ? 0.5 : 1,
+                      boxShadow: isDropship(order) ? `inset 3px 0 0 ${DROPSHIP_ACCENT}` : undefined,
                     }}
                     onClick={() => setExpandedId(isExpanded ? null : order._id)}
                     onMouseEnter={e => { if (!isExpanded && !isSelected) (e.currentTarget as HTMLDivElement).style.background = '#fdfcfb'; }}
@@ -814,6 +1104,14 @@ export default function AdminOrdersPage() {
                       <p className="font-mono text-[0.67rem] font-bold text-[#1a1714] tracking-wide">
                         #{order._id.slice(-8).toUpperCase()}
                       </p>
+                      {isDropship(order) && (
+                        <div className="mt-1 flex items-center gap-1">
+                          <DropshipBadge />
+                          {order.dropship?.needsAttention && (
+                            <span title={order.dropship.attentionReason}><AlertTriangle size={11} style={{ color: '#c2410c' }} /></span>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1 mt-0.5">
                         <Calendar size={9} className="text-[#c4bdb2]" />
                         <p className="text-[0.6rem] text-[#b0a898]">{timeAgo(order.createdAt)}</p>
@@ -828,7 +1126,11 @@ export default function AdminOrdersPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[0.73rem] font-semibold text-[#1a1714] truncate">{order.user?.name ?? '—'}</p>
-                        <p className="text-[0.62rem] text-[#a09a90] truncate">{order.user?.email ?? '—'}</p>
+                        <p className="text-[0.62rem] text-[#a09a90] truncate">
+                          {isDropship(order)
+                            ? <>Seller · ships to <span className="text-[#5a5249]">{order.shippingAddress?.fullName}</span></>
+                            : (order.user?.email ?? '—')}
+                        </p>
                       </div>
                     </div>
 
@@ -837,12 +1139,16 @@ export default function AdminOrdersPage() {
                       <p className="text-[0.85rem] font-semibold text-[#1a1714]" style={{ fontFamily: '"Elms Sans", sans-serif' }}>
                         ${order.totalAmount.toLocaleString()}
                       </p>
-                      <p className="text-[0.6rem] text-[#b0a898]">{order.items.length} item{order.items.length !== 1 ? 's' : ''}</p>
+                      <p className="text-[0.6rem] text-[#b0a898] truncate">
+                        {isDropship(order)
+                          ? `${order.items[0]?.quantity ?? 1} × ${order.items[0]?.name ?? 'item'}`
+                          : `${order.items.length} item${order.items.length !== 1 ? 's' : ''}`}
+                      </p>
                     </div>
 
                     {/* Payment */}
-                    <span className={`text-[0.62rem] font-bold capitalize ${order.paymentStatus === 'completed' ? 'text-green-600' : 'text-amber-600'}`}>
-                      {order.paymentStatus}
+                    <span className={`text-[0.62rem] font-bold capitalize ${order.paymentStatus === 'completed' ? 'text-green-600' : order.paymentStatus === 'failed' ? 'text-red-600' : 'text-amber-600'}`}>
+                      {order.paymentStatus === 'completed' ? 'Paid' : order.paymentStatus === 'failed' ? 'Failed' : isDropship(order) ? 'Unpaid' : order.paymentStatus}
                     </span>
 
                     {/* Shipping */}
@@ -852,7 +1158,13 @@ export default function AdminOrdersPage() {
 
                     {/* Status selector */}
                     <div onClick={e => e.stopPropagation()}>
-                      <StatusSelect orderId={order._id} current={order.status} onUpdate={handleStatusUpdate} />
+                      <StatusSelect
+                        orderId={order._id}
+                        current={order.status}
+                        onUpdate={handleStatusUpdate}
+                        dropship={isDropship(order)}
+                        paid={order.paymentStatus === 'completed'}
+                      />
                     </div>
 
                     {/* Actions */}

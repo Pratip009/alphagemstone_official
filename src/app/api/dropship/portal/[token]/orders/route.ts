@@ -2,33 +2,33 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
-import { submitDropshipOrder, DropshipError } from '@/services/dropship.service';
+import {
+  submitDropshipOrder,
+  DropshipError,
+  DROPSHIP_MAX_QUANTITY,
+} from '@/services/dropship.service';
 
-const shippingSelectionSchema = z.object({
-  carrier: z.string().min(1),
-  service: z.string().min(1),
-  serviceCode: z.string().min(1),
-  rateId: z.string().min(1),
-  rate: z.number().nonnegative(),
-  estimatedDays: z.number().optional(),
-  estimatedDelivery: z.string().optional(),
-});
+const opt = (max: number) => z.string().trim().max(max).optional();
 
+// NOTE: no price or shipping amount is accepted from the client. The product
+// price is read from the database and the shipping price comes from the
+// server-signed `shippingQuote` (see src/lib/dropshipQuote.ts).
 const schema = z.object({
-  productId: z.string().min(1, 'Please select a product'),
-  quantity: z.number().int().positive().optional(),
-  specifications: z.string().optional(),
-  customerName: z.string().min(2, "Customer's name is required"),
-  customerEmail: z.string().email().optional().or(z.literal('')),
-  customerPhone: z.string().optional(),
-  addressLine1: z.string().min(2, 'Shipping address is required'),
-  addressLine2: z.string().optional(),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().length(2, 'A valid 2-letter state/province code is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  country: z.string().optional(),
-  shippingSelection: shippingSelectionSchema,
-  specialInstructions: z.string().optional(),
+  productId: z.string().regex(/^[a-f0-9]{24}$/i, 'Please select a product'),
+  quantity: z.number().int().min(1).max(DROPSHIP_MAX_QUANTITY).optional(),
+  specifications: opt(500),
+  customerName: z.string().trim().min(2, "Customer's name is required").max(120),
+  customerEmail: z.string().trim().email('Enter a valid email or leave it blank').max(200).optional().or(z.literal('')),
+  customerPhone: opt(40),
+  addressLine1: z.string().trim().min(2, 'Shipping address is required').max(200),
+  addressLine2: opt(200),
+  city: z.string().trim().min(1, 'City is required').max(100),
+  state: z.string().trim().length(2, 'Choose a state / province'),
+  postalCode: z.string().trim().min(3, 'Postal code is required').max(20),
+  country: z.enum(['US', 'CA']).optional(),
+  shippingQuote: z.string().min(10, 'Please choose a shipping method').max(4000),
+  specialInstructions: opt(1000),
+  clientRequestId: z.string().regex(/^[a-zA-Z0-9-]{8,64}$/).optional(),
 });
 
 export async function POST(
@@ -47,11 +47,11 @@ export async function POST(
     });
     if (!rate.success) return rateLimitResponse(rate);
 
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return errorResponse(
-        'Invalid request',
+        'Please check the highlighted fields.',
         422,
         parsed.error.flatten().fieldErrors
       );

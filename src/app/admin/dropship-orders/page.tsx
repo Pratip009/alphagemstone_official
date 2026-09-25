@@ -144,6 +144,14 @@ export default function DropshipOrdersAdminPage() {
 
   return (
     <div>
+      <a
+        href="/admin/orders?source=dropship"
+        className="mb-5 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-[13px] font-semibold"
+        style={{ background: '#ecfeff', border: '1px solid #a5f3fc', color: '#155e75' }}
+      >
+        <span>Good to know: every dropship order also shows in the main <u>Orders</u> tab, marked “DROPSHIP”. You can manage them there.</span>
+        <span>Open Orders ›</span>
+      </a>
       <div className="flex items-center gap-3 mb-6">
         <Package size={20} style={{ color: '#c9a84c' }} />
         <div>

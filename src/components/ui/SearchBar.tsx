@@ -811,26 +811,26 @@ function kindMeta(kind: "watch" | "gemstone" | "jewelry" | "diamond") {
 const RECENT_KEY = "sb_recent_searches";
 const RECENT_MAX = 6;
 
-function getRecent(): string[] {
+function getRecent(key: string = RECENT_KEY): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(RECENT_KEY);
+    const raw = window.localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
     return [];
   }
 }
 
-function pushRecent(q: string) {
+function pushRecent(q: string, key: string = RECENT_KEY) {
   if (typeof window === "undefined") return;
   const trimmed = q.trim();
   if (!trimmed) return;
   try {
-    const cur = getRecent().filter(
+    const cur = getRecent(key).filter(
       (r) => r.toLowerCase() !== trimmed.toLowerCase(),
     );
     const next = [trimmed, ...cur].slice(0, RECENT_MAX);
-    window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    window.localStorage.setItem(key, JSON.stringify(next));
   } catch {
     // localStorage unavailable (private mode, etc) — recent search history is a nice-to-have, fail silently
   }
@@ -838,17 +838,56 @@ function pushRecent(q: string) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/**
+ * What the user picked, handed to `onSelect` instead of navigating.
+ * Lets other screens (e.g. the dropship seller portal) reuse this exact
+ * search experience while deciding for themselves what a pick means.
+ */
+export type SearchSelection =
+  | { type: "product"; product: SearchProduct }
+  | { type: "category"; categorySlug: string; categoryName: string }
+  | {
+      type: "subcategory";
+      categorySlug: string;
+      categoryName: string;
+      subcategorySlug: string;
+      subcategoryName: string;
+    }
+  | { type: "attr"; param: string; value: string; label: string; isWatch: boolean }
+  | { type: "query"; q: string };
+
+export type { SearchProduct };
+
 interface Props {
   initialCategories?: SearchCategory[];
   placeholder?: string;
   variant?: "desktop" | "mobile";
+  /** When set, picks call this instead of routing to storefront pages. */
+  onSelect?: (selection: SearchSelection) => void;
+  /** "drawer" (default) = full-width panel under the navbar; "inline" = dropdown under the input. */
+  dropdownMode?: "drawer" | "inline";
+  /** Global "/" and ⌘K focus shortcut. Turn off for secondary search boxes on a page. */
+  enableShortcut?: boolean;
+  /** localStorage key for recent searches, so separate search boxes keep separate history. */
+  recentStorageKey?: string;
+  /** Keep the typed text after a free-text submit (useful when the query also drives a results grid). */
+  keepQueryOnSubmit?: boolean;
+  /** Called whenever the typed text changes (including when it's cleared). */
+  onQueryChange?: (query: string) => void;
 }
 
 export default function SearchBar({
   initialCategories = [],
   placeholder = "Search gems, shapes, brands…",
   variant = "desktop",
+  onSelect,
+  dropdownMode = "drawer",
+  enableShortcut = true,
+  recentStorageKey = RECENT_KEY,
+  keepQueryOnSubmit = false,
+  onQueryChange,
 }: Props) {
+  const inline = dropdownMode === "inline";
   const router = useRouter();
   const listboxId = useId();
   const [query, setQuery] = useState("");
@@ -866,7 +905,15 @@ export default function SearchBar({
   const abortRef = useRef<AbortController | null>(null);
   const reqIdRef = useRef(0);
 
-  useEffect(() => setRecent(getRecent()), []);
+  useEffect(() => setRecent(getRecent(recentStorageKey)), [recentStorageKey]);
+
+  // Let a parent follow the typed text (e.g. a live results grid). Kept in a
+  // ref so a new callback identity doesn't re-fire it.
+  const onQueryChangeRef = useRef(onQueryChange);
+  onQueryChangeRef.current = onQueryChange;
+  useEffect(() => {
+    onQueryChangeRef.current?.(query);
+  }, [query]);
 
   // Seed SSR categories into cache
   useEffect(() => {
@@ -884,6 +931,7 @@ export default function SearchBar({
 
   // Keep drawerTop in sync with navbar bottom
   useEffect(() => {
+    if (inline) return;
     const measure = () => {
       const nav = document.querySelector("nav");
       if (nav) setDrawerTop(nav.getBoundingClientRect().bottom);
@@ -895,10 +943,11 @@ export default function SearchBar({
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure);
     };
-  }, []);
+  }, [inline]);
 
   // Global "/" and "⌘K / Ctrl+K" shortcuts to jump into search, like most modern apps
   useEffect(() => {
+    if (!enableShortcut) return;
     const onKeyDown = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || "").toLowerCase();
       const typing =
@@ -915,7 +964,7 @@ export default function SearchBar({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [enableShortcut]);
 
   const handleFocus = useCallback(async () => {
     setFocused(true);
@@ -1012,6 +1061,35 @@ export default function SearchBar({
       setActiveIdx(-1);
       inputRef.current?.blur();
 
+      if (onSelect) {
+        if (r.type === "product") {
+          setQuery("");
+          onSelect({ type: "product", product: r.item });
+        } else if (r.type === "category") {
+          setQuery("");
+          onSelect({ type: "category", categorySlug: r.item.slug, categoryName: r.item.name });
+        } else if (r.type === "subcategory") {
+          setQuery("");
+          onSelect({
+            type: "subcategory",
+            categorySlug: r.parent.slug,
+            categoryName: r.parent.name,
+            subcategorySlug: r.item.slug,
+            subcategoryName: r.item.name,
+          });
+        } else if (r.type === "attr") {
+          setQuery("");
+          onSelect({
+            type: "attr",
+            param: r.match.param,
+            value: r.match.value,
+            label: r.match.label,
+            isWatch: WATCH_KINDS.has(r.match.kind),
+          });
+        }
+        return;
+      }
+
       if (r.type === "category") {
         setQuery("");
         router.push(`/products?category=${r.item.slug}`);
@@ -1039,7 +1117,7 @@ export default function SearchBar({
         );
       }
     },
-    [router],
+    [router, onSelect],
   );
 
   // Free-text submit — detect watch brand names in the query
@@ -1048,22 +1126,29 @@ export default function SearchBar({
       const q = (raw ?? query).trim();
       if (!q) return;
       setOpen(false);
-      pushRecent(q);
-      setRecent(getRecent());
+      pushRecent(q, recentStorageKey);
+      setRecent(getRecent(recentStorageKey));
+      if (onSelect) {
+        onSelect({ type: "query", q });
+        if (keepQueryOnSubmit) setQuery(q);
+        else setQuery("");
+        inputRef.current?.blur();
+        return;
+      }
       const catParam = isWatchQuery(q) ? "&category=watches" : "";
       router.push(`/products?search=${encodeURIComponent(q)}${catParam}`);
       setQuery("");
     },
-    [query, router],
+    [query, router, onSelect, recentStorageKey, keepQueryOnSubmit],
   );
 
   const clearRecent = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (typeof window !== "undefined")
-      window.localStorage.removeItem(RECENT_KEY);
+      window.localStorage.removeItem(recentStorageKey);
     setRecent([]);
-  }, []);
+  }, [recentStorageKey]);
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -1173,6 +1258,17 @@ export default function SearchBar({
           box-shadow: 0 24px 80px rgba(79,70,229,0.13), 0 4px 20px rgba(0,0,0,0.07);
           z-index: 9999; overflow: hidden;
           animation: sbIn 0.16s cubic-bezier(.2,.7,.3,1) both;
+        }
+        .sb-drawer.sb-inline {
+          position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+          max-width: none; margin: 0; border-radius: 12px;
+          border-top: 3px solid #c9a84c;
+          box-shadow: 0 18px 50px rgba(26,23,20,0.16), 0 3px 12px rgba(0,0,0,0.06);
+        }
+        .sb-drawer.sb-inline .sb-body { max-height: 60vh; }
+        @media (max-width: 720px) {
+          .sb-drawer.sb-inline .sb-body { grid-template-columns: 1fr !important; }
+          .sb-drawer.sb-inline .sb-col + .sb-col { border-left: none; border-top: 1px solid #f0eeff; }
         }
         @keyframes sbIn {
           from { opacity: 0; transform: translateY(-6px) scale(0.99); }
@@ -1353,7 +1449,7 @@ export default function SearchBar({
           />
 
           {query && (
-            <button
+            <button type="button"
               className="sb-clear"
               tabIndex={-1}
               aria-label="Clear search"
@@ -1371,7 +1467,7 @@ export default function SearchBar({
         </div>
 
         {/* ── Drawer ── */}
-        {open && !isDesktop && (
+        {open && !isDesktop && !inline && (
           <div
             className="sb-scrim"
             onClick={() => {
@@ -1382,8 +1478,8 @@ export default function SearchBar({
         )}
         {open && (
           <div
-            className="sb-drawer"
-            style={{ top: drawerTop }}
+            className={`sb-drawer${inline ? " sb-inline" : ""}`}
+            style={inline ? undefined : { top: drawerTop }}
             id={listboxId}
             role="listbox"
           >
@@ -1400,7 +1496,7 @@ export default function SearchBar({
                     <div className="sb-col">
                       <p className="sb-sec-label">
                         <IcoClock /> Recent searches
-                        <button
+                        <button type="button"
                           className="sb-clear-link"
                           onMouseDown={clearRecent}
                         >
@@ -1409,7 +1505,7 @@ export default function SearchBar({
                       </p>
                       <div className="sb-chip-row">
                         {recent.map((r) => (
-                          <button
+                          <button type="button"
                             key={r}
                             className="sb-chip plain"
                             onMouseDown={(e) => {
@@ -1429,7 +1525,7 @@ export default function SearchBar({
                         <IcoTrend /> Popular categories
                       </p>
                       {trendingCats.map((cat) => (
-                        <button
+                        <button type="button"
                           key={cat._id}
                           className="sb-row"
                           onMouseDown={(e) => {
@@ -1483,7 +1579,7 @@ export default function SearchBar({
                               r as { type: "category"; item: SearchCategory }
                             ).item;
                             return (
-                              <button
+                              <button type="button"
                                 key={cat._id}
                                 id={`${listboxId}-opt-${idx}`}
                                 role="option"
@@ -1527,7 +1623,7 @@ export default function SearchBar({
                               parent: SearchCategory;
                             };
                             return (
-                              <button
+                              <button type="button"
                                 key={sub.item._id}
                                 id={`${listboxId}-opt-${idx}`}
                                 role="option"
@@ -1604,7 +1700,7 @@ export default function SearchBar({
                             ? `$${prod.price.toLocaleString()}`
                             : null);
                         return (
-                          <button
+                          <button type="button"
                             key={prod._id}
                             id={`${listboxId}-opt-${idx}`}
                             role="option"
@@ -1717,7 +1813,7 @@ export default function SearchBar({
                             </div>
                             <div className="sb-attr-chips">
                               {rows.map((r) => (
-                                <button
+                                <button type="button"
                                   key={r.match.value}
                                   className="sb-chip"
                                   style={{ background: bg, color }}
@@ -1742,14 +1838,14 @@ export default function SearchBar({
                   <span className="sb-hint">
                     ↑↓ navigate · ↵ select · esc close
                   </span>
-                  <button
+                  <button type="button"
                     className="sb-all"
                     onMouseDown={(e) => {
                       e.preventDefault();
                       submit();
                     }}
                   >
-                    All results <IcoArrow />
+                    {onSelect ? "Show all matches" : "All results"} <IcoArrow />
                   </button>
                 </div>
               </>

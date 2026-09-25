@@ -31,6 +31,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { trackShipEnginePackage } from '@/services/shipengine.service';
 import { applyDeliveryStatus, getOrderByLabelId } from '@/services/order.service';
+import DropshipOrder from '@/models/DropshipOrder';
+import { markDropshipOrderDelivered } from '@/services/dropship.service';
 
 /**
  * ShipStation's webhook envelope looks like:
@@ -86,6 +88,15 @@ export async function POST(req: NextRequest) {
 
     const order = await getOrderByLabelId(labelId);
     if (!order) {
+      // Dropship orders keep their labels on DropshipOrder, not Order.
+      const dropship = await DropshipOrder.findOne({ labelId }).select('_id').lean() as { _id: any } | null;
+      if (dropship) {
+        const tracking = await trackShipEnginePackage(labelId);
+        const delivered = tracking.deliveredAt
+          ? await markDropshipOrderDelivered(dropship._id.toString())
+          : false;
+        return NextResponse.json({ received: true, dropshipOrderId: dropship._id.toString(), delivered });
+      }
       // Not necessarily a bug — could be a label from a test/other account.
       console.warn(`[webhooks/shipstation] No order found for labelId ${labelId}`);
       return NextResponse.json({ received: true, skipped: 'no_matching_order' });

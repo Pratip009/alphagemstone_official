@@ -28,9 +28,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { trackShipEnginePackage } from '@/services/shipengine.service';
 import { applyDeliveryStatus, getOrdersAwaitingDeliverySync } from '@/services/order.service';
+import {
+  getDropshipOrdersAwaitingDeliverySync,
+  markDropshipOrderDelivered,
+} from '@/services/dropship.service';
 
 function isAuthorized(req: NextRequest): boolean {
-  const expected = 'cronsecret123';
+  // Was a hard-coded string committed to the repo, which let anyone trigger
+  // this job and meant Vercel Cron (which sends $CRON_SECRET) was rejected.
+  const expected = process.env.CRON_SECRET;
   if (!expected) return false; // fail closed — don't run an unprotected cron
 
   const authHeader = req.headers.get('authorization');
@@ -66,6 +72,20 @@ export async function GET(req: NextRequest) {
       }
     } catch (err: any) {
       errors.push({ orderId: order._id.toString(), message: err?.message ?? 'unknown error' });
+    }
+  }
+
+  // Dropship orders — same carrier check, stored on DropshipOrder.
+  const dropshipCandidates = await getDropshipOrdersAwaitingDeliverySync();
+  for (const order of dropshipCandidates) {
+    checked += 1;
+    try {
+      const tracking = await trackShipEnginePackage(order.labelId);
+      if (tracking.deliveredAt && (await markDropshipOrderDelivered(order._id.toString()))) {
+        delivered += 1;
+      }
+    } catch (err: any) {
+      errors.push({ orderId: `dropship:${order._id.toString()}`, message: err?.message ?? 'unknown error' });
     }
   }
 
