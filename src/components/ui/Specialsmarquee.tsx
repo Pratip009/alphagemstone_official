@@ -1,4 +1,15 @@
 "use client";
+
+/**
+ * SpecialsMarquee — the product grid of the homepage "Our Collection" area.
+ *
+ * Sits directly below OurCollectionSection on the same sapphire background,
+ * so the statement ("One source. Thousands of possibilities.") and the live
+ * products read as one continuous band. Data logic is unchanged: 60 active
+ * products, category filters, 7 cards per page, auto-advancing every 5 s
+ * (paused while the visitor hovers or tabs through the grid).
+ */
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { optimizedImageUrl } from "@/lib/image-url";
@@ -42,175 +53,48 @@ function getSubtitle(p: ApiProduct): string {
 
 // ── Product Card ──────────────────────────────────────────────────────────────
 
-function ProductCard({
-  product,
-  featured = false,
-}: {
-  product: ApiProduct;
-  featured?: boolean;
-}) {
+function ProductCard({ product }: { product: ApiProduct }) {
   const [imgError, setImgError] = useState(false);
   const hasImg = product.images?.length > 0 && !imgError;
 
   return (
-    <Link
-      href={`/products/${product.slug ?? product._id}`}
-      style={{ textDecoration: "none", display: "block" }}
-      className="product-card"
-    >
-      {/* Image — capped smaller, rounded, shadowed */}
-      <div
-        style={{
-          position: "relative",
-          paddingBottom: "82%",
-          background: "#f8f9fa",
-          overflow: "hidden",
-          borderRadius: 14,
-          boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
-        }}
-      >
-        {hasImg ? (
-          <img
-            src={optimizedImageUrl(product.images[0], {
-              width: featured ? 700 : 500,
-              quality: 90,
-            })}
-            alt={product.name}
-            onError={() => setImgError(true)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transition: "transform 0.5s cubic-bezier(0.22,1,0.36,1)",
-            }}
-            className="card-img"
-          />
-        ) : (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#f1f5f9",
-            }}
-          >
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-                stroke="#cbd5e1"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        )}
+    <Link href={`/products/${product.slug ?? product._id}`} className="cm-card">
+      <div className="cm-tile">
+        <div className="cm-tile-inner">
+          {hasImg ? (
+            <img
+              src={optimizedImageUrl(product.images[0], { width: 500, quality: 90 })}
+              alt={product.name}
+              loading="lazy"
+              onError={() => setImgError(true)}
+              className="cm-img"
+            />
+          ) : (
+            <div className="cm-img-empty" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                  stroke="#b9bfcc"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          )}
 
-        {product.stock <= 5 && product.stock > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: 10,
-              right: 10,
-              background: "rgba(255,255,255,0.92)",
-              backdropFilter: "blur(4px)",
-              borderRadius: 20,
-              padding: "3px 9px",
-              fontSize: 9.5,
-              fontWeight: 600,
-              color: "#dc2626",
-              letterSpacing: "0.05em",
-              boxShadow: "0 1px 3px rgba(15,23,42,0.12)",
-            }}
-          >
-            {product.stock} left
-          </span>
-        )}
-
-        {/* subtle gradient wash on hover for depth */}
-        <div
-          className="img-wash"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(to top, rgba(15,23,42,0.10), transparent 40%)",
-            opacity: 0,
-            transition: "opacity 0.3s ease",
-          }}
-        />
+          {product.stock <= 5 && product.stock > 0 && (
+            <span className="cm-stock">{product.stock} left</span>
+          )}
+        </div>
       </div>
 
-      {/* Info */}
-      <div style={{ padding: "13px 2px 0" }}>
-        <p
-          style={{
-            fontSize: 9.5,
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "#64748b",
-            margin: "0 0 5px",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-          }}
-        >
-          <span
-            style={{
-              width: 3,
-              height: 3,
-              borderRadius: "50%",
-              background: "#cbd5e1",
-              flexShrink: 0,
-            }}
-          />
-          {getSubtitle(product) || product.category?.name}
-        </p>
-        <p
-          style={
-            {
-              fontFamily: '"Elms Sans", sans-serif',
-              fontSize: featured ? 18 : 14.5,
-              fontWeight: 500,
-              color: "#0f172a",
-              margin: "0 0 7px",
-              lineHeight: 1.35,
-              overflow: "hidden",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-            } as React.CSSProperties
-          }
-        >
-          {product.name}
-        </p>
-        <p
-          style={{
-            fontFamily: '"Elms Sans", sans-serif',
-            fontSize: featured ? 19 : 15.5,
-            fontWeight: 600,
-            color: "#0f172a",
-            margin: 0,
-          }}
-        >
+      <div className="cm-info">
+        <p className="cm-sub">{getSubtitle(product) || product.category?.name}</p>
+        <p className="cm-name">{product.name}</p>
+        <p className="cm-price">
           ${product.price.toLocaleString()}
-          {product.size && (
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 400,
-                color: "#64748b",
-                marginLeft: 3,
-              }}
-            >
-              /ct
-            </span>
-          )}
+          {product.size ? <span className="cm-unit">/ct</span> : null}
         </p>
       </div>
     </Link>
@@ -221,30 +105,14 @@ function ProductCard({
 
 function Skeleton() {
   return (
-    <div>
-      <div
-        style={{
-          paddingBottom: "82%",
-          position: "relative",
-          borderRadius: 14,
-          overflow: "hidden",
-        }}
-      >
-        <div className="skel" style={{ position: "absolute", inset: 0 }} />
+    <div aria-hidden="true">
+      <div className="cm-tile">
+        <div className="cm-tile-inner cm-skel" />
       </div>
-      <div style={{ paddingTop: 13 }}>
-        <div
-          className="skel"
-          style={{ height: 9, width: "40%", marginBottom: 8, borderRadius: 2 }}
-        />
-        <div
-          className="skel"
-          style={{ height: 14, width: "78%", marginBottom: 7, borderRadius: 2 }}
-        />
-        <div
-          className="skel"
-          style={{ height: 17, width: "32%", borderRadius: 2 }}
-        />
+      <div className="cm-info">
+        <div className="cm-skel" style={{ height: 9, width: "45%", marginBottom: 9, borderRadius: 2 }} />
+        <div className="cm-skel" style={{ height: 13, width: "80%", marginBottom: 8, borderRadius: 2 }} />
+        <div className="cm-skel" style={{ height: 15, width: "34%", borderRadius: 2 }} />
       </div>
     </div>
   );
@@ -258,6 +126,7 @@ export default function SpecialsMarquee() {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
   const [page, setPage] = useState(0);
+  const [paused, setPaused] = useState(false);
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const COLS = 7; // cards per page
 
@@ -289,10 +158,7 @@ export default function SpecialsMarquee() {
       new Map(
         allProducts
           .filter((p) => p.category?._id)
-          .map((p) => [
-            p.category._id,
-            { key: p.category._id, label: p.category.name },
-          ]),
+          .map((p) => [p.category._id, { key: p.category._id, label: p.category.name }]),
       ).values(),
     ),
   ];
@@ -307,13 +173,10 @@ export default function SpecialsMarquee() {
 
   const startAuto = useCallback(() => {
     if (autoRef.current) clearInterval(autoRef.current);
-    if (totalPages > 1) {
-      autoRef.current = setInterval(
-        () => setPage((p) => (p + 1) % totalPages),
-        5000,
-      );
+    if (totalPages > 1 && !paused) {
+      autoRef.current = setInterval(() => setPage((p) => (p + 1) % totalPages), 5000);
     }
-  }, [totalPages]);
+  }, [totalPages, paused]);
 
   useEffect(() => {
     startAuto();
@@ -332,215 +195,59 @@ export default function SpecialsMarquee() {
   };
 
   return (
-    <>
-      <style>{`
-      
+    <section className="cm" aria-labelledby="cm-title">
+      <style>{CSS}</style>
 
+      <div className="cm-inner">
+        {/* Header */}
+        <div className="cm-head">
+          <h2 id="cm-title" className="cm-title">Our Collection</h2>
+          <Link href="/products" className="cm-all">
+            View all products
+          </Link>
+        </div>
 
-        @keyframes shimmer {
-          from { background-position: -600px 0; }
-          to   { background-position:  600px 0; }
-        }
+        {/* Category filters */}
+        <div className="cm-pills" role="group" aria-label="Filter by category">
+          {loading
+            ? [60, 80, 72, 90, 68].map((w, i) => (
+                <div key={i} className="cm-skel" style={{ height: 34, width: w, borderRadius: 20 }} />
+              ))
+            : categories.map((cat) => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  className={`cm-pill${activeCategory === cat.key ? " is-active" : ""}`}
+                  aria-pressed={activeCategory === cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                >
+                  {cat.label}
+                </button>
+              ))}
+        </div>
 
-        .skel {
-          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-          background-size: 600px 100%;
-          animation: shimmer 1.5s infinite linear;
-        }
-
-        .product-card {
-          transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
-        }
-        .product-card:hover { transform: translateY(-5px); }
-        .product-card:hover .card-img { transform: scale(1.06); }
-        .product-card:hover .img-wash { opacity: 1; }
-
-        .cat-pill {
-          font-size: 12px;
-          font-weight: 500;
-          letter-spacing: 0.02em;
-          padding: 7px 17px;
-          border-radius: 20px;
-          border: 1px solid #e2e8f0;
-          background: #fff;
-          color: #64748b;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-        }
-        .cat-pill:hover { border-color: #cbd5e1; color: #0f172a; background: #f8fafc; }
-        .cat-pill.active {
-          background: #0f172a;
-          color: #fff;
-          border-color: #0f172a;
-          box-shadow: 0 4px 12px rgba(15,23,42,0.22);
-        }
-
-        .view-all-btn {
-          font-size: 12.5px;
-          font-weight: 500;
-          letter-spacing: 0.03em;
-          color: #0f172a;
-          text-decoration: none;
-          padding: 9px 18px;
-          border: 1px solid #e2e8f0;
-          border-radius: 24px;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-        }
-        .view-all-btn:hover { border-color: #0f172a; background: #0f172a; color: #fff; }
-
-        .our-collection-title {
-          position: relative;
-          display: inline-block;
-        }
-        .our-collection-title::after {
-          content: "";
-          position: absolute;
-          left: 1px;
-          bottom: -10px;
-          width: 44px;
-          height: 3px;
-          border-radius: 2px;
-          background: linear-gradient(90deg, #0f172a, #94a3b8);
-        }
-      `}</style>
-
-      <section
-        style={{
-          background: "#fff",
-          borderTop: "1px solid #f1f5f9",
-          padding: "72px 0 80px",
-        }}
-      >
-        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 32px" }}>
-          {/* Header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              marginBottom: 44,
-              gap: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "#64748b",
-                  margin: "0 0 8px",
-                }}
-              >
-                Curated selection
-              </p>
-              <h2
-                className="our-collection-title"
-                style={{
-                  fontFamily: '"Elms Sans", sans-serif',
-                  fontSize: "clamp(30px, 3.2vw, 44px)",
-                  fontWeight: 500,
-                  color: "#0f172a",
-                  lineHeight: 1,
-                  margin: 0,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Our Collection
-              </h2>
-            </div>
-            <Link href="/products" className="view-all-btn">
-              View all products
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M3 8h10M9 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </div>
-
-          {/* Category filters */}
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: "wrap",
-              marginBottom: 40,
-              paddingBottom: 32,
-              borderBottom: "1px solid #f1f5f9",
-            }}
-          >
-            {loading
-              ? [60, 80, 72, 90, 68].map((w, i) => (
-                  <div
-                    key={i}
-                    className="skel"
-                    style={{ height: 34, width: w, borderRadius: 20 }}
-                  />
-                ))
-              : categories.map((cat) => (
-                  <button
-                    key={cat.key}
-                    className={`cat-pill${activeCategory === cat.key ? " active" : ""}`}
-                    onClick={() => setActiveCategory(cat.key)}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-          </div>
-
-          {/* Products grid */}
+        {/* Products grid */}
+        <div
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+        >
           {error ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "64px 0",
-                color: "#64748b",
-                fontSize: 13,
-              }}
-            >
-              Could not load products.{" "}
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#0f172a",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  textDecoration: "underline",
-                }}
-              >
-                Retry
+            <div className="cm-state">
+              Products couldn&rsquo;t be loaded.{" "}
+              <button type="button" className="cm-retry" onClick={() => window.location.reload()}>
+                Reload
               </button>
             </div>
           ) : loading ? (
             <div className="specials-grid">
-              {Array.from({ length: 5 }).map((_, i) => (
+              {Array.from({ length: 7 }).map((_, i) => (
                 <Skeleton key={i} />
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "64px 0",
-                color: "#64748b",
-                fontSize: 13,
-              }}
-            >
-              No products in this category.
-            </div>
+            <div className="cm-state">No products in this category yet.</div>
           ) : (
             <div className="specials-grid">
               {visible.map((p) => (
@@ -548,52 +255,241 @@ export default function SpecialsMarquee() {
               ))}
             </div>
           )}
-
-          {/* Pagination dots */}
-          {!loading && !error && totalPages > 1 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 0,
-                marginTop: 48,
-              }}
-            >
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  aria-label={`Page ${i + 1}`}
-                  onClick={() => goTo(i)}
-                  style={{
-                    width: i === page ? 20 : 6,
-                    height: 6,
-                    borderRadius: 3,
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 9,
-                    boxSizing: "content-box",
-                    backgroundClip: "content-box",
-                     backgroundColor: i === page ? "#0f172a" : "#e2e8f0",
-                    transition: "all 0.3s ease",
-                  }}
-                />
-              ))}
-            </div>
-          )}
         </div>
-      </section>
 
-      <style>{`
-        .specials-grid {
-          display: grid;
-          grid-template-columns: repeat(7, 1fr);
-          gap: 28px 20px;
-        }
-        @media (max-width: 1024px) { .specials-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 640px)  { .specials-grid { grid-template-columns: repeat(2, 1fr); gap: 20px 14px; } }
-        @media (max-width: 380px)  { .specials-grid { grid-template-columns: repeat(1, 1fr); } }
-      `}</style>
-    </>
+        {/* Pagination */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="cm-dots">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Page ${i + 1}`}
+                aria-current={i === page ? "true" : undefined}
+                onClick={() => goTo(i)}
+                className={`cm-dot${i === page ? " is-active" : ""}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
+
+const CSS = `
+.cm {
+  --cm-night: #0B1430;
+  --cm-platinum: #E9EBF1;
+  --cm-mist: #A7B0C6;
+  --cm-gold: #C8A66A;
+  --cm-gold-soft: rgba(200, 166, 106, 0.28);
+  --cm-cut: 12px;
+  background: var(--cm-night);
+  color: var(--cm-platinum);
+  font-family: "Elms Sans", system-ui, sans-serif;
+}
+.cm-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 64px) clamp(72px, 8vw, 112px);
+}
+
+/* Header */
+.cm-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: clamp(40px, 5vw, 64px);
+  border-top: 1px solid var(--cm-gold-soft);
+  margin-bottom: 28px;
+}
+.cm-title {
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(34px, 3.4vw, 52px);
+  line-height: 1;
+  letter-spacing: 0.005em;
+  color: var(--cm-platinum);
+}
+.cm-all {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cm-platinum);
+  text-decoration: underline;
+  text-decoration-color: var(--cm-gold-soft);
+  text-underline-offset: 6px;
+  transition: text-decoration-color .25s ease;
+}
+.cm-all:hover { text-decoration-color: var(--cm-gold); }
+
+/* Category filters */
+.cm-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+.cm-pill {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--cm-gold-soft);
+  background: transparent;
+  color: var(--cm-mist);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .2s ease, color .2s ease, background-color .2s ease;
+}
+.cm-pill:hover { border-color: var(--cm-gold); color: var(--cm-platinum); }
+.cm-pill.is-active {
+  background: var(--cm-gold);
+  border-color: var(--cm-gold);
+  color: var(--cm-night);
+}
+
+/* Grid */
+.specials-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 32px 20px;
+}
+@media (max-width: 1024px) { .specials-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px)  { .specials-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 14px; } }
+@media (max-width: 380px)  { .specials-grid { grid-template-columns: 1fr; } }
+
+/* Card: product photo in a small emerald-cut tile, echoing the video frame above */
+.cm-card { display: block; text-decoration: none; color: inherit; }
+.cm-tile {
+  padding: 1px;
+  background: rgba(200, 166, 106, 0.22);
+  clip-path: polygon(var(--cm-cut) 0, calc(100% - var(--cm-cut)) 0, 100% var(--cm-cut), 100% calc(100% - var(--cm-cut)), calc(100% - var(--cm-cut)) 100%, var(--cm-cut) 100%, 0 calc(100% - var(--cm-cut)), 0 var(--cm-cut));
+  transition: background-color .3s ease;
+}
+.cm-tile-inner {
+  position: relative;
+  padding-bottom: 82%;
+  overflow: hidden;
+  background: #F4F4F6;
+  clip-path: polygon(var(--cm-cut) 0, calc(100% - var(--cm-cut)) 0, 100% var(--cm-cut), 100% calc(100% - var(--cm-cut)), calc(100% - var(--cm-cut)) 100%, var(--cm-cut) 100%, 0 calc(100% - var(--cm-cut)), 0 var(--cm-cut));
+}
+.cm-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .6s cubic-bezier(.22,1,.36,1);
+}
+.cm-img-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cm-card:hover .cm-tile,
+.cm-card:focus-visible .cm-tile { background: var(--cm-gold); }
+.cm-card:hover .cm-img { transform: scale(1.05); }
+.cm-card:hover .cm-name { color: #fff; }
+
+.cm-stock {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(11, 20, 48, 0.86);
+  color: #F4B3A6;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.cm-info { padding: 14px 2px 0; }
+.cm-sub {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--cm-mist);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-name {
+  margin: 0 0 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--cm-platinum);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color .2s ease;
+}
+.cm-price {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--cm-gold);
+}
+.cm-unit { margin-left: 3px; font-size: 11.5px; font-weight: 400; color: var(--cm-mist); }
+
+/* States */
+.cm-state { padding: 64px 0; text-align: center; font-size: 14px; color: var(--cm-mist); }
+.cm-retry {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--cm-gold);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+/* Pagination */
+.cm-dots { display: flex; justify-content: center; margin-top: 48px; }
+.cm-dot {
+  width: 6px;
+  height: 6px;
+  padding: 9px;
+  box-sizing: content-box;
+  background-clip: content-box;
+  background-color: rgba(200, 166, 106, 0.3);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: width .3s ease, background-color .3s ease;
+}
+.cm-dot.is-active { width: 22px; background-color: var(--cm-gold); }
+
+/* Loading shimmer, tuned for the dark background */
+@keyframes cm-shimmer {
+  from { background-position: -600px 0; }
+  to   { background-position: 600px 0; }
+}
+.cm-skel {
+  background: linear-gradient(90deg, rgba(233,235,241,.06) 25%, rgba(233,235,241,.13) 50%, rgba(233,235,241,.06) 75%);
+  background-size: 600px 100%;
+  animation: cm-shimmer 1.5s infinite linear;
+}
+
+/* Keyboard focus */
+.cm-all:focus-visible, .cm-pill:focus-visible, .cm-dot:focus-visible, .cm-retry:focus-visible {
+  outline: 2px solid var(--cm-platinum);
+  outline-offset: 3px;
+}
+.cm-card:focus-visible { outline: none; }
+.cm-card:focus-visible .cm-name { text-decoration: underline; text-decoration-color: var(--cm-gold); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-skel { animation: none; }
+  .cm-img, .cm-tile, .cm-dot { transition: none; }
+  .cm-card:hover .cm-img { transform: none; }
+}
+`;

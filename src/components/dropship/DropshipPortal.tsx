@@ -436,7 +436,7 @@ export default function DropshipPortal({ token }: { token: string }) {
     </div>
   );
   const contact = (
-    <a href="mailto:info@alphagemimports.com" style={{ color: GOLD }}>info@alphagemimports.com</a>
+    <a href="mailto:info@alphaimports.com" style={{ color: GOLD }}>info@alphaimports.com</a>
   );
 
   if (loadError === "network" && !application) {

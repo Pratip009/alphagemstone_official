@@ -60,6 +60,10 @@ async function sendOtpEmail(
       to: email,
       subject,
       html: otpEmailHtml(otp, purpose),
+      // A plain-text part alongside the HTML. Yahoo/AOL and Outlook filters
+      // treat HTML-only mail as a spam signal, and it's what text-only mail
+      // clients and screen readers show.
+      text: otpEmailText(otp, purpose),
     });
 
     // The Resend SDK often resolves successfully even when delivery was
@@ -83,6 +87,32 @@ async function sendOtpEmail(
     console.error('[sendOtpEmail] Resend threw an error:', err instanceof Error ? err.message : err);
     throw err;
   }
+}
+
+function otpEmailText(otp: string, purpose: 'signup' | 'reset_password'): string {
+  const lines =
+    purpose === 'signup'
+      ? [
+          'Verify your email',
+          '',
+          'Enter this code to complete your registration and activate your Alpha Gemstone account:',
+        ]
+      : [
+          'Reset your password',
+          '',
+          'Use this code to reset your Alpha Gemstone password. If you did not request this, you can safely ignore this email.',
+        ];
+  return [
+    ...lines,
+    '',
+    `    ${otp}`,
+    '',
+    `This code expires in ${OTP_EXPIRY_MINUTES} minutes.`,
+    '',
+    'Never share this code. Alpha Gemstone will never ask for it by phone or email.',
+    '',
+    'Alpha Gemstone',
+  ].join('\n');
 }
 
 // ─── Signup OTP ───────────────────────────────────────────────────────────────

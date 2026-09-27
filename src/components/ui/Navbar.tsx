@@ -1529,8 +1529,8 @@ export default function Navbar({
                 Free Shipping on 100+ Gemstones &amp; Diamonds
                 <DiamondDot color="#7c3aed" size={4} />
                 Questions? Email&nbsp;
-                <a href="mailto:info@alphagemimports.com">
-                  info@alphagemimports.com
+                <a href="mailto:info@alphaimports.com">
+                  info@alphaimports.com
                 </a>
                 <DiamondDot color="#c4b5fd" size={5} />
                 Natural, Lab-Grown &amp; Simulated Gemstones &nbsp;·&nbsp; Certification Available on Select Stones
@@ -1754,7 +1754,7 @@ export default function Navbar({
                 1-914-310-1480
               </a>
               <a
-                href="mailto:info@alphagemimports.com"
+                href="mailto:info@alphaimports.com"
                 className="nav-contact-link"
               >
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
@@ -1773,7 +1773,7 @@ export default function Navbar({
                     strokeLinejoin="round"
                   />
                 </svg>
-                info@alphagemimports.com
+                info@alphaimports.com
               </a>
             </div>
           </div>
@@ -2233,7 +2233,7 @@ export default function Navbar({
               1-914-310-1480
             </a>
             <a
-              href="mailto:info@alphagemimports.com"
+              href="mailto:info@alphaimports.com"
               className="nav-contact-link"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -2252,7 +2252,7 @@ export default function Navbar({
                   strokeLinejoin="round"
                 />
               </svg>
-              info@alphagemimports.com
+              info@alphaimports.com
             </a>
           </div>
         </div>

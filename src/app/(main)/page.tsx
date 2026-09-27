@@ -12,7 +12,7 @@ import BestSellersMarquee from "@/components/ui/BestSellersMarquee";
 import WorldShipping from "@/components/ui/WorldShipping";
 import BirthstoneCarousel from "@/components/ui/BirthstoneCarousel";
 import AwardsAccolades from "@/components/ui/AwardsAccolades";
-import DiamondStudsSection from "@/components/ui/DiamondStudsSection";
+import OurCollectionSection from "@/components/ui/OurCollectionSection";
 import MetalPriceTicker from "@/components/ui/MetalPriceTicker";
 import CertificationMarquee from "@/components/ui/CertificationMarquee";
 import CompleteSource from "@/components/home/CompleteSource";
@@ -56,7 +56,7 @@ export default async function HomePage() {
       <BirthstoneCarousel/>
       {/* <AwardsAccolades/> */}
       <SpecialsMarquee />
-      <DiamondStudsSection videoSrc="/video/shop.mp4" />
+      <OurCollectionSection videoSrc="/video/shop.mp4" />
       {/* <Testimonials /> */}
       {/* <FeaturedInNews /> */}
       <JewelryModal />

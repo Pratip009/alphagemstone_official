@@ -1,14 +1,10 @@
 import { Suspense } from 'react';
-import LoginPage from '../login/LoginPage';
-import { isGoogleAuthConfigured } from '@/lib/google-oauth';
-
-// Read env at request time so enabling Google doesn't require a rebuild.
-export const dynamic = 'force-dynamic';
+import ForgotPasswordPage from './ForgotPasswordPage';
 
 export default function Page() {
   return (
-    <Suspense fallback={null}>
-      <LoginPage googleEnabled={isGoogleAuthConfigured()} />
+    <Suspense>
+      <ForgotPasswordPage />
     </Suspense>
   );
 }

@@ -377,26 +377,9 @@ export default function SignupPage({ googleEnabled = false }: { googleEnabled?: 
               <>
                 <h1 className="auth-heading">Create account</h1>
                 <p className="auth-subheading">
-                  Join Alpha Gemstone — we'll verify your email
+                  Sign up with any email address: Yahoo, Hotmail/Outlook, AOL,
+                  Gmail or your business email. We&apos;ll send a code to verify it.
                 </p>
-
-                {googleEnabled && (
-                  <>
-                    <div className="auth-google">
-                      <GoogleButton
-                        from="signup"
-                        label="Sign up with Google"
-                        redirect={redirectParam ? redirectTarget : null}
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="auth-divider auth-divider-tight">
-                      <div className="auth-divider-line" />
-                      <span className="auth-divider-text">or sign up with email</span>
-                      <div className="auth-divider-line" />
-                    </div>
-                  </>
-                )}
 
                 <form onSubmit={handleFormSubmit}>
                   <div className="auth-field">
@@ -545,10 +528,29 @@ export default function SignupPage({ googleEnabled = false }: { googleEnabled?: 
                   <button type="submit" disabled={loading} className="auth-btn">
                     <span className="auth-btn-inner">
                       {loading && <span className="auth-spinner" />}
-                      {loading ? "Sending code…" : "Continue"}
+                      {loading ? "Sending code…" : "Sign up with email"}
                     </span>
                   </button>
                 </form>
+
+                {/* Google is an optional shortcut, offered after the email form */}
+                {googleEnabled && (
+                  <>
+                    <div className="auth-divider auth-divider-tight">
+                      <div className="auth-divider-line" />
+                      <span className="auth-divider-text">or</span>
+                      <div className="auth-divider-line" />
+                    </div>
+                    <div className="auth-google">
+                      <GoogleButton
+                        from="signup"
+                        label="Continue with Google"
+                        redirect={redirectParam ? redirectTarget : null}
+                        disabled={loading}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <p className="auth-terms">
                   By continuing you agree to our{" "}
@@ -595,7 +597,9 @@ export default function SignupPage({ googleEnabled = false }: { googleEnabled?: 
                 </p>
                 <p className="otp-email-hint">
                   Code sent to <strong>{form.email}</strong>.<br />
-                  It expires in 10 minutes.
+                  It expires in 10 minutes.<br />
+                  Not in your inbox? Check your Spam or Bulk folder. Yahoo and AOL
+                  often put new senders there.
                 </p>
 
                 <OtpInput value={otp} onChange={setOtp} disabled={loading} />

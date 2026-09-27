@@ -865,21 +865,8 @@ export default function LoginPage({ googleEnabled = false }: { googleEnabled?: b
 
             <h1 className="auth-heading">Welcome back</h1>
             <p className="auth-subheading">
-              Sign in to your account to continue
+              Sign in with your email address and password
             </p>
-
-            {googleEnabled && (
-              <>
-                <div className="auth-google">
-                  <GoogleButton from="login" redirect={redirectParam ? redirectTarget : null} disabled={loading} />
-                </div>
-                <div className="auth-divider auth-divider-tight">
-                  <div className="auth-divider-line" />
-                  <span className="auth-divider-text">or sign in with email</span>
-                  <div className="auth-divider-line" />
-                </div>
-              </>
-            )}
 
             <form onSubmit={handleSubmit}>
               {/* Email */}
@@ -1027,7 +1014,7 @@ export default function LoginPage({ googleEnabled = false }: { googleEnabled?: b
               )}
               {showGoogleHint && (
                 <p className="auth-hint">
-                  Created your account with Google? Use Continue with Google above, or{" "}
+                  Created your account with Google? Use Continue with Google below, or{" "}
                   <Link href="/forgot-password">set a password</Link> to sign in with email too.
                 </p>
               )}
@@ -1035,10 +1022,24 @@ export default function LoginPage({ googleEnabled = false }: { googleEnabled?: b
               <button type="submit" disabled={loading} className="auth-btn">
                 <span className="auth-btn-inner">
                   {loading && <span className="auth-spinner" />}
-                  {loading ? "Signing in…" : "Sign in"}
+                  {loading ? "Signing in…" : "Sign in with email"}
                 </span>
               </button>
             </form>
+
+            {/* Google is an optional shortcut, offered after the email form */}
+            {googleEnabled && (
+              <>
+                <div className="auth-divider auth-divider-tight">
+                  <div className="auth-divider-line" />
+                  <span className="auth-divider-text">or</span>
+                  <div className="auth-divider-line" />
+                </div>
+                <div className="auth-google">
+                  <GoogleButton from="login" redirect={redirectParam ? redirectTarget : null} disabled={loading} />
+                </div>
+              </>
+            )}
 
             <div className="auth-divider">
               <div className="auth-divider-line" />

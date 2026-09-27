@@ -279,7 +279,7 @@ export default function ForgotPasswordPage() {
                 </button>
                 <h1 className="auth-heading">Check your email</h1>
                 <p className="auth-subheading">Enter the 6-digit reset code</p>
-                <p className="otp-email-hint">Code sent to <strong>{email}</strong>.<br />It expires in 10 minutes.</p>
+                <p className="otp-email-hint">Code sent to <strong>{email}</strong>.<br />It expires in 10 minutes.<br />Not in your inbox? Check your Spam or Bulk folder. Yahoo and AOL often put new senders there.</p>
                 <OtpInput value={otp} onChange={setOtp} disabled={loading} />
                 {error && (
                   <div className="auth-error" style={{ marginTop: 18 }}>
