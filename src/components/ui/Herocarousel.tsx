@@ -464,30 +464,25 @@ useEffect(() => {
                   ref={imageRef}
                   className="absolute inset-0"
                   style={{
-                    backgroundImage: `url(${bgImage})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
                     transform: "scale(1.03)",
-                    opacity: imgLoaded ? 1 : 0,
-                    transition: "transform 0.6s cubic-bezier(.16,1,.3,1), opacity 0.4s ease",
+                    transition: "transform 0.6s cubic-bezier(.16,1,.3,1)",
                   }}
-                />
-                {/* Off-screen <img> purely to get a real onLoad signal and
-                    let the browser prioritize this fetch — CSS backgrounds
-                    support neither. */}
-                <img
-                  src={bgImage}
-                  alt=""
-                  aria-hidden="true"
-                  fetchPriority={current === 0 ? "high" : "auto"}
-                  loading="eager"
-                  decoding="async"
-                  onLoad={() => setImgLoaded(true)}
-                  ref={(el) => {
-                    if (el?.complete && el.naturalWidth > 0) setImgLoaded(true);
-                  }}
-                  style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-                />
+                >
+                  {/* Real, visible <img>: discoverable by the preload scanner and
+                      never hidden behind a JS-driven opacity gate, so it can paint
+                      as the LCP element as soon as the bytes arrive. */}
+                  <img
+                    src={bgImage}
+                    alt={b.title || ""}
+                    width={1400}
+                    height={900}
+                    fetchPriority={current === 0 ? "high" : "auto"}
+                    loading={current === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                    onLoad={() => setImgLoaded(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+                  />
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>

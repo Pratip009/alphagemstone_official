@@ -34,10 +34,19 @@ function seedSeries(base: number, points = 32): number[] {
 }
 
 function useLivePrice(basePrice: number): LivePriceState {
-  const [series, setSeries] = useState<number[]>(() => seedSeries(basePrice));
-  const openRef = useRef<number>(series[0]);
+  // The first render must be deterministic: server and client both render a
+  // flat series at basePrice, so the HTML matches and hydration succeeds.
+  // (Previously Math.random() ran inside useState's initializer, so the server
+  // and client produced different prices -> hydration mismatch.)
+  const [series, setSeries] = useState<number[]>(() => Array(32).fill(basePrice));
+  const openRef = useRef<number>(basePrice);
 
   useEffect(() => {
+    // Client-only: randomise the history once after hydration.
+    const seeded = seedSeries(basePrice);
+    openRef.current = seeded[0];
+    setSeries(seeded);
+
     const id = setInterval(() => {
       setSeries((prev) => {
         const last = prev[prev.length - 1];

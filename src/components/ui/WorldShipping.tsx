@@ -23,8 +23,8 @@ import type { GlobeMethods } from "react-globe.gl";
 const Globe = dynamic(() => import("react-globe.gl"), { ssr: false });
 
 const TEXTURES = {
-  globe: "/textures/earth-blue-marble.jpg",
-  bump: "/textures/earth-topology.png",
+  globe: "/textures/earth-blue-marble.webp",
+  bump: "/textures/earth-topology.webp",
 };
 
 const HUB = { lat: 40.71, lng: -74.0, name: "New York" };
@@ -198,6 +198,24 @@ function GlobeCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  // Defer loading three.js + textures until the globe is near the viewport.
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -220,7 +238,7 @@ function GlobeCanvas() {
 
   return (
     <div ref={containerRef} className="h-full w-full">
-      {size.width > 0 && size.height > 0 && (
+      {visible && size.width > 0 && size.height > 0 && (
         <Globe
           ref={globeRef as any}
           width={size.width}

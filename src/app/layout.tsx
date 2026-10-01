@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import Providers from "./providers";
 import "./global.css";
-import CookieConsent from "@/components/ui/Cookieconsent";
+import CookieConsentLazy from "./CookieConsentLazy";
 import HomeOnlyWidgets from "./HomeOnlyWidgets";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next"
@@ -236,7 +236,7 @@ export default async function RootLayout({
           {children}
           <HomeOnlyWidgets />
         </Providers>
-        <CookieConsent />
+        <CookieConsentLazy />
         <SpeedInsights />
         <Analytics />
       </body>
