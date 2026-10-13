@@ -344,12 +344,39 @@ export async function createProduct(data: Partial<IProduct>) {
   return product.toObject();
 }
 
+// Admin-only lookup: unlike getProductById this does NOT filter on
+// isActive, so deactivated products can still be opened in the edit form.
+export async function getProductByIdAdmin(id: string) {
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+
+  return Product.findById(id)
+    .populate('category', 'name slug')
+    .populate('subcategory', 'name slug')
+    .populate('subSubcategory', 'name slug')
+    .lean();
+}
+
 export async function updateProduct(id: string, data: Partial<IProduct>) {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
 
+  // A field sent as `null` means "clear it" (e.g. the admin removed the
+  // subcategory or emptied the description in the edit form). Those go to
+  // $unset instead of $set so the field is removed rather than stored as
+  // null / cast-failing an ObjectId or enum.
+  const $set: Record<string, unknown> = {};
+  const $unset: Record<string, ''> = {};
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (value === null) $unset[key] = '';
+    else if (value !== undefined) $set[key] = value;
+  }
+
+  const update: Record<string, unknown> = {};
+  if (Object.keys($set).length) update.$set = $set;
+  if (Object.keys($unset).length) update.$unset = $unset;
+
   return Product.findByIdAndUpdate(
     id,
-    { $set: data },
+    update,
     { new: true, runValidators: true }
   ).lean();
 }

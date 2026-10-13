@@ -1,14 +1,43 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { updateProduct, deleteProduct } from '@/services/product.service';
+import { updateProduct, deleteProduct, getProductByIdAdmin } from '@/services/product.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { MEMO_MAX_DAYS_CEILING } from '@/models/Product';
+
+export const GET = withAdmin(async (_req, { params }) => {
+  try {
+    await connectDB();
+    const product = await getProductByIdAdmin(params.id);
+    if (!product) return errorResponse('Product not found', 404);
+    return successResponse(product);
+  } catch (err) {
+    return errorResponse('Failed to fetch product', 500);
+  }
+});
+
+// Fields that must never be cleared through an edit — the model requires them.
+const REQUIRED_FIELDS = ['name', 'category', 'price', 'stock'] as const;
 
 export const PUT = withAdmin(async (req, { params }) => {
   try {
     await connectDB();
     const body = await req.json();
+
+    // Never let an update strip a slug or _id, and never null-out (= $unset,
+    // see updateProduct) a required field.
+    delete body._id;
+    delete body.slug;
+    for (const f of REQUIRED_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(body, f) && (body[f] === null || body[f] === '')) {
+        return errorResponse('Validation failed', 400, { [f]: [`${f} is required`] });
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'images')) {
+      if (!Array.isArray(body.images) || body.images.some((u: unknown) => typeof u !== 'string' || !u)) {
+        return errorResponse('Validation failed', 400, { images: ['images must be a list of URLs'] });
+      }
+    }
 
     // ── Memo field validation ────────────────────────────────────────────
     // The PUT route otherwise passes the body straight through to Mongoose,

@@ -180,6 +180,14 @@ const css = `
   .ap-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .ap-img-remove { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: rgba(15,23,42,0.7); border: none; color: #fff; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s; line-height: 1; }
   .ap-img-remove:hover { background: #dc2626; }
+  .ap-img-cover-tag { position: absolute; left: 4px; bottom: 4px; padding: 2px 6px; border-radius: 4px; background: #b45309; color: #fff; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; }
+  .ap-img-make-cover { position: absolute; left: 4px; bottom: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(15,23,42,0.7); color: #fff; border: none; font-size: 0.6rem; font-weight: 600; cursor: pointer; font-family: "Elms Sans", sans-serif; opacity: 0; transition: opacity 0.12s; }
+  .ap-img-thumb:hover .ap-img-make-cover, .ap-img-make-cover:focus-visible { opacity: 1; }
+  @media (hover: none) { .ap-img-make-cover { opacity: 1; } }
+  .ap-edit-row { font-size: 0.75rem; color: #0f172a; background: none; border: 1.5px solid #d1cec7; cursor: pointer; font-family: "Elms Sans", sans-serif; font-weight: 600; padding: 3px 10px; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
+  .ap-edit-row:hover { color: #b45309; border-color: #b45309; background: #fef3c7; }
+  .ap-table tbody tr.editing td { background: #fffbeb; }
+  .ap-form-loading { padding: 2rem; text-align: center; color: #64748b; font-size: 0.875rem; }
   .ap-img-uploading { position: absolute; inset: 0; background: rgba(255,255,255,0.75); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #b45309; flex-direction: column; gap: 4px; }
   .ap-img-spinner { width: 18px; height: 18px; border: 2px solid #fde68a; border-top-color: #b45309; border-radius: 50%; animation: ap-spin 0.7s linear infinite; }
   @keyframes ap-spin { to { transform: rotate(360deg); } }
@@ -208,6 +216,7 @@ interface Product {
   memoMinDays?: number;
   memoMaxDays?: number;
   reservedForMemo?: number;
+  images?: string[];
 }
 interface Category {
   _id: string;
@@ -610,6 +619,13 @@ function ImageUploader({
     onChange(items.filter((i) => i.id !== id));
   };
 
+  // The first image is the one shown on product cards, search and cart.
+  const makeCover = (id: string) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    onChange([item, ...items.filter((i) => i.id !== id)]);
+  };
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -620,7 +636,7 @@ function ImageUploader({
     <div className="ap-uploader">
       <label className="ap-label">
         Product Images
-        <span className="ap-label-hint">JPG, PNG, WebP · up to 10 MB each</span>
+        <span className="ap-label-hint">JPG, PNG, WebP · up to 10 MB each · first image is the cover</span>
       </label>
 
       {/* Drop zone */}
@@ -656,9 +672,21 @@ function ImageUploader({
       {/* Thumbnails */}
       {items.length > 0 && (
         <div className="ap-img-grid">
-          {items.map((item) => (
+          {items.map((item, idx) => (
             <div key={item.id} className="ap-img-thumb">
               <img src={item.previewUrl} alt="" />
+              {idx === 0 ? (
+                <span className="ap-img-cover-tag">Cover</span>
+              ) : item.status === "done" && (
+                <button
+                  type="button"
+                  className="ap-img-make-cover"
+                  onClick={(e) => { e.stopPropagation(); makeCover(item.id); }}
+                  title="Show this image first on the storefront"
+                >
+                  Make cover
+                </button>
+              )}
               {item.status === "uploading" && (
                 <div className="ap-img-uploading">
                   <div className="ap-img-spinner" />
@@ -696,19 +724,45 @@ function ImageUploader({
 type SortKey = "name" | "price" | "stock";
 type SortDir = "asc" | "desc";
 
-/* ── AddProductForm ───────────────────────────────────────────────────────── */
-function AddProductForm({
+/* ── Edit helpers ─────────────────────────────────────────────────────────── */
+type RefField = { _id: string; name?: string } | string | null | undefined;
+const refId = (v: RefField) => (v && typeof v === "object" ? v._id : v || "");
+const toArr = (v: unknown): string[] =>
+  Array.isArray(v) ? (v as string[]) : typeof v === "string" && v ? [v] : [];
+const toStr = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+
+// Full product document as returned by GET /api/admin/products/[id]
+type ProductDoc = Record<string, unknown> & {
+  _id: string;
+  name: string;
+  category?: RefField;
+  subcategory?: RefField;
+  subSubcategory?: RefField;
+  images?: string[];
+};
+
+const isWatchDoc = (p: Record<string, unknown>) =>
+  !!(p.watchBrand || p.watchMovement || p.watchGender);
+
+/* ── ProductForm (create + edit) ──────────────────────────────────────────── */
+function ProductForm({
   categories,
   onSuccess,
   onCancel,
   apiFetch,
+  editProductId,
 }: {
   categories: Category[];
-  onSuccess: () => void;
+  onSuccess: (name: string) => void;
   onCancel: () => void;
   apiFetch: (url: string, opts?: RequestInit) => Promise<unknown>;
+  /** When set, the form loads this product and saves changes to it. */
+  editProductId?: string;
 }) {
+  const isEdit = !!editProductId;
   const [productType, setProductType] = useState<ProductType>("diamond");
+  const [loadingProduct, setLoadingProduct] = useState(isEdit);
+  const [loadedDoc, setLoadedDoc] = useState<ProductDoc | null>(null);
   const [diamondForm, setDiamondForm] = useState<DiamondForm>({ ...EMPTY_DIAMOND_FORM });
   const [watchForm, setWatchForm] = useState<WatchForm>({ ...EMPTY_WATCH_FORM });
   const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
@@ -718,6 +772,96 @@ function AddProductForm({
   const [error, setError] = useState("");
 
   const form = productType === "diamond" ? diamondForm : watchForm;
+
+  // ── Edit mode: load the product and fill the form ─────────────────────────
+  useEffect(() => {
+    if (!editProductId) return;
+    let cancelled = false;
+    setLoadingProduct(true);
+    setError("");
+    apiFetch(`/api/admin/products/${editProductId}`)
+      .then((res) => {
+        if (cancelled) return;
+        const p = (res as { data: ProductDoc }).data;
+        const memo = {
+          memoEligible: !!p.memoEligible,
+          memoMinDays: toStr(p.memoMinDays ?? 3),
+          memoMaxDays: toStr(p.memoMaxDays ?? MEMO_MAX_DAYS_CEILING),
+        };
+        const shared = {
+          name: p.name ?? "",
+          category: refId(p.category),
+          subcategory: refId(p.subcategory),
+          subSubcategory: refId(p.subSubcategory),
+          price: toStr(p.price),
+          stock: toStr(p.stock),
+          description: toStr(p.description),
+        };
+        if (isWatchDoc(p)) {
+          setProductType("watch");
+          setWatchForm({
+            ...EMPTY_WATCH_FORM,
+            ...shared,
+            ...memo,
+            watchGender: toStr(p.watchGender),
+            watchBrand: toStr(p.watchBrand),
+            watchMovement: toStr(p.watchMovement),
+            watchStrapType: toStr(p.watchStrapType),
+            watchCaseMaterial: toStr(p.watchCaseMaterial),
+            watchDialColor: toStr(p.watchDialColor),
+            watchFeatures: toArr(p.watchFeatures),
+            watchStyle: toStr(p.watchStyle),
+            watchCaseSize: toStr(p.watchCaseSize),
+          });
+        } else {
+          setProductType("diamond");
+          setDiamondForm({
+            ...EMPTY_DIAMOND_FORM,
+            ...shared,
+            ...memo,
+            shapes: toArr(p.shape),
+            size: toStr(p.size),
+            colors: toArr(p.color),
+            clarities: toArr(p.clarity),
+            certifications: toArr(p.certification),
+            approxWeight: toStr(p.approxWeight),
+            numberOfStones: toStr(p.numberOfStones),
+          });
+        }
+        setUploadItems(
+          (p.images ?? []).map((url, i) => ({
+            id: `existing-${i}-${url}`,
+            previewUrl: url,
+            cloudUrl: url,
+            status: "done" as const,
+          }))
+        );
+        setLoadedDoc(p);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load product");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProduct(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editProductId]);
+
+  // Populate the subcategory / type dropdowns for the loaded product. Runs
+  // again once categories arrive in case they load after the product.
+  useEffect(() => {
+    if (!loadedDoc) return;
+    const catId = refId(loadedDoc.category);
+    const subId = refId(loadedDoc.subcategory);
+    setSubcategories(categories.find((c) => c._id === catId)?.subcategories ?? []);
+    if (subId) {
+      apiFetch(`/api/admin/subsubcategories?subcategory=${subId}`)
+        .then((res) => setSubSubcategories(((res as { data?: SubSubcategory[] }).data) ?? []))
+        .catch(() => setSubSubcategories([]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedDoc, categories]);
 
   const handleCategoryChange = (id: string) => {
     if (productType === "diamond") {
@@ -757,7 +901,12 @@ function AddProductForm({
       return;
     }
 
-    if (productType === "diamond") {
+    // Type-specific required fields are only enforced when creating. Many
+    // existing products came from bulk import without them, and that must
+    // not stop an admin from e.g. swapping an image on such a product.
+    if (isEdit) {
+      // no-op
+    } else if (productType === "diamond") {
       if (diamondForm.shapes.length === 0) { setError("Select at least one shape"); return; }
       if (diamondForm.colors.length === 0) { setError("Select at least one color"); return; }
       if (diamondForm.clarities.length === 0) { setError("Select at least one clarity"); return; }
@@ -782,6 +931,65 @@ function AddProductForm({
       .map((i) => i.cloudUrl as string);
 
     setLoading(true);
+
+    if (isEdit) {
+      // Edit sends only the fields this form manages, so anything else on
+      // the product (legacy import data, SEO fields, slug) is left untouched.
+      // Cleared optional fields are sent as null, which the API unsets.
+      const orNull = (v: string) => (v.trim() === "" ? null : v);
+      const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
+      const memoPatch = form.memoEligible
+        ? { memoEligible: true, memoMinDays: Number(form.memoMinDays), memoMaxDays: Number(form.memoMaxDays) }
+        : { memoEligible: false };
+      const shared = {
+        name: form.name.trim(),
+        category: form.category,
+        subcategory: orNull(form.subcategory),
+        subSubcategory: orNull(form.subSubcategory),
+        price: Number(form.price),
+        stock: Number(form.stock),
+        description: orNull(form.description),
+        images: imageUrls,
+        ...memoPatch,
+      };
+      const patch: Record<string, unknown> =
+        productType === "diamond"
+          ? {
+              ...shared,
+              shape: diamondForm.shapes,
+              size: numOrNull(diamondForm.size),
+              color: diamondForm.colors,
+              clarity: diamondForm.clarities,
+              certification: diamondForm.certifications,
+              approxWeight: orNull(diamondForm.approxWeight),
+              numberOfStones: numOrNull(diamondForm.numberOfStones),
+            }
+          : {
+              ...shared,
+              watchGender: orNull(watchForm.watchGender),
+              watchBrand: orNull(watchForm.watchBrand),
+              watchMovement: orNull(watchForm.watchMovement),
+              watchStrapType: orNull(watchForm.watchStrapType),
+              watchCaseMaterial: orNull(watchForm.watchCaseMaterial),
+              watchDialColor: orNull(watchForm.watchDialColor),
+              watchFeatures: watchForm.watchFeatures,
+              watchStyle: orNull(watchForm.watchStyle),
+              watchCaseSize: orNull(watchForm.watchCaseSize),
+            };
+      try {
+        await apiFetch(`/api/admin/products/${editProductId}`, {
+          method: "PUT",
+          body: JSON.stringify(patch),
+        });
+        onSuccess(form.name.trim());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save changes");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       let payload: Record<string, unknown>;
 
@@ -831,7 +1039,7 @@ function AddProductForm({
       setUploadItems([]);
       setSubcategories([]);
       setSubSubcategories([]);
-      onSuccess();
+      onSuccess(payload.name as string);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create product");
     } finally {
@@ -846,9 +1054,21 @@ function AddProductForm({
     <div className="ap-form-outer">
       <div className="ap-card">
         <div className="ap-card-inner">
-          <h2 className="ap-section-title">New Product</h2>
+          <h2 className="ap-section-title">
+            {isEdit ? `Edit product${loadedDoc ? `: ${loadedDoc.name}` : ""}` : "New Product"}
+          </h2>
 
-          {/* Product type toggle */}
+          {isEdit && loadingProduct ? (
+            <div className="ap-form-loading">Loading product…</div>
+          ) : isEdit && !loadedDoc ? (
+            <>
+              {error && <div className="ap-error" style={{ marginBottom: "1rem" }}>⚠ {error}</div>}
+              <button type="button" onClick={onCancel} className="ap-btn-ghost">Close</button>
+            </>
+          ) : (
+          <>
+          {/* Product type toggle — fixed once a product exists */}
+          {!isEdit && (
           <div className="ap-type-toggle">
             <button
               type="button"
@@ -865,6 +1085,7 @@ function AddProductForm({
               ⌚ Watch
             </button>
           </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="ap-form-grid">
@@ -992,7 +1213,7 @@ function AddProductForm({
                         setDiamondForm((prev) => ({ ...prev, size: e.target.value }))
                       }
                       placeholder="0.00"
-                      required
+                      required={!isEdit}
                       min="0.01"
                       step="0.01"
                     />
@@ -1030,21 +1251,21 @@ function AddProductForm({
                     options={SHAPES}
                     selected={(diamondForm as DiamondForm).shapes}
                     onChange={(v) => setDiamondForm((prev) => ({ ...prev, shapes: v }))}
-                    required
+                    required={!isEdit}
                   />
                   <PillGroup
                     label="Color"
                     options={COLORS}
                     selected={(diamondForm as DiamondForm).colors}
                     onChange={(v) => setDiamondForm((prev) => ({ ...prev, colors: v }))}
-                    required
+                    required={!isEdit}
                   />
                   <PillGroup
                     label="Clarity Grade"
                     options={CLARITIES}
                     selected={(diamondForm as DiamondForm).clarities}
                     onChange={(v) => setDiamondForm((prev) => ({ ...prev, clarities: v }))}
-                    required
+                    required={!isEdit}
                   />
                   <PillGroup
                     label="Certification"
@@ -1064,7 +1285,7 @@ function AddProductForm({
                       className="ap-input"
                       value={(watchForm as WatchForm).watchGender}
                       onChange={(e) => setWatchForm((prev) => ({ ...prev, watchGender: e.target.value }))}
-                      required
+                      required={!isEdit}
                     >
                       <option value="">Select gender…</option>
                       {WATCH_GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -1077,7 +1298,7 @@ function AddProductForm({
                       className="ap-input"
                       value={(watchForm as WatchForm).watchBrand}
                       onChange={(e) => setWatchForm((prev) => ({ ...prev, watchBrand: e.target.value }))}
-                      required
+                      required={!isEdit}
                     >
                       <option value="">Select brand…</option>
                       {WATCH_BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -1090,7 +1311,7 @@ function AddProductForm({
                       className="ap-input"
                       value={(watchForm as WatchForm).watchMovement}
                       onChange={(e) => setWatchForm((prev) => ({ ...prev, watchMovement: e.target.value }))}
-                      required
+                      required={!isEdit}
                     >
                       <option value="">Select movement…</option>
                       {WATCH_MOVEMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -1270,13 +1491,17 @@ function AddProductForm({
                     ? "⏳ Uploading images…"
                     : loading
                       ? "Saving…"
-                      : productType === "diamond"
+                      : isEdit
+                        ? "Save changes"
+                        : productType === "diamond"
                         ? "💎 Create Diamond Product"
                         : "⌚ Create Watch Product"}
                 </button>
               </div>
             </div>
           </form>
+          </>
+          )}
         </div>
       </div>
     </div>
@@ -1294,6 +1519,24 @@ export default function AdminProductsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
+  // When set, the form is open in edit mode for this product id.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const openEdit = (id: string) => {
+    setEditingId(id);
+    setShowForm(true);
+    setError("");
+    setSuccess("");
+    // Let the form mount, then bring it into view.
+    requestAnimationFrame(() =>
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    );
+  };
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+  };
 
   // `search` is what's typed immediately; `debouncedSearch` is what's actually
   // sent to the server, 350ms after typing stops. With an 18k+ product
@@ -1594,7 +1837,11 @@ export default function AdminProductsPage() {
           )}
           <button
             className="ap-btn-primary"
-            onClick={() => { setShowForm((v) => !v); setError(""); setSuccess(""); }}
+            onClick={() => {
+              if (showForm) closeForm();
+              else { setEditingId(null); setShowForm(true); }
+              setError(""); setSuccess("");
+            }}
           >
             {showForm ? "✕ Cancel" : "+ Add Product"}
           </button>
@@ -1629,16 +1876,21 @@ export default function AdminProductsPage() {
       {error && !showForm && <div className="ap-error">⚠ {error}</div>}
 
       {showForm && (
-        <AddProductForm
-          categories={categories}
-          apiFetch={apiFetch}
-          onSuccess={() => {
-            setSuccess("Product created successfully.");
-            setShowForm(false);
-            fetchProducts();
-          }}
-          onCancel={() => setShowForm(false)}
-        />
+        <div ref={formRef} style={{ scrollMarginTop: "1rem" }}>
+          <ProductForm
+            // Remount when switching between products / create so state resets.
+            key={editingId ?? "new"}
+            categories={categories}
+            apiFetch={apiFetch}
+            editProductId={editingId ?? undefined}
+            onSuccess={(name) => {
+              setSuccess(editingId ? `"${name}" updated.` : "Product created successfully.");
+              closeForm();
+              fetchProducts();
+            }}
+            onCancel={closeForm}
+          />
+        </div>
       )}
 
       {/* Filter bar */}
@@ -1762,7 +2014,7 @@ export default function AdminProductsPage() {
               {paginated.map((p) => {
                 const watch = isWatch(p);
                 return (
-                  <tr key={p._id}>
+                  <tr key={p._id} className={editingId === p._id ? "editing" : undefined}>
                     <td className="td-name">{p.name}</td>
                     <td>
                       <span className={`ap-badge ${watch ? "watch" : "diamond"}`}>
@@ -1807,6 +2059,13 @@ export default function AdminProductsPage() {
                     </td>
                     <td>
                       <div className="ap-row-actions">
+                        <button
+                          className="ap-edit-row"
+                          onClick={() => openEdit(p._id)}
+                          title="Edit details and images"
+                        >
+                          Edit
+                        </button>
                         {p.isActive ? (
                           <button
                             className="ap-deactivate"
