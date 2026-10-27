@@ -23,8 +23,8 @@ import type { GlobeMethods } from "react-globe.gl";
 const Globe = dynamic(() => import("react-globe.gl"), { ssr: false });
 
 const TEXTURES = {
-  globe: "/textures/earth-blue-marble.webp",
-  bump: "/textures/earth-topology.webp",
+  globe: "/textures/earth-blue-marble.jpg",
+  bump: "/textures/earth-topology.png",
 };
 
 const HUB = { lat: 40.71, lng: -74.0, name: "New York" };
