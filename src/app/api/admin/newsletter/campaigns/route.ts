@@ -4,14 +4,7 @@ import { listCampaigns, createCampaign } from '@/services/newsletter.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { paginatedResponse, successResponse, errorResponse } from '@/lib/api-response';
-import { z } from 'zod';
-
-const createCampaignSchema = z.object({
-  title:   z.string().min(1).max(200),
-  subject: z.string().min(1).max(300),
-  message: z.string().min(1),
-  image:   z.string().optional().default(''),
-});
+import { campaignInputSchema } from '@/lib/newsletter-schema';
 
 export const GET = withAdmin(async (req: NextRequest) => {
   try {
@@ -33,7 +26,7 @@ export const POST = withAdmin(async (req: AuthenticatedRequest) => {
     await connectDB();
     const body = await req.json();
 
-    const parsed = createCampaignSchema.safeParse(body);
+    const parsed = campaignInputSchema.safeParse(body);
     if (!parsed.success) {
       return errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors);
     }

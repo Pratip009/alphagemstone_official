@@ -145,6 +145,15 @@ export interface IProduct extends Document {
   // productFilter.service.ts for how this is matched.
   crossListedSubcategoryIds?: mongoose.Types.ObjectId[];
 
+  // Extra SubSubcategory ObjectIds this product should ALSO appear under,
+  // on top of its primary `subSubcategory`. The legacy catalogue filed some
+  // rings in two third-level categories at once (e.g. RS013 is both a
+  // Bridal Diamond Ring and a Wedding Diamond Band); a single ref can't
+  // express that, so without this field one of the two listings silently
+  // lost the product. Matched alongside `subSubcategory` in
+  // buildProductFilterQuery() / baseSimpleFilter().
+  crossListedSubSubcategoryIds?: mongoose.Types.ObjectId[];
+
   metaTitle?: string;
   metaDescription?: string;
   metaKeywords?: string[];
@@ -337,6 +346,12 @@ const ProductSchema = new Schema<IProduct>(
     crossListedSubcategoryIds: {
       type: [Schema.Types.ObjectId],
       ref: 'Subcategory',
+      default: undefined,
+      index: true,
+    },
+    crossListedSubSubcategoryIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'SubSubcategory',
       default: undefined,
       index: true,
     },

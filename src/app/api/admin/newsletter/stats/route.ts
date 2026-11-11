@@ -11,6 +11,8 @@ export const GET = withAdmin(async (_req: NextRequest) => {
     return successResponse({
       totalSubscribers:  subs.total,
       activeSubscribers: subs.active,
+      legacyContacts:    subs.legacyActive,
+      registeredUsers:   subs.registeredUsers,
       totalCampaigns:    camps.total,
       lastSentCampaign:  camps.lastSent,
     });

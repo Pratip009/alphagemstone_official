@@ -11,5 +11,6 @@ import '@/models/HeroSlide';
 import '@/models/Otp';
 import '@/models/NewsletterSubscriber';
 import '@/models/NewsletterCampaign';
+import '@/models/NewsletterDelivery';
 import '@/models/DropshipApplication';
 import '@/models/DropshipOrder';

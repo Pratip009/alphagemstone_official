@@ -85,10 +85,7 @@ const FOOTER_COLUMNS = [
         label: "Volume Discount Program",
         href: "/volume-discount",
       },
-      {
-        label: "Sitemap",
-        href: "/sitemap",
-      },
+      
     ],
   },
 

@@ -3,14 +3,7 @@ import { connectDB } from '@/lib/db';
 import { getCampaign, updateCampaign, deleteCampaign } from '@/services/newsletter.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
-import { z } from 'zod';
-
-const updateSchema = z.object({
-  title:   z.string().min(1).max(200),
-  subject: z.string().min(1).max(300),
-  message: z.string().min(1),
-  image:   z.string().optional().default(''),
-});
+import { campaignInputSchema } from '@/lib/newsletter-schema';
 
 export const GET = withAdmin(async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
@@ -31,7 +24,7 @@ export const PUT = withAdmin(async (req: NextRequest, context: { params: Promise
     const { id } = await context.params;
     const body = await req.json();
 
-    const parsed = updateSchema.safeParse(body);
+    const parsed = campaignInputSchema.safeParse(body);
     if (!parsed.success) {
       return errorResponse('Validation failed', 400, parsed.error.flatten().fieldErrors);
     }

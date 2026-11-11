@@ -148,28 +148,49 @@ const SPECIALS_SUBCATEGORY_LEGACY_IDS: Record<string, number> = {
 // as long as both call sites ask for the same slug, only one of them
 // actually hits Mongo — the other gets the already-in-flight/resolved
 // result for free.
+const NO_MATCH_ID = '000000000000000000000000';
+
 const lookupCategoryId = cache(async (slug: string) => {
   const cat = await Category.findOne({ slug, isActive: true })
     .select('_id')
     .lean();
-  return cat ? cat._id.toString() : '000000000000000000000000';
+  return cat ? cat._id.toString() : NO_MATCH_ID;
 });
 
-const lookupSubcategoryId = cache(async (slug: string) => {
+// Slugs are only unique WITHIN their parent (SubSubcategory has a unique
+// index on {slug, subcategory}, not on slug alone). E.g. "diamond-earrings"
+// is both Jewelry → Diamond Earrings → Diamond Earrings and
+// Jewelry → Bargains → Diamond Earrings. A global findOne({ slug }) returned
+// whichever came first, so one of those pages listed the OTHER one's
+// products. Look up inside the parent first; fall back to a global lookup
+// only when no parent was given or nothing matched there.
+const lookupSubcategoryId = cache(async (slug: string, categoryId?: string) => {
+  if (categoryId && categoryId !== NO_MATCH_ID) {
+    const scoped = await Subcategory.findOne({ slug, category: categoryId, isActive: true })
+      .select('_id')
+      .lean();
+    if (scoped) return scoped._id.toString();
+  }
   const sub = await Subcategory.findOne({ slug, isActive: true })
     .select('_id')
     .lean();
-  return sub ? sub._id.toString() : '000000000000000000000000';
+  return sub ? sub._id.toString() : NO_MATCH_ID;
 });
 
-const lookupSubSubcategoryId = cache(async (slug: string) => {
+const lookupSubSubcategoryId = cache(async (slug: string, subcategoryId?: string) => {
   // Lazy import to avoid pulling SubSubcategory into every module that
   // imports this file just for the type.
   const { default: SubSubcategory } = await import('@/models/SubSubcategory');
+  if (subcategoryId && subcategoryId !== NO_MATCH_ID) {
+    const scoped = await SubSubcategory.findOne({ slug, subcategory: subcategoryId, isActive: true })
+      .select('_id')
+      .lean();
+    if (scoped) return scoped._id.toString();
+  }
   const sub = await SubSubcategory.findOne({ slug, isActive: true })
     .select('_id')
     .lean();
-  return sub ? sub._id.toString() : '000000000000000000000000';
+  return sub ? sub._id.toString() : NO_MATCH_ID;
 });
 
 export async function resolveSlugFilters(
@@ -211,16 +232,23 @@ export async function resolveSlugFilters(
   const needsSubSubcategory =
     !!resolved.subSubcategory && !isObjectId(resolved.subSubcategory);
 
-  // Independent lookups — run concurrently instead of one after another.
-  const [catId, subId, subSubId] = await Promise.all([
-    needsCategory ? lookupCategoryId(resolved.category as string) : null,
-    needsSubcategory ? lookupSubcategoryId(resolved.subcategory as string) : null,
-    needsSubSubcategory ? lookupSubSubcategoryId(resolved.subSubcategory as string) : null,
-  ]);
-
-  if (needsCategory) resolved.category = catId as string;
-  if (needsSubcategory) resolved.subcategory = subId as string;
-  if (needsSubSubcategory) resolved.subSubcategory = subSubId as string;
+  // Resolved parent-first, because a child slug is only unique inside its
+  // parent (see lookupSubcategoryId / lookupSubSubcategoryId).
+  if (needsCategory) {
+    resolved.category = await lookupCategoryId(resolved.category as string);
+  }
+  if (needsSubcategory) {
+    resolved.subcategory = await lookupSubcategoryId(
+      resolved.subcategory as string,
+      resolved.category as string | undefined
+    );
+  }
+  if (needsSubSubcategory) {
+    resolved.subSubcategory = await lookupSubSubcategoryId(
+      resolved.subSubcategory as string,
+      resolved.subcategory as string | undefined
+    );
+  }
 
   return resolved;
 }
@@ -239,6 +267,14 @@ export async function resolveSlugFilters(
 // matched zero products on every branch.)
 function toObjectIdIfValid(id: string): mongoose.Types.ObjectId | string {
   return mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : id;
+}
+
+// A product belongs to a sub-subcategory if it's its primary one OR it's
+// cross-listed there (legacy products filed under two third-level
+// categories, e.g. Bridal Diamond Rings + Wedding Diamond Bands).
+function subSubcategoryScope(id: string): FilterQuery<IProduct> {
+  const oid = toObjectIdIfValid(id);
+  return { $or: [{ subSubcategory: oid }, { crossListedSubSubcategoryIds: oid }] };
 }
 
 // ─── Core Filter Builder ──────────────────────────────────────────────────────
@@ -296,10 +332,12 @@ export function buildProductFilterQuery(params: ProductFilterParams): ParsedFilt
 
   // ── Sub-subcategory (third taxonomy level) ──────────────────────────────
   // Independent of the subcategory $or scoping above — a product must have
-  // BOTH the right subcategory (handled above) AND this exact
-  // sub-subcategory, so a plain top-level filter field is correct here.
+  // BOTH the right subcategory (handled above) AND this sub-subcategory,
+  // either as its primary one or as a cross-listing (see
+  // Product.crossListedSubSubcategoryIds). Pushed as its own $and entry so
+  // it can't clobber the subcategory / search $or blocks.
   if (params.subSubcategory) {
-    filter.subSubcategory = toObjectIdIfValid(params.subSubcategory);
+    andConditions.push(subSubcategoryScope(params.subSubcategory));
   }
 
   if (params.productKind) filter.productKind = params.productKind;
@@ -594,7 +632,7 @@ function baseSimpleFilter(params: ProductFilterParams): FilterQuery<IProduct> {
     filter.category = toObjectIdIfValid(params.category);
   }
   if (params.subSubcategory) {
-    filter.subSubcategory = toObjectIdIfValid(params.subSubcategory);
+    filter.$and = [...((filter.$and as FilterQuery<IProduct>[]) ?? []), subSubcategoryScope(params.subSubcategory)];
   }
   if (params.productKind) filter.productKind = params.productKind;
   return filter;

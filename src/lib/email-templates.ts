@@ -38,9 +38,9 @@ const T = {
   gemSapphire: '#1B3A6B',
   gemEmerald:  '#1B4D3E',
   gemRuby:     '#7A1F2B',
-  fontStack:   'Georgia,"Times New Roman",Times,serif',
-  sansStack:   '-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif',
-  monoStack:   '"Courier New",Courier,monospace',
+  fontStack:   "Georgia,'Times New Roman',Times,serif",
+  sansStack:   "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif",
+  monoStack:   "'Courier New',Courier,monospace",
 };
 
 const GEM_CYCLE = [T.gemGold, T.gemSapphire, T.gemEmerald, T.gemRuby];
@@ -632,96 +632,7 @@ export function orderShippedEmailHtml(data: OrderShippedEmailData): string {
 }
 
 
-// ─── Newsletter Campaign Email ────────────────────────────────────────────────
-
-export interface NewsletterEmailData {
-  title: string;
-  subject: string;
-  message: string;
-  image?: string;
-  unsubscribeUrl: string;
-}
-
-export function newsletterEmailHtml(data: NewsletterEmailData): string {
-  // Hero: use provided image as full-bleed banner, or fall back to dark header
-  const heroSection = data.image
-    ? `<tr>
-        <td style="padding:0;">
-          <a href="${SITE_URL}/products" target="_blank" style="display:block;text-decoration:none;">
-            <img src="${data.image}" alt="${data.title}" width="${CONTENT_WIDTH}"
-              style="display:block;width:100%;max-width:${CONTENT_WIDTH}px;height:auto;border:0;" />
-          </a>
-        </td>
-       </tr>
-       <tr>
-         <td style="background-color:${T.headerBg};padding:38px 52px 34px;">
-           <p style="margin:0 0 10px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">${BRAND_NAME} · Newsletter</p>
-           <h1 style="margin:0;font-family:${T.fontStack};font-size:29px;font-weight:400;color:#FFFFFF;line-height:1.25;">${data.title}</h1>
-         </td>
-       </tr>
-       ${facetRule()}`
-    : `<tr>
-        <td style="background-color:${T.headerBg};padding:56px 52px 48px;">
-          <p style="margin:0 0 16px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.accentGold};letter-spacing:0.22em;text-transform:uppercase;">${BRAND_NAME} · Newsletter</p>
-          <h1 style="margin:0;font-family:${T.fontStack};font-size:38px;font-weight:400;color:#FFFFFF;letter-spacing:-0.01em;line-height:1.2;">${data.title}</h1>
-        </td>
-       </tr>
-       ${facetRule()}`;
-
-  // Inline-safe rich text transforms
-  const messageContent = data.message
-    .replace(/<h1([^>]*)>/g, `<h1$1 style="margin:0 0 12px;font-family:${T.fontStack};font-size:26px;font-weight:400;color:${T.textPrimary};line-height:1.3;">`)
-    .replace(/<h2([^>]*)>/g, `<h2$1 style="margin:0 0 10px;font-family:${T.fontStack};font-size:20px;font-weight:400;color:${T.textPrimary};line-height:1.35;">`)
-    .replace(/<h3([^>]*)>/g, `<h3$1 style="margin:0 0 8px;font-family:${T.sansStack};font-size:14px;font-weight:700;color:${T.textPrimary};text-transform:uppercase;letter-spacing:0.08em;">`)
-    .replace(/<p(?!\w)([^>]*)>/g, `<p$1 style="margin:0 0 20px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.75;">`)
-    .replace(/<ul>/g, `<ul style="margin:0 0 20px;padding-left:0;list-style:none;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.75;">`)
-    .replace(/<li>/g, `<li style="padding:6px 0 6px 20px;border-bottom:1px solid ${T.divider};position:relative;">`)
-    .replace(/<ol>/g, `<ol style="margin:0 0 20px;padding-left:20px;font-family:${T.sansStack};font-size:15px;color:${T.textMuted};line-height:1.75;">`)
-    .replace(/<a /g, `<a style="color:${T.accentGold};text-decoration:underline;" `)
-    .replace(/<strong>/g, `<strong style="font-weight:700;color:${T.textPrimary};">`);
-
-  const body = `
-  ${heroSection}
-
-  <!-- Content -->
-  <tr>
-    <td class="email-pad" style="padding:46px 52px 38px;">
-      <div>${messageContent}</div>
-
-      <!-- Divider -->
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:36px 0 32px;">
-        <tr>
-          <td style="border-top:1px solid ${T.divider};"></td>
-          <td style="width:40px;text-align:center;padding:0 12px;">
-            <div style="display:inline-block;width:7px;height:7px;background-color:${T.accentGold};transform:rotate(45deg);">&nbsp;</div>
-          </td>
-          <td style="border-top:1px solid ${T.divider};"></td>
-        </tr>
-      </table>
-
-      <!-- CTA block -->
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:36px;">
-        <tr>
-          <td style="background-color:#FAFAF8;border:1px solid ${T.border};padding:30px 34px;">
-            <p style="margin:0 0 6px;font-family:${T.sansStack};font-size:10px;font-weight:700;color:${T.textLight};letter-spacing:0.18em;text-transform:uppercase;">Explore now</p>
-            <p style="margin:0 0 20px;font-family:${T.fontStack};font-size:18px;color:${T.textPrimary};line-height:1.4;">Discover our latest collection of fine gemstones.</p>
-            ${ctaButton('Shop the Collection', `${SITE_URL}/products`)}
-          </td>
-        </tr>
-      </table>
-
-      <!-- Unsubscribe -->
-      <p style="margin:0;font-family:${T.sansStack};font-size:11px;color:${T.textLight};line-height:1.8;text-align:center;">
-        You are receiving this because you subscribed to ${BRAND_NAME} newsletters.<br />
-        <a href="${data.unsubscribeUrl}" style="color:${T.textLight};text-decoration:underline;">Unsubscribe</a>
-        &nbsp;·&nbsp;
-        <a href="${SITE_URL}" style="color:${T.textLight};text-decoration:underline;">Visit our store</a>
-      </p>
-    </td>
-  </tr>`;
-
-  return emailWrapper(body, data.subject);
-}
+// Newsletter campaign emails live in ./newsletter-template.ts
 
 // ─── Coupon Email ─────────────────────────────────────────────────────────────
 

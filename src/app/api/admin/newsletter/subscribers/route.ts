@@ -1,25 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { listSubscribers, subscriberStats } from '@/services/newsletter.service';
+import { listSubscribers, subscriberStats, exportSubscribers, SourceFilter } from '@/services/newsletter.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { errorResponse } from '@/lib/api-response';
-import NewsletterSubscriber from '@/models/NewsletterSubscriber';
+
+const SOURCES: SourceFilter[] = ['all', 'website', 'legacy', 'account'];
+
+function csvCell(v: string) {
+  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
 
 export const GET = withAdmin(async (req: NextRequest) => {
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
+    const rawSource = searchParams.get('source') as SourceFilter | null;
+    const source: SourceFilter = rawSource && SOURCES.includes(rawSource) ? rawSource : 'all';
 
     // ── CSV export ────────────────────────────────────────────────────────────
     if (searchParams.get('export') === 'csv') {
-      const allActive = await NewsletterSubscriber.find({ status: 'active' })
-        .select('email subscribedAt')
-        .sort({ subscribedAt: -1 })
-        .lean();
-
-      const rows = ['Email,Subscribed At'];
-      for (const sub of allActive) {
-        rows.push(`${sub.email},${new Date(sub.subscribedAt).toISOString()}`);
+      const rows = ['Email,Name,Source,Subscribed At'];
+      for (const sub of await exportSubscribers(source)) {
+        rows.push([
+          csvCell(sub.email),
+          csvCell(sub.name ?? ''),
+          sub.source ?? 'website',
+          new Date(sub.subscribedAt).toISOString(),
+        ].join(','));
       }
 
       return new Response(rows.join('\n'), {
@@ -37,7 +44,7 @@ export const GET = withAdmin(async (req: NextRequest) => {
     const status = (searchParams.get('status') as 'active' | 'unsubscribed' | 'all') ?? 'all';
 
     const [{ subscribers, total }, stats] = await Promise.all([
-      listSubscribers({ page, limit, search, status }),
+      listSubscribers({ page, limit, search, status, source }),
       subscriberStats(),
     ]);
 
