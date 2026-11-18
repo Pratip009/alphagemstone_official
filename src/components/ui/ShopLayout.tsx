@@ -110,7 +110,7 @@ function LandingHero() {
           marginBottom: 16,
         }}
       >
-        Fine Jewelry, Since 1998
+        Fine Jewelry, Since 1988
       </p>
       <h2
         style={{
