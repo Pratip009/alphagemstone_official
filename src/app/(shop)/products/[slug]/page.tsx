@@ -651,11 +651,14 @@ export default async function ProductDetailPage({
   const watch = kind === "watch";
   const gemstone = kind === "gemstone";
 
-  const related = await getRelatedProducts(p, String(p._id), 4);
-
-  // Best-effort — a review-aggregation hiccup shouldn't take down the whole
-  // product page, it just means the JSON-LD omits aggregateRating.
-  const ratingStats = await getRatingStats(String(p._id)).catch(() => null);
+  // These two queries are independent, so run them in parallel instead of
+  // back-to-back — saves a full DB round trip from TTFB on every product page.
+  // Rating stats stay best-effort: a review-aggregation hiccup shouldn't take
+  // down the page, it just means the JSON-LD omits aggregateRating.
+  const [related, ratingStats] = await Promise.all([
+    getRelatedProducts(p, String(p._id), 4),
+    getRatingStats(String(p._id)).catch(() => null),
+  ]);
 
   const canonicalUrl = `${SITE_URL}/products/${p.slug}`;
   const kindLabelForLd =
@@ -1048,6 +1051,13 @@ export default async function ProductDetailPage({
                   <img
                     src={optimizedImageUrl(mainImage, { width: 700 })}
                     alt={p.name}
+                    width={700}
+                    height={700}
+                    // This is the LCP element — tell the browser to fetch it
+                    // ahead of other images and scripts.
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="async"
                   />
                 ) : (
                   <div className="pd-main-image-placeholder">◇</div>

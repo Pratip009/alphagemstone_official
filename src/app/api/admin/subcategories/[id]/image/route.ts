@@ -10,11 +10,12 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { uploadBuffer, destroyImage } from '@/lib/r2';
 import { assertValidImageBuffer } from '@/lib/file-signature';
 import Subcategory from '@/models/Subcategory';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
 type Ctx = { params: Promise<{ id: string }> };
 
 // ── POST ─────────────────────────────────────────────────────────────────────
-export const POST = withAdmin(async (req: NextRequest, ctx: Ctx) => {
+const _POST = withAdmin(async (req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
 
@@ -60,7 +61,7 @@ export const POST = withAdmin(async (req: NextRequest, ctx: Ctx) => {
 });
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
-export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
+const _DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
 
@@ -80,3 +81,6 @@ export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
     return errorResponse(err instanceof Error ? err.message : 'Failed', 400);
   }
 });
+
+export const POST = withNavRevalidate(_POST);
+export const DELETE = withNavRevalidate(_DELETE);

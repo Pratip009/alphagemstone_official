@@ -7,6 +7,7 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { uploadBuffer, destroyImage } from '@/lib/r2';
 import { assertValidImageBuffer } from '@/lib/file-signature';
 import SubSubcategory from '@/models/SubSubcategory';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -16,7 +17,7 @@ type Ctx = { params: Promise<{ id: string }> };
 // sub-subcategory — those products simply stop being scoped by it (they
 // keep their real category/subcategory) and fall back to the plain
 // subcategory listing.
-export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
+const _DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
 
@@ -36,7 +37,7 @@ export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
 // ── PATCH /api/admin/subsubcategories/:id ─────────────────────────────────────
 // Updates name/description/image/sortOrder/isActive.
 // Accepts multipart/form-data (with image) or JSON (without).
-export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
+const _PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
 
@@ -102,3 +103,6 @@ export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
     return errorResponse(err instanceof Error ? err.message : 'Failed', 400);
   }
 });
+
+export const DELETE = withNavRevalidate(_DELETE);
+export const PATCH = withNavRevalidate(_PATCH);

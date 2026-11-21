@@ -7,12 +7,13 @@ import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { uploadBuffer } from '@/lib/r2';
 import { assertValidImageBuffer } from '@/lib/file-signature';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
 // ── POST /api/admin/subsubcategories ─────────────────────────────────────────
 // Accepts EITHER:
 //   multipart/form-data  →  fields: name, subcategoryId, description?, image (File)
 //   application/json     →  { name, subcategoryId, description? }  (no image)
-export const POST = withAdmin(async (req: NextRequest) => {
+const _POST = withAdmin(async (req: NextRequest) => {
   try {
     await connectDB();
 
@@ -80,3 +81,5 @@ export const GET = withAdmin(async (req: NextRequest) => {
     return errorResponse('Failed to fetch sub-subcategories', 500);
   }
 });
+
+export const POST = withNavRevalidate(_POST);

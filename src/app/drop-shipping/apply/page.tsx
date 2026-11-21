@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/ui/Navbar";
+import { getNavCategories } from "@/lib/getNavCategories";
 import Footer from "@/components/ui/Footer";
 import DropshipApplyForm from "@/components/dropship/DropshipApplyForm";
 
@@ -16,10 +17,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function DropshipApplyPage() {
+export default async function DropshipApplyPage() {
+  const initialCategories = await getNavCategories();
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Navbar />
+      <Navbar initialCategories={initialCategories} />
       <main className="flex-1 w-full">
         <DropshipApplyForm />
       </main>

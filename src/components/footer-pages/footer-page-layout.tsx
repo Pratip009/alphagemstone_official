@@ -1,20 +1,28 @@
 import Navbar from "../ui/Navbar";
 import Footer from "../ui/Footer";
+import { getNavCategories } from "@/lib/getNavCategories";
 
 type Props = {
   title: string;
   children: React.ReactNode;
 };
 
-export default function FooterPageLayout({
+// Server component: fetch the nav categories here (cached — see
+// getNavCategories.ts) and hand them to <Navbar>. Without them the Navbar
+// renders shimmer placeholders, fetches /api/categories on the client, then
+// swaps in the real category row — which shifted the whole page down
+// (CLS ~0.5) and delayed FCP/LCP on every page using this layout.
+export default async function FooterPageLayout({
   title,
   children,
 }: Props) {
+  const initialCategories = await getNavCategories();
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
 
       {/* Navbar */}
-      <Navbar />
+      <Navbar initialCategories={initialCategories} />
 
       {/* Main Content */}
       <main className="flex-1 w-full">

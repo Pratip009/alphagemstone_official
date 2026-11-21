@@ -3,8 +3,9 @@ import { connectDB } from '@/lib/db';
 import { createCategory, listCategories } from '@/services/category.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
-export const POST = withAdmin(async (req: NextRequest) => {
+const _POST = withAdmin(async (req: NextRequest) => {
   try {
     await connectDB();
     const { name, description } = await req.json();
@@ -25,3 +26,5 @@ export const GET = withAdmin(async () => {
     return errorResponse('Failed to fetch categories', 500);
   }
 });
+
+export const POST = withNavRevalidate(_POST);

@@ -2,6 +2,8 @@
 // Queries MongoDB directly — no internal HTTP round-trip.
 // Called only from Server Components / RSC layouts, never in the browser.
 
+import { unstable_cache } from 'next/cache';
+
 export interface NavSubcategory {
   _id: string;
   name: string;
@@ -24,8 +26,32 @@ export interface NavCategory {
   subcategories: NavSubcategory[];
 }
 
+
+// Nav categories change rarely (only when an admin edits categories), yet
+// this runs on every page render via the layouts / FooterPageLayout. Caching
+// it in the Next data cache removes a MongoDB round trip from the critical
+// path of every request (TTFB). Admin category routes can call
+// revalidateTag('nav-categories') to refresh immediately; otherwise it
+// refreshes every 10 minutes.
+const getCachedNavCategories = unstable_cache(
+  fetchNavCategories,
+  ['nav-categories'],
+  { revalidate: 600, tags: ['nav-categories'] },
+);
+
 export async function getNavCategories(): Promise<NavCategory[]> {
   try {
+    return await getCachedNavCategories();
+  } catch (err) {
+    // Errors are thrown out of the cached function (not swallowed inside it)
+    // so a transient DB failure never gets an empty list cached for 10 min.
+    console.error('[getNavCategories]', err);
+    return [];
+  }
+}
+
+async function fetchNavCategories(): Promise<NavCategory[]> {
+  {
     const { connectDB } = await import('@/lib/db');
     const { listCategories, listSubcategoriesWithChildFlagAll } = await import('@/services/category.service');
     const { SPECIALS_VIRTUAL_SUBCATEGORIES } = await import('@/lib/specialsVirtualSubcategories');
@@ -82,8 +108,5 @@ export async function getNavCategories(): Promise<NavCategory[]> {
           subcategories: subs,
         };
       });
-  } catch (err) {
-    console.error('[getNavCategories]', err);
-    return [];
   }
 }

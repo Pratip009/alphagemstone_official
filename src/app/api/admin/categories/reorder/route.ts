@@ -3,8 +3,9 @@ import { connectDB } from '@/lib/db';
 import { reorderCategories } from '@/services/category.service';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
-export const PATCH = withAdmin(async (req: NextRequest) => {
+const _PATCH = withAdmin(async (req: NextRequest) => {
   try {
     await connectDB();
 
@@ -31,3 +32,5 @@ export const PATCH = withAdmin(async (req: NextRequest) => {
     return errorResponse(message, 500);
   }
 });
+
+export const PATCH = withNavRevalidate(_PATCH);

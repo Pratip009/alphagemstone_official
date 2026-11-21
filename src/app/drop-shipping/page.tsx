@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/ui/Navbar";
+import { getNavCategories } from "@/lib/getNavCategories";
 import Footer from "@/components/ui/Footer";
 
 const SITE_URL =
@@ -120,10 +121,11 @@ function DiamondBullet() {
   );
 }
 
-export default function DropshipLandingPage() {
+export default async function DropshipLandingPage() {
+  const initialCategories = await getNavCategories();
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <Navbar />
+      <Navbar initialCategories={initialCategories} />
 
       <main className="flex-1 w-full">
         {/* ── Hero ── */}

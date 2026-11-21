@@ -7,11 +7,6 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <>
-      
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&family=Elsie:wght@400;900&display=swap"
-      />
      <Navbar initialCategories={initialCategories} />
       <main>{children}</main>
       <Footer/>

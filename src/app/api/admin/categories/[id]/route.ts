@@ -3,10 +3,11 @@ import { connectDB } from '@/lib/db';
 import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import Category from '@/models/Category';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
+const _PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
     const { id } = await ctx.params;
@@ -23,7 +24,7 @@ export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
   }
 });
 
-export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
+const _DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
     const { id } = await ctx.params;
@@ -34,3 +35,6 @@ export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
     return errorResponse(err instanceof Error ? err.message : 'Failed to delete', 400);
   }
 });
+
+export const PATCH = withNavRevalidate(_PATCH);
+export const DELETE = withNavRevalidate(_DELETE);

@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/hooks/useCart";
 import SearchBar from "./SearchBar";
-import CartSidebar from "./CartSidebar";
+import dynamic from "next/dynamic";
+// The cart drawer is only needed after the user clicks the cart icon, so its
+// code is split out of the navbar bundle that every page downloads.
+const CartSidebar = dynamic(() => import("./CartSidebar"), { ssr: false });
 import { useWishlist } from "@/hooks/useWishlist";
 import { trackCTA, trackEvent } from "@/lib/analytics";
 import { Gem } from "lucide-react";
@@ -196,6 +199,12 @@ export default function Navbar({
   >(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  // Mount the (lazy) cart drawer on first open, then keep it mounted so its
+  // close animation still plays.
+  const [cartMounted, setCartMounted] = useState(false);
+  useEffect(() => {
+    if (cartOpen) setCartMounted(true);
+  }, [cartOpen]);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -2259,7 +2268,9 @@ export default function Navbar({
       </div>
 
       {/* ── Cart Sidebar ── */}
-      <CartSidebar open={cartOpen} onClose={() => setCartOpen(false)} />
+      {cartMounted && (
+        <CartSidebar open={cartOpen} onClose={() => setCartOpen(false)} />
+      )}
     </>
   );
 }

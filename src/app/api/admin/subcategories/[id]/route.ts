@@ -6,12 +6,13 @@ import { withAdmin } from '@/middleware/auth.middleware';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { uploadBuffer, destroyImage } from '@/lib/r2';
 import Subcategory from '@/models/Subcategory';
+import { withNavRevalidate } from '@/lib/revalidateNav';
 
 type Ctx = { params: Record<string, string> };
 
 // ── DELETE /api/admin/subcategories/:id ──────────────────────────────────────
 // Deletes the DB document AND removes the image from Cloudinary.
-export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
+const _DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
 
@@ -31,7 +32,7 @@ export const DELETE = withAdmin(async (_req: NextRequest, ctx: Ctx) => {
 // ── PATCH /api/admin/subcategories/:id ───────────────────────────────────────
 // Updates name and/or description and/or image.
 // Accepts multipart/form-data (with image) or JSON (without).
-export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
+const _PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
   try {
     await connectDB();
 
@@ -79,3 +80,6 @@ export const PATCH = withAdmin(async (req: NextRequest, ctx: Ctx) => {
     return errorResponse(err instanceof Error ? err.message : 'Failed', 400);
   }
 });
+
+export const DELETE = withNavRevalidate(_DELETE);
+export const PATCH = withNavRevalidate(_PATCH);
